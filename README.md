@@ -1,4 +1,4 @@
-[README.md](https://github.com/user-attachments/files/26326743/README.md)
+[README.md](https://github.com/user-attachments/files/26326785/README.md)
 # PlugMarket.eu — EV Marketplace
 
 ## Quick Start
