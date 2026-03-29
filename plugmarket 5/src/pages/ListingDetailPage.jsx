@@ -168,12 +168,15 @@ export default function ListingDetailPage() {
   const cardStyle = { ...cs(th), padding: "4px 18px", marginBottom: 0 };
 
   // ── Equipment list ──
+  const dbFeatures = Array.isArray(car.features) ? car.features : [];
   const equipment = [
     car.drivetrain && `${car.drivetrain} drivetrain`,
     car.charge_port && `${car.charge_port} port`,
     car.ac_charge_kw && `${car.ac_charge_kw} kW AC charging`,
     car.accident_free && "Accident-free",
     car.service_history && car.service_history !== "No service history" && car.service_history,
+    car.interior_material && `${car.interior_material} interior`,
+    ...dbFeatures,
   ].filter(Boolean);
 
   // ── LEFT CONTENT ──
@@ -304,6 +307,7 @@ export default function ListingDetailPage() {
             { icon: <MapIcon size={14} color={BC}/>, label: "Range (winter)", value: car.range_winter_km ? `${car.range_winter_km} km` : "—" },
             { icon: <CarIcon size={14} color={BC}/>, label: "Exterior colour", value: car.exterior_color || "—" },
             { icon: <CarIcon size={14} color={BC}/>, label: "Interior colour", value: car.interior_color || "—" },
+            { icon: <CarIcon size={14} color={BC}/>, label: "Interior material", value: car.interior_material || "—" },
             { icon: <InfoIcon size={14} color={BC}/>, label: "VIN", value: car.vin || "—" },
             { icon: <InfoIcon size={14} color={BC}/>, label: "First registration", value: car.first_registration || "—" },
             { icon: <UserIcon size={14} color={BC}/>, label: "Previous owners", value: car.previous_owners || "—" },

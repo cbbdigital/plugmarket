@@ -102,6 +102,39 @@ const DRIVETRAINS = ["RWD","AWD","FWD"];
 const PORTS = ["CCS2","Type 2","CHAdeMO","CCS2 / Type 2"];
 const CONDITIONS = ["New","Used","Certified Pre-Owned"];
 
+const INT_COLORS = [
+  {name:"Black",hex:"#1a1a1a"},{name:"White",hex:"#f5f5f5"},{name:"Gray",hex:"#888"},{name:"Brown",hex:"#6B3A2A"},
+  {name:"Beige",hex:"#D4B896"},{name:"Red",hex:"#C0392B"},{name:"Orange",hex:"#E67E22"},{name:"Yellow",hex:"#F1C40F"},
+  {name:"Green",hex:"#27AE60"},{name:"Blue",hex:"#2980B9"},{name:"Purple",hex:"#8E44AD"},
+];
+const INT_MATERIALS = ["Natural leather","Synthetic leather","Alcantara","Textile","Mixed"];
+
+const FEATURES_LIST = {
+  "Comfort":[
+    "Air conditioning","Dual-zone climate","Tri-zone climate","Heated front seats","Heated rear seats","Ventilated seats",
+    "Heated steering wheel","Massage seats","Memory seats","Power-adjustable seats","Lumbar support","Armrest","Ambient lighting",
+    "Panoramic roof","Sunroof","Keyless entry","Keyless start","Power tailgate","Soft-close doors",
+  ],
+  "Technology":[
+    "Apple CarPlay","Android Auto","Wireless CarPlay/AA","Built-in navigation","Head-up display","Digital cockpit",
+    "Wireless phone charging","Premium sound system","Harman Kardon","Bose","Bang & Olufsen","Burmester",
+    "OTA updates","Voice control","Wi-Fi hotspot","USB-C ports",
+  ],
+  "Safety & driving":[
+    "Adaptive cruise control (ACC)","Lane keep assist","Lane change assist","Blind spot monitoring","Rear cross-traffic alert",
+    "Automatic emergency braking","Traffic sign recognition","Driver drowsiness detection","360° camera","Rear camera",
+    "Front parking sensors","Rear parking sensors","Auto-parking assist","Matrix LED headlights","Adaptive headlights",
+  ],
+  "Exterior":[
+    "LED headlights","LED taillights","Fog lights","Roof rails","Tinted windows","Privacy glass",
+    "Power-folding mirrors","Heated mirrors","Auto-dimming mirrors","Tow hitch","Aero wheels",
+  ],
+  "Other":[
+    "V2L (vehicle-to-load)","Heat pump","Pre-conditioning","ISOFIX","Spare wheel","Roof box ready",
+    "Winter tyres included","All-season tyres","Dashcam","PPF/ceramic coating",
+  ],
+};
+
 // ── Icons ──
 const Ic = ({d,size=16,color="currentColor"}) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{d}</svg>
@@ -199,12 +232,14 @@ export default function SellPage(){
   const [condition,setCondition]=useState("");
   const [color,setColor]=useState("");
   const [intColor,setIntColor]=useState("");
+  const [intMaterial,setIntMaterial]=useState("");
   const [drive,setDrive]=useState("");
   const [vin,setVin]=useState("");
   const [regDate,setRegDate]=useState("");
   const [owners,setOwners]=useState("");
   const [accidentFree,setAccidentFree]=useState(true);
   const [serviceHistory,setServiceHistory]=useState("");
+  const [features,setFeatures]=useState([]);
 
   // Step 2
   const [battery,setBattery]=useState("");
@@ -263,12 +298,14 @@ export default function SellPage(){
         setCondition(condRev[c.condition] || c.condition || "");
         setColor(c.exterior_color || "");
         setIntColor(c.interior_color || "");
+        setIntMaterial(c.interior_material || "");
         setDrive(driveRev[c.drivetrain] || c.drivetrain || "");
         setVin(c.vin || "");
         setRegDate(c.first_registration || "");
         setOwners(c.previous_owners != null ? String(c.previous_owners) : "");
         setAccidentFree(c.accident_free !== false);
         setServiceHistory(c.service_history || "");
+        setFeatures(Array.isArray(c.features) ? c.features : []);
 
         setBattery(c.battery_capacity_kwh ? String(c.battery_capacity_kwh) : "");
         setUsable(c.usable_capacity_kwh ? String(c.usable_capacity_kwh) : "");
@@ -314,10 +351,12 @@ export default function SellPage(){
     const data = {
       make, model, variant: variant || null, year: +year, mileage_km: +km,
       condition: condMap[condition] || null,
-      exterior_color: color || null, interior_color: intColor || null, drivetrain: driveMap[drive] || null,
+      exterior_color: color || null, interior_color: intColor || null, interior_material: intMaterial || null,
+      drivetrain: driveMap[drive] || null,
       vin: vin || null, first_registration: regDate || null,
       previous_owners: owners ? +owners : null,
       accident_free: accidentFree, service_history: serviceHistory || null,
+      features: features.length > 0 ? features : null,
       battery_capacity_kwh: battery ? +battery : null, usable_capacity_kwh: usable ? +usable : null,
       state_of_health_pct: soh ? +soh : null,
       range_real_km: rangeReal ? +rangeReal : null, range_winter_km: rangeWinter ? +rangeWinter : null,
@@ -552,7 +591,23 @@ export default function SellPage(){
               </div>
               <div style={{display:"grid",gridTemplateColumns:g2,gap:12}}>
                 <Sel label="Exterior colour" value={color} onChange={setColor} options={COLORS} t={t}/>
-                <Inp label="Interior colour" value={intColor} onChange={setIntColor} ph="e.g. Black Premium" t={t}/>
+                <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                  <label style={{fontSize:12,fontWeight:600,color:t.tx2}}>Interior colour</label>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap",padding:"8px 0"}}>
+                    {INT_COLORS.map(c=>(
+                      <div key={c.name} onClick={()=>setIntColor(c.name)} title={c.name} style={{width:28,height:28,borderRadius:"50%",background:c.hex,cursor:"pointer",border:intColor===c.name?`3px solid ${BC}`:`2px solid ${t.bd}`,boxSizing:"border-box",transition:"all 0.15s"}}/>
+                    ))}
+                  </div>
+                  {intColor&&<span style={{fontSize:11,color:t.tx2}}>{intColor}</span>}
+                </div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                <label style={{fontSize:12,fontWeight:600,color:t.tx2}}>Interior material</label>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                  {INT_MATERIALS.map(m=>(
+                    <button key={m} onClick={()=>setIntMaterial(intMaterial===m?"":m)} style={{padding:"6px 12px",borderRadius:8,border:intMaterial===m?`1.5px solid ${BC}`:`1px solid ${t.bd}`,background:intMaterial===m?(d?"rgba(255,117,0,0.1)":"rgba(255,117,0,0.06)"):t.inp,color:intMaterial===m?BC:t.tx2,fontSize:11,fontWeight:intMaterial===m?600:400,cursor:"pointer"}}>{m}</button>
+                  ))}
+                </div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:g2,gap:12}}>
                 <Sel label="Drivetrain" value={drive} onChange={setDrive} options={DRIVETRAINS} t={t}/>
@@ -564,6 +619,25 @@ export default function SellPage(){
               </div>
               <Toggle label="Accident-free" value={accidentFree} onChange={setAccidentFree} t={t}/>
               <Sel label="Service history" value={serviceHistory} onChange={setServiceHistory} options={["Full service history","Partial service history","No service history"]} t={t}/>
+
+              {/* Features & Equipment */}
+              <div style={{marginTop:8}}>
+                <div style={{fontSize:13,fontWeight:600,color:t.tx,marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
+                  <CheckIcon size={15} color={BC}/> Features & equipment
+                  {features.length>0&&<span style={{fontSize:10,fontWeight:700,color:"#fff",background:BC,borderRadius:9,padding:"1px 7px",minWidth:18,textAlign:"center"}}>{features.length}</span>}
+                </div>
+                {Object.entries(FEATURES_LIST).map(([cat,items])=>(
+                  <div key={cat} style={{marginBottom:12}}>
+                    <div style={{fontSize:11,fontWeight:600,color:t.tx3,marginBottom:6,textTransform:"uppercase",letterSpacing:0.3}}>{cat}</div>
+                    <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                      {items.map(f=>{
+                        const on=features.includes(f);
+                        return <button key={f} onClick={()=>setFeatures(p=>on?p.filter(x=>x!==f):[...p,f])} style={{padding:"5px 10px",borderRadius:7,border:on?`1.5px solid ${BC}`:`1px solid ${t.bd}`,background:on?(d?"rgba(255,117,0,0.1)":"rgba(255,117,0,0.06)"):t.inp,color:on?BC:t.tx2,fontSize:11,fontWeight:on?600:400,cursor:"pointer",transition:"all 0.15s"}}>{on?"✓ ":""}{f}</button>;
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -743,7 +817,8 @@ export default function SellPage(){
                 {s:"Vehicle",si:1,rows:[
                   ["Make / Model",`${make} ${model} ${variant}`.trim()],
                   ["Year",year],["Mileage",km?`${Number(km).toLocaleString()} km`:""],
-                  ["Condition",condition],["Colour",color],["Drivetrain",drive],
+                  ["Condition",condition],["Exterior colour",color],["Interior",intColor?(intMaterial?`${intColor} · ${intMaterial}`:intColor):""],
+                  ["Drivetrain",drive],["Features",features.length>0?`${features.length} selected`:""],
                 ]},
                 {s:"EV specs",si:2,rows:[
                   ["Gross battery",battery?`${battery} kWh`:""],["SoH",soh?`${soh}%`:""],
