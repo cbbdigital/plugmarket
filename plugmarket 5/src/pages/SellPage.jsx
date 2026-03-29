@@ -236,7 +236,7 @@ export default function SellPage(){
       charge_port: port || null, power_kw: powerKw ? +powerKw : null,
       price_eur: +price, negotiable, vat_deductible: vatDeduct,
       description: description || null,
-      contact_name: sellerName, contact_phone: phone, contact_email: email,
+      contact_name: sellerName, contact_phone: phone, contact_email: email, seller_type: sellerType,
       city, country,
       status: "active",
     }, token);
