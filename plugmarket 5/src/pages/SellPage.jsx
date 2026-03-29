@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import { BC, GR, cs } from "../styles/theme";
@@ -176,16 +176,60 @@ export default function SellPage(){
   const models = make ? MAKES_DATA[make]||[] : [];
   const years = Array.from({length:8},(_,i)=>String(2025-i));
 
-  const addPhoto = () => {
-    const placeholders = [
-      "https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=300&h=200&fit=crop",
-      "https://images.unsplash.com/photo-1619317190803-58529786b291?w=300&h=200&fit=crop",
-      "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=300&h=200&fit=crop",
-      "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=300&h=200&fit=crop",
-      "https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?w=300&h=200&fit=crop",
-    ];
-    if(photos.length<20) setPhotos([...photos, placeholders[photos.length % placeholders.length]]);
+  const [uploading, setUploading] = useState(false);
+
+  const compressImage = (file, maxSizeKB = 2500) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let w = img.width, h = img.height;
+          const maxDim = 1920;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+            else { w = Math.round(w * maxDim / h); h = maxDim; }
+          }
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          let quality = 0.8;
+          let result = canvas.toDataURL("image/jpeg", quality);
+          while (result.length > maxSizeKB * 1370 && quality > 0.3) {
+            quality -= 0.1;
+            result = canvas.toDataURL("image/jpeg", quality);
+          }
+          resolve(result);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
   };
+
+  const fileInputRef = useRef(null);
+
+  const addPhoto = () => {
+    if (fileInputRef.current) fileInputRef.current.click();
+  };
+
+  const handleFileSelect = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setUploading(true);
+    const remaining = 20 - photos.length;
+    const toProcess = files.slice(0, remaining);
+    const compressed = [];
+    for (const file of toProcess) {
+      const result = await compressImage(file);
+      compressed.push(result);
+    }
+    setPhotos(prev => [...prev, ...compressed]);
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const removePhoto = (idx) => setPhotos(photos.filter((_,i)=>i!==idx));
 
   const canNext = () => {
@@ -220,7 +264,7 @@ export default function SellPage(){
           </div>
           <div style={{display:"flex",gap:10,justifyContent:"center",marginTop:20}}>
               <button onClick={()=>{setSubmitted(false);setStep(1);setMake("");setModel("");setPhotos([]);setPrice("")}} style={{padding:"10px 20px",borderRadius:10,border:`1px solid ${t.bd}`,background:t.card,color:t.tx,fontSize:13,fontWeight:500,cursor:"pointer"}}>Sell another EV</button>
-              <button style={{padding:"10px 20px",borderRadius:10,border:"none",background:GR,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:"0 2px 8px rgba(255,117,0,0.3)"}}>View my listing</button>
+              <button onClick={()=>nav("/account")} style={{padding:"10px 20px",borderRadius:10,border:"none",background:GR,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:"0 2px 8px rgba(255,117,0,0.3)"}}>View my listing</button>
             </div>
         </div>
       </div>
@@ -335,6 +379,7 @@ export default function SellPage(){
                 <span style={{fontSize:12,color:t.tx2,lineHeight:1.5}}>Listings with 6+ photos get 3x more views. Include exterior (front, rear, sides), interior, dashboard, boot, and any damage.</span>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(110px,1fr))",gap:10}}>
+                <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileSelect} style={{display:"none"}}/>
                 {photos.map((ph,i)=>(
                   <div key={i} style={{position:"relative",aspectRatio:"4/3",borderRadius:12,overflow:"hidden",boxShadow:`inset 0 0 0 1px ${t.bd}`}}>
                     <img src={ph} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
@@ -343,9 +388,9 @@ export default function SellPage(){
                   </div>
                 ))}
                 {photos.length<20&&(
-                  <div onClick={addPhoto} style={{aspectRatio:"4/3",borderRadius:10,border:`2px dashed ${d?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.1)"}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",gap:6,background:t.sec}}>
+                  <div onClick={addPhoto} style={{aspectRatio:"4/3",borderRadius:10,border:`2px dashed ${d?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.1)"}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",gap:6,background:t.sec,opacity:uploading?0.5:1}}>
                     <PlusIcon size={22} color={t.tx3}/>
-                    <span style={{fontSize:11,color:t.tx3,fontWeight:500}}>Add photo</span>
+                    <span style={{fontSize:11,color:t.tx3,fontWeight:500}}>{uploading?"Compressing...":"Add photo"}</span>
                   </div>
                 )}
               </div>
