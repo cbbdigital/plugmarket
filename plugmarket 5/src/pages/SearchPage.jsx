@@ -196,9 +196,7 @@ export default function SearchPage() {
   }
 
   return(
-    <div style={{fontFamily:"var(--font-sans)",color:t.tx,maxWidth:1120,margin:"0 auto",padding:"0 8% 80px"}}>
-      <NB t={t} left={<button onClick={()=>navigate("/")} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${t.bd}`,background:t.inp,cursor:"pointer",fontSize:12,fontWeight:500,color:BC,display:"flex",alignItems:"center",gap:5}}><Bck size={14} color={BC}/>Home</button>}/>
-
+    <>
       {/* Top row: make, model, country */}
       <div style={{padding:"14px 0 10px",display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}}>
         {[{l:"Make",v:make,s:v=>{setMake(v);setModel("")},o:Object.keys(MK).sort()},{l:"Model",v:model,s:setModel,o:mods,ph:"Any"},{l:"Country",v:co,s:setCo,o:CO.map(c=>({v:c.c,l:`${c.f} ${c.n}`}))}].map((f,i)=>(
@@ -326,6 +324,6 @@ export default function SearchPage() {
       ):(
         <div style={{display:"flex",flexDirection:"column",gap:10}}>{filtered.map(l=><SC key={l.id} l={l}/>)}</div>
       )}
-    </div>
+    </>
   );
 }
