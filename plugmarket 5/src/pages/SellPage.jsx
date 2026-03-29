@@ -77,7 +77,7 @@ function Sel({label,value,onChange,options,ph,req,t}){
     <div style={{display:"flex",flexDirection:"column",gap:4}}>
       {label&&<label style={{fontSize:12,fontWeight:600,color:t.tx2}}>{label}{req&&<span style={{color:"#ef4444"}}> *</span>}</label>}
       <div style={{position:"relative"}}>
-        <select value={value} onChange={e=>onChange(e.target.value)} style={{width:"100%",height:42,borderRadius:10,border:`1px solid ${t.inpBrd}`,background:t.inp,color:value?t.tx:"#9ca3af",padding:"0 30px 0 14px",fontSize:13,cursor:"pointer",appearance:"none",WebkitAppearance:"none"}}>
+        <select value={value} onChange={e=>onChange(e.target.value)} style={{width:"100%",height:42,borderRadius:10,border:`1px solid ${t.bd}`,background:t.inp,color:value?t.tx:"#9ca3af",padding:"0 30px 0 14px",fontSize:13,cursor:"pointer",appearance:"none",WebkitAppearance:"none"}}>
           <option value="">{ph||"Select..."}</option>
           {options.map(o=>typeof o==="string"?<option key={o} value={o}>{o}</option>:<option key={o.v} value={o.v}>{o.l}</option>)}
         </select>
@@ -88,7 +88,7 @@ function Sel({label,value,onChange,options,ph,req,t}){
 }
 
 function Inp({label,value,onChange,ph,unit,type="text",req,textarea,t}){
-  const shared = {width:"100%",borderRadius:10,border:`1px solid ${t.inpBrd}`,background:t.inp,color:t.tx,padding:unit?"0 40px 0 14px":"0 14px",fontSize:13,boxSizing:"border-box"};
+  const shared = {width:"100%",borderRadius:10,border:`1px solid ${t.bd}`,background:t.inp,color:t.tx,padding:unit?"0 40px 0 14px":"0 14px",fontSize:13,boxSizing:"border-box"};
   return(
     <div style={{display:"flex",flexDirection:"column",gap:4}}>
       {label&&<label style={{fontSize:12,fontWeight:600,color:t.tx2}}>{label}{req&&<span style={{color:"#ef4444"}}> *</span>}</label>}
@@ -118,9 +118,6 @@ export default function SellPage(){
   const { t, dark: d } = useOutletContext();
   const { user } = useAuth();
   const nav = useNavigate();
-  const [authChecked, setAuthChecked] = useState(false);
-  useEffect(() => { if (!user) nav("/login"); else setAuthChecked(true); }, [user, nav]);
-  if (!authChecked) return null;
   const [narrow,setNarrow]=useState(()=>window.innerWidth<480);
   useEffect(()=>{const h=()=>setNarrow(window.innerWidth<480);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h)},[]);
   const g2=narrow?"1fr":"1fr 1fr";
@@ -172,6 +169,10 @@ export default function SellPage(){
 
   const [submitted,setSubmitted]=useState(false);
 
+  // Auth redirect
+  useEffect(() => { if (!user) nav("/login"); }, [user, nav]);
+  if (!user) return null;
+
   const models = make ? MAKES_DATA[make]||[] : [];
   const years = Array.from({length:8},(_,i)=>String(2025-i));
 
@@ -196,7 +197,7 @@ export default function SellPage(){
     return true;
   };
 
-  const cs = {background:t.card,borderRadius:16,border:`1px solid ${t.brd}`,boxShadow:`0 2px 8px ${t.sh}`,padding:20,marginBottom:20};
+  const cardS = {background:t.card,borderRadius:16,border:`1px solid ${t.bd}`,boxShadow:`0 2px 8px ${t.sh}`,padding:20,marginBottom:20};
 
   // ── Success screen ──
   if(submitted){
@@ -209,16 +210,16 @@ export default function SellPage(){
             Your {make} {model} has been published successfully.<br/>
             You'll receive notifications when buyers contact you.
           </p>
-          <div style={{background:t.card,borderRadius:16,boxShadow:`0 2px 8px ${t.sh}`,border:`1px solid ${t.brd}`,padding:"2px 16px",textAlign:"left",marginTop:20}}>
+          <div style={{background:t.card,borderRadius:16,boxShadow:`0 2px 8px ${t.sh}`,border:`1px solid ${t.bd}`,padding:"2px 16px",textAlign:"left",marginTop:20}}>
             {[["Vehicle",`${make} ${model} ${variant}`.trim()],["Price",`€${Number(price).toLocaleString()}`],["Photos",`${photos.length} uploaded`]].map(([k,v],i)=>(
-              <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"8px 0",borderBottom:i<2?`1px solid ${t.brd}`:"none"}}>
+              <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"8px 0",borderBottom:i<2?`1px solid ${t.bd}`:"none"}}>
                 <span style={{color:t.tx2}}>{k}</span>
                 <span style={{fontWeight:600}}>{v}</span>
               </div>
             ))}
           </div>
           <div style={{display:"flex",gap:10,justifyContent:"center",marginTop:20}}>
-              <button onClick={()=>{setSubmitted(false);setStep(1);setMake("");setModel("");setPhotos([]);setPrice("")}} style={{padding:"10px 20px",borderRadius:10,border:`1px solid ${t.brd}`,background:t.card,color:t.tx,fontSize:13,fontWeight:500,cursor:"pointer"}}>Sell another EV</button>
+              <button onClick={()=>{setSubmitted(false);setStep(1);setMake("");setModel("");setPhotos([]);setPrice("")}} style={{padding:"10px 20px",borderRadius:10,border:`1px solid ${t.bd}`,background:t.card,color:t.tx,fontSize:13,fontWeight:500,cursor:"pointer"}}>Sell another EV</button>
               <button style={{padding:"10px 20px",borderRadius:10,border:"none",background:GR,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:"0 2px 8px rgba(255,117,0,0.3)"}}>View my listing</button>
             </div>
         </div>
@@ -241,7 +242,7 @@ export default function SellPage(){
             const active = step === s.id;
             return(
               <div key={s.id} onClick={()=>{if(done)setStep(s.id)}} style={{flex:1,minWidth:0,cursor:done?"pointer":"default"}}>
-                <div style={{display:"flex",alignItems:"center",gap:5,padding:"7px 8px",borderRadius:10,background:active?(d?"rgba(255,117,0,0.1)":"rgba(255,117,0,0.06)"):done?(d?"rgba(16,185,129,0.1)":"rgba(16,185,129,0.06)"):t.card2,border:active?`1.5px solid ${BC}`:"1.5px solid transparent",transition:"all 0.2s"}}>
+                <div style={{display:"flex",alignItems:"center",gap:5,padding:"7px 8px",borderRadius:10,background:active?(d?"rgba(255,117,0,0.1)":"rgba(255,117,0,0.06)"):done?(d?"rgba(16,185,129,0.1)":"rgba(16,185,129,0.06)"):t.sec,border:active?`1.5px solid ${BC}`:"1.5px solid transparent",transition:"all 0.2s"}}>
                   <div style={{width:26,height:26,borderRadius:8,background:done?"#10b981":active?BC:"rgba(128,128,128,0.15)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,color:done||active?"#fff":"#9ca3af",transition:"all 0.2s"}}>
                     {done?<CheckIcon size={12} color="#fff"/>:<span style={{fontSize:10,fontWeight:700}}>{s.id}</span>}
                   </div>
@@ -253,7 +254,7 @@ export default function SellPage(){
         </div>
 
         {/* FORM CARD */}
-        <div style={cs}>
+        <div style={cardS}>
 
           {step===1&&(
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -335,14 +336,14 @@ export default function SellPage(){
               </div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(110px,1fr))",gap:10}}>
                 {photos.map((ph,i)=>(
-                  <div key={i} style={{position:"relative",aspectRatio:"4/3",borderRadius:12,overflow:"hidden",boxShadow:`inset 0 0 0 1px ${t.brd}`}}>
+                  <div key={i} style={{position:"relative",aspectRatio:"4/3",borderRadius:12,overflow:"hidden",boxShadow:`inset 0 0 0 1px ${t.bd}`}}>
                     <img src={ph} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
                     <button onClick={()=>removePhoto(i)} style={{position:"absolute",top:4,right:4,width:24,height:24,borderRadius:6,border:"none",background:"rgba(0,0,0,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><TrashIcon size={12} color="#fff"/></button>
                     {i===0&&<div style={{position:"absolute",bottom:4,left:4,fontSize:9,fontWeight:700,background:BC,color:"#fff",padding:"2px 6px",borderRadius:4,textTransform:"uppercase"}}>Cover</div>}
                   </div>
                 ))}
                 {photos.length<20&&(
-                  <div onClick={addPhoto} style={{aspectRatio:"4/3",borderRadius:10,border:`2px dashed ${d?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.1)"}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",gap:6,background:t.card2}}>
+                  <div onClick={addPhoto} style={{aspectRatio:"4/3",borderRadius:10,border:`2px dashed ${d?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.1)"}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",gap:6,background:t.sec}}>
                     <PlusIcon size={22} color={t.tx3}/>
                     <span style={{fontSize:11,color:t.tx3,fontWeight:500}}>Add photo</span>
                   </div>
@@ -361,7 +362,7 @@ export default function SellPage(){
               <Inp label="Asking price" value={price} onChange={setPrice} ph="e.g. 38900" unit="EUR" type="number" req t={t}/>
 
               {price&&(
-                <div style={{background:t.card2,borderRadius:12,padding:14}}>
+                <div style={{background:t.sec,borderRadius:12,padding:14}}>
                   <div style={{fontSize:12,fontWeight:600,color:t.tx3,marginBottom:8}}>Price positioning</div>
                   {(()=>{
                     const p = Number(price);
@@ -429,7 +430,7 @@ export default function SellPage(){
                 <label style={{fontSize:12,fontWeight:600,color:t.tx2,marginBottom:6,display:"block"}}>Seller type</label>
                 <div style={{display:"flex",gap:8}}>
                   {[{v:"private",l:"Private seller"},{v:"dealer",l:"Dealer"}].map(tp=>(
-                    <button key={tp.v} onClick={()=>setSellerType(tp.v)} style={{flex:1,height:42,borderRadius:10,border:sellerType===tp.v?`2px solid ${BC}`:`1px solid ${t.inpBrd}`,background:sellerType===tp.v?(d?"rgba(255,117,0,0.08)":"rgba(255,117,0,0.04)"):t.inp,color:sellerType===tp.v?BC:t.tx,fontSize:13,fontWeight:sellerType===tp.v?600:400,cursor:"pointer"}}>{tp.l}</button>
+                    <button key={tp.v} onClick={()=>setSellerType(tp.v)} style={{flex:1,height:42,borderRadius:10,border:sellerType===tp.v?`2px solid ${BC}`:`1px solid ${t.bd}`,background:sellerType===tp.v?(d?"rgba(255,117,0,0.08)":"rgba(255,117,0,0.04)"):t.inp,color:sellerType===tp.v?BC:t.tx,fontSize:13,fontWeight:sellerType===tp.v?600:400,cursor:"pointer"}}>{tp.l}</button>
                   ))}
                 </div>
               </div>
@@ -455,7 +456,7 @@ export default function SellPage(){
                 {photos.slice(0,3).map((ph,i)=>(
                   <div key={i} style={{width:96,height:64,borderRadius:8,overflow:"hidden"}}><img src={ph} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>
                 ))}
-                {photos.length>3&&<div style={{width:96,height:64,borderRadius:8,background:t.card2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:600,color:t.tx2}}>+{photos.length-3} more</div>}
+                {photos.length>3&&<div style={{width:96,height:64,borderRadius:8,background:t.sec,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:600,color:t.tx2}}>+{photos.length-3} more</div>}
               </div>
               {[
                 {s:"Vehicle",si:1,rows:[
@@ -484,9 +485,9 @@ export default function SellPage(){
                     {section.s}
                     <button onClick={()=>setStep(section.si)} style={{fontSize:11,color:BC,background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Edit</button>
                   </div>
-                  <div style={{background:t.card2,borderRadius:10,padding:"2px 14px"}}>
+                  <div style={{background:t.sec,borderRadius:10,padding:"2px 14px"}}>
                     {section.rows.filter(r=>r[1]).map((r,ri,arr)=>(
-                      <div key={ri} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:ri<arr.length-1?`1px solid ${t.brd}`:"none",fontSize:13}}>
+                      <div key={ri} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:ri<arr.length-1?`1px solid ${t.bd}`:"none",fontSize:13}}>
                         <span style={{color:t.tx2}}>{r[0]}</span>
                         <span style={{fontWeight:500}}>{r[1]}</span>
                       </div>
@@ -500,7 +501,7 @@ export default function SellPage(){
 
         {/* NAVIGATION */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingBottom:12}}>
-          <button onClick={()=>setStep(Math.max(1,step-1))} style={{padding:"10px 18px",borderRadius:10,border:`1px solid ${t.brd}`,background:t.card,color:t.tx,fontSize:13,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",gap:6,visibility:step===1?"hidden":"visible"}}><ChevL size={14}/> Back</button>
+          <button onClick={()=>setStep(Math.max(1,step-1))} style={{padding:"10px 18px",borderRadius:10,border:`1px solid ${t.bd}`,background:t.card,color:t.tx,fontSize:13,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",gap:6,visibility:step===1?"hidden":"visible"}}><ChevL size={14}/> Back</button>
 
           {step<6?(
             <button onClick={()=>{if(canNext())setStep(step+1)}} style={{padding:"10px 22px",borderRadius:10,border:"none",background:canNext()?GR:"rgba(128,128,128,0.15)",color:canNext()?"#fff":"#9ca3af",fontSize:13,fontWeight:600,cursor:canNext()?"pointer":"default",display:"flex",alignItems:"center",gap:6,boxShadow:canNext()?"0 2px 8px rgba(255,117,0,0.3)":"none"}}>Next <ChevR size={14} color={canNext()?"#fff":"#9ca3af"}/></button>
