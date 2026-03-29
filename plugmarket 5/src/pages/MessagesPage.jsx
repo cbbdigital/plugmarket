@@ -25,6 +25,13 @@ const Hrt=p=><I {...p} d={<path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06
 const BC="#FF7500";
 const BG="linear-gradient(135deg,#FF7500,#FF9533)";
 
+// ── Supabase REST client ──
+const SB_URL = import.meta.env.VITE_SUPABASE_URL || "https://tmftxqwqwceuiydleuag.supabase.co";
+const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtZnR4cXdxd2NldWl5ZGxldWFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDA2MzEsImV4cCI6MjA5MDI3NjYzMX0.k5TOln3e4M8PxH2tH22-6BsFimH84InVfNOWP8riaCM";
+const sbH=(token)=>({"apikey":SB_KEY,"Authorization":`Bearer ${token||SB_KEY}`,"Content-Type":"application/json","Prefer":"return=representation"});
+async function sbGet(table,params,token){try{const r=await fetch(`${SB_URL}/rest/v1/${table}?${params}`,{headers:sbH(token)});if(!r.ok)return[];return await r.json()}catch{return[]}}
+async function sbPost(table,data,token){try{const r=await fetch(`${SB_URL}/rest/v1/${table}`,{method:"POST",headers:sbH(token),body:JSON.stringify(data)});if(!r.ok)return null;const res=await r.json();return res?.[0]||res}catch{return null}}
+async function sbPatch(table,match,data,token){try{await fetch(`${SB_URL}/rest/v1/${table}?${match}`,{method:"PATCH",headers:sbH(token),body:JSON.stringify(data)});return true}catch{return false}}
 /* ─── RESPONSIVE HOOK ─── */
 function useWidth(){
   const[w,setW]=useState(typeof window!=="undefined"?window.innerWidth:800);
@@ -35,61 +42,8 @@ function useWidth(){
   },[]);
   return w;
 }
-/* ─── MOCK DATA ─── */
-const CONVERSATIONS = [
-  {
-    id:1, name:"Marcus Weber", initials:"MW", online:true, unread:2,
-    car:"Tesla Model 3",
-    lastMsg:"Is the battery report available?", time:"2 min ago",
-    messages:[
-      {id:1,from:"them",text:"Hi, I saw your Tesla Model 3 listing. Is it still available?",time:"10:32 AM"},
-      {id:2,from:"me",text:"Yes, it's still available! Would you like to schedule a viewing?",time:"10:35 AM"},
-      {id:3,from:"them",text:"That would be great. I'm in Munich as well. Could we do this Saturday?",time:"10:38 AM"},
-      {id:4,from:"me",text:"Saturday works perfectly. I can do 10 AM or 2 PM — what's better for you?",time:"10:41 AM"},
-      {id:5,from:"them",text:"Let's go with 10 AM. Also, I noticed you mentioned the SoH is 97%.",time:"11:02 AM"},
-      {id:6,from:"them",text:"Is the battery report available?",time:"11:03 AM"},
-    ]
-  },
-  {
-    id:2, name:"Sophie Laurent", initials:"SL", online:false, unread:1,
-    car:"Tesla Model 3",
-    lastMsg:"I'd like to offer €36,500 for the car", time:"1 hour ago",
-    messages:[
-      {id:1,from:"them",text:"Bonjour, is the Tesla Model 3 still available?",time:"Yesterday"},
-      {id:2,from:"me",text:"Hi Sophie! Yes, absolutely. Where are you located?",time:"Yesterday"},
-      {id:3,from:"them",text:"I'm in Brussels. I'd like to offer €36,500 for the car",time:"2:15 PM"},
-    ]
-  },
-  {
-    id:3, name:"Jan de Vries", initials:"JV", online:false, unread:0,
-    car:"Tesla Model 3",
-    lastMsg:"Thanks, I'll think about it", time:"2 days ago",
-    messages:[
-      {id:1,from:"them",text:"What's the lowest you'd go on the Tesla?",time:"2 days ago"},
-      {id:2,from:"me",text:"I can do €37,500 for a quick sale.",time:"2 days ago"},
-      {id:3,from:"them",text:"Thanks, I'll think about it",time:"2 days ago"},
-    ]
-  },
-  {
-    id:4, name:"Anna Müller", initials:"AM", online:true, unread:1,
-    car:"BMW i4",
-    lastMsg:"Can I see it this Saturday?", time:"30 min ago",
-    messages:[
-      {id:1,from:"them",text:"Hi! I'm interested in the BMW i4. Is it available for viewing?",time:"10:00 AM"},
-      {id:2,from:"me",text:"Yes! I'm in Munich. When would you like to come?",time:"10:05 AM"},
-      {id:3,from:"them",text:"Can I see it this Saturday?",time:"10:30 AM"},
-    ]
-  },
-  {
-    id:5, name:"Thomas Schmidt", initials:"TS", online:false, unread:1,
-    car:"BMW i4",
-    lastMsg:"What's the lowest you'd go?", time:"3 hours ago",
-    messages:[
-      {id:1,from:"them",text:"I'm interested in the BMW i4. What's the lowest you'd go?",time:"9:00 AM"},
-    ]
-  },
-];
 
+function timeAgo(d){if(!d)return"";const s=Math.floor((Date.now()-new Date(d).getTime())/1000);if(s<60)return"now";if(s<3600)return`${Math.floor(s/60)} min ago`;if(s<86400)return`${Math.floor(s/3600)}h ago`;if(s<604800)return`${Math.floor(s/86400)}d ago`;return new Date(d).toLocaleDateString()}
 const groupByCar=c=>{const g={};c.forEach(x=>{if(!g[x.car])g[x.car]=[];g[x.car].push(x)});return g};
 /* ─── CONVERSATION ROW ─── */
 function ConvoRow({c,t,active,onClick,isLast}){
@@ -198,13 +152,14 @@ function RightPanel({t,activeConvo,newMsg,setNewMsg,sendMessage,inputRef,message
 
 export default function MessagesPage(){
   const { t, dark } = useOutletContext();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const nav = useNavigate();
   const[activeChat,setActiveChat]=useState(null);
   const[newMsg,setNewMsg]=useState("");
   const[search,setSearch]=useState("");
-  const[conversations,setConversations]=useState(CONVERSATIONS);
+  const[conversations,setConversations]=useState([]);
   const[activeFilter,setActiveFilter]=useState("all");
+  const[loading,setLoading]=useState(true);
   const messagesEndRef=useRef(null);
   const inputRef=useRef(null);
   const width=useWidth();
@@ -212,6 +167,38 @@ export default function MessagesPage(){
 
   useEffect(()=>{messagesEndRef.current?.scrollIntoView({behavior:"smooth"})},[activeChat,conversations]);
   useEffect(() => { if (!user) nav("/login"); }, [user, nav]);
+
+  // Load conversations from Supabase
+  useEffect(()=>{
+    if(!user||!session?.access_token)return;
+    const token=session.access_token;
+    const uid=user.id;
+    (async()=>{
+      const convos=await sbGet("conversations",`or=(buyer_id.eq.${uid},seller_id.eq.${uid})&order=updated_at.desc`,token);
+      if(convos.length>0){
+        const mapped=[];
+        for(const c of convos){
+          const otherIsMe=c.buyer_id===uid;
+          const otherId=otherIsMe?c.seller_id:c.buyer_id;
+          const otherProfile=await sbGet("profiles",`id=eq.${otherId}&select=full_name`,token);
+          const otherName=otherProfile?.[0]?.full_name||"User";
+          const listing=c.listing_id?await sbGet("listings",`id=eq.${c.listing_id}&select=make,model`,token):[];
+          const carName=listing?.[0]?`${listing[0].make} ${listing[0].model}`:"General";
+          const msgs=await sbGet("messages",`conversation_id=eq.${c.id}&order=created_at.asc`,token);
+          mapped.push({
+            id:c.id, name:otherName,
+            initials:otherName.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2),
+            online:false, unread:otherIsMe?(c.buyer_unread_count||0):(c.seller_unread_count||0),
+            car:carName, lastMsg:c.last_message_text||"", time:timeAgo(c.updated_at),
+            messages:msgs.map(m=>({id:m.id,from:m.sender_id===uid?"me":"them",text:m.content,time:new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})})),
+          });
+        }
+        setConversations(mapped);
+      }
+      setLoading(false);
+    })();
+  },[user,session]);
+
   if (!user) return null;
 
   const activeConvo=conversations.find(c=>c.id===activeChat);
@@ -224,13 +211,17 @@ export default function MessagesPage(){
     return ms&&c.car===activeFilter;
   });
 
-  const sendMessage=()=>{
-    if(!newMsg.trim()||!activeChat)return;
-    setConversations(prev=>prev.map(c=>{
-      if(c.id!==activeChat)return c;
+  const sendMessage=async()=>{
+    if(!newMsg.trim()||!activeChat||!session?.access_token)return;
+    const token=session.access_token;
+    const msg=await sbPost("messages",{conversation_id:activeChat,sender_id:user.id,content:newMsg.trim()},token);
+    if(msg){
       const ts=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
-      return{...c,messages:[...c.messages,{id:Date.now(),from:"me",text:newMsg.trim(),time:ts}],lastMsg:newMsg.trim(),time:"now"};
-    }));
+      setConversations(prev=>prev.map(c=>{
+        if(c.id!==activeChat)return c;
+        return{...c,messages:[...c.messages,{id:msg.id||Date.now(),from:"me",text:newMsg.trim(),time:ts}],lastMsg:newMsg.trim(),time:"now"};
+      }));
+    }
     setNewMsg("");
     inputRef.current?.focus();
   };
@@ -238,7 +229,23 @@ export default function MessagesPage(){
   const selectConvo=(id)=>{
     setActiveChat(id);
     setConversations(prev=>prev.map(x=>x.id===id?{...x,unread:0}:x));
+    // Mark as read in Supabase
+    if(session?.access_token){
+      const c=conversations.find(x=>x.id===id);
+      if(c) sbPatch("conversations",`id=eq.${id}`,{[c.buyer_id===user.id?"buyer_unread_count":"seller_unread_count"]:0},session.access_token);
+    }
   };
+
+  if(loading) return <div style={{textAlign:"center",padding:"60px 0",color:t.tx3}}>Loading messages...</div>;
+
+  // Empty state
+  if(conversations.length===0) return(
+    <div style={{textAlign:"center",padding:"60px 0"}}>
+      <Chat size={48} color={t.tx3}/>
+      <div style={{fontSize:16,fontWeight:600,color:t.tx,marginTop:12}}>No messages yet</div>
+      <div style={{fontSize:13,color:t.tx2,marginTop:6}}>When buyers contact you about your listings, conversations will appear here.</div>
+    </div>
+  );
 
   if(narrow){
     return(
