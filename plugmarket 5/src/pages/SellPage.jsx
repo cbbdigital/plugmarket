@@ -156,7 +156,7 @@ function Toggle({label,value,onChange,t}){
 
 export default function SellPage(){
   const { t, dark: d } = useOutletContext();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const nav = useNavigate();
   const [narrow,setNarrow]=useState(()=>window.innerWidth<480);
   useEffect(()=>{const h=()=>setNarrow(window.innerWidth<480);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h)},[]);
@@ -216,9 +216,9 @@ export default function SellPage(){
 
   const publishListing = async () => {
     setPublishing(true);
-    const token = user?.access_token || JSON.parse(localStorage.getItem("pm_session")||"{}").access_token;
-    const uid = user?.id || user?.user?.id || JSON.parse(localStorage.getItem("pm_session")||"{}").user?.id;
-    if (!token || !uid) { setPublishing(false); alert("Please sign in again."); return; }
+    const token = session?.access_token;
+    const uid = user?.id;
+    if (!token || !uid) { setPublishing(false); alert("Session expired. Please sign in again."); nav("/login"); return; }
 
     // 1. Insert listing
     const listing = await sbInsert("listings", {
