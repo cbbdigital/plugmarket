@@ -570,6 +570,16 @@ export default function HomePage() {
   const auth = useAuth();
   const { listings: dbListings, loading: dbLoading } = useListings();
   const allListings = dbListings.length > 0 ? dbListings : SLS;
+  const filteredCount = allListings.filter(l=>{
+    if(make&&l.mk!==make)return false;
+    if(model&&l.md!==model)return false;
+    if(co&&l.co!==co)return false;
+    if(yMin&&l.yr<+yMin)return false;
+    if(pMin&&l.pr<+pMin)return false;
+    if(pMax&&l.pr>+pMax)return false;
+    if(rngMin&&l.rng<+rngMin)return false;
+    return true;
+  }).length;
 
   useEffect(() => {
     if (!auth.token) return;
@@ -621,7 +631,7 @@ export default function HomePage() {
               </div>
             </div>
             <button onClick={()=>{const p=new URLSearchParams();if(make)p.set("make",make);if(model)p.set("model",model);if(co)p.set("co",co);if(yMin)p.set("yMin",yMin);if(pMin)p.set("pMin",pMin);if(pMax)p.set("pMax",pMax);if(rngMin)p.set("rMin",rngMin);navigate(`/search?${p.toString()}`)}} style={{width:"100%",height:44,borderRadius:12,border:"none",background:BG,color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:2}}>
-              <Srch size={17} color="#fff"/>Search {allListings.length} EVs
+              <Srch size={17} color="#fff"/>Search {filteredCount} EVs
             </button>
           </div>
         </div>
