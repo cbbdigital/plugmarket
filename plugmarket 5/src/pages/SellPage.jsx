@@ -118,7 +118,9 @@ export default function SellPage(){
   const { t, dark: d } = useOutletContext();
   const { user } = useAuth();
   const nav = useNavigate();
-  if (!user) { nav("/login"); return null; }
+  const [authChecked, setAuthChecked] = useState(false);
+  useEffect(() => { if (!user) nav("/login"); else setAuthChecked(true); }, [user, nav]);
+  if (!authChecked) return null;
   const [narrow,setNarrow]=useState(()=>window.innerWidth<480);
   useEffect(()=>{const h=()=>setNarrow(window.innerWidth<480);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h)},[]);
   const g2=narrow?"1fr":"1fr 1fr";

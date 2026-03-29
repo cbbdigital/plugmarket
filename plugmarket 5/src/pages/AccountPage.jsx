@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import { BC, GR, cs } from "../styles/theme";
@@ -305,17 +305,13 @@ export default function AccountPage(){
   const { user, signOut } = useAuth();
   const nav = useNavigate();
   const[page,setPage]=useState("home");
-
-  // If not logged in, redirect to login
-  if (!user) {
-    nav("/login");
-    return null;
-  }
-
   const[notifEmail,setNotifEmail]=useState(true);
   const[notifPush,setNotifPush]=useState(true);
   const[notifNewMsg,setNotifNewMsg]=useState(true);
   const[notifPrice,setNotifPrice]=useState(true);
+
+  useEffect(() => { if (!user) nav("/login"); }, [user, nav]);
+  if (!user) return null;
 
   const goHome=()=>setPage("home");
 
