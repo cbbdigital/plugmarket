@@ -142,7 +142,7 @@ function useListings() {
           co: r.country || "",
           ct: r.city || "",
           hp: r.state_of_health_pct || 100,
-          ft: r.featured || false,
+          ft: r.is_boosted || false,
           dy: Math.max(0, Math.round((Date.now() - new Date(r.created_at).getTime()) / 86400000)),
           imgs: photoMap[r.id] || [FALLBACK_IMG],
           _raw: r,

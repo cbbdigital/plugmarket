@@ -92,7 +92,7 @@ function ListingsPage({t,onBack,nav,user,session}){
         img:photoMap[r.id]||"https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=400&h=260&fit=crop",
         status:r.status||"active",views:r.view_count||0,inquiries:r.inquiry_count||0,
         saved:r.save_count||0,days:Math.max(0,Math.round((Date.now()-new Date(r.created_at).getTime())/86400000)),
-        soh:r.state_of_health_pct||100,battery:r.battery_capacity_kwh?`${r.battery_capacity_kwh} kWh`:"—",
+        soh:r.state_of_health_pct||100,battery:r.battery_capacity_kwh?`${r.battery_capacity_kwh} kWh`:"—",boosted:r.is_boosted||false,
       })));
     } else { setListings([]); }
     setLoading(false);
@@ -110,6 +110,12 @@ function ListingsPage({t,onBack,nav,user,session}){
     if(!confirm(`Delete "${car.year} ${car.make} ${car.model}"? This cannot be undone.`))return;
     const ok=await sbUpdate("listings",`id=eq.${car.id}`,{status:"deleted"},token);
     if(ok) setListings(prev=>prev.filter(l=>l.id!==car.id));
+  };
+
+  const boostListing=async(car)=>{
+    const ok=await sbUpdate("listings",`id=eq.${car.id}`,{is_boosted:true},token);
+    if(ok) setListings(prev=>prev.map(l=>l.id===car.id?{...l,boosted:true}:l));
+    if(ok) alert(`"${car.year} ${car.make} ${car.model}" is now featured on the homepage!`);
   };
 
   const items=filter==="all"?listings:listings.filter(l=>l.status===filter);
@@ -138,7 +144,7 @@ function ListingsPage({t,onBack,nav,user,session}){
           </div>
         </div>
         <div style={{display:"flex",borderTop:`1px solid ${t.bd}`}}>
-          {[{l:"Edit",ic:<Edit size={13} color={t.tx2}/>,action:()=>nav(`/sell?edit=${car.id}`)},{l:"Messages",ic:<Chat size={13} color={BC}/>,action:()=>nav("/messages")},{l:car.status==="paused"?"Activate":"Pause",ic:car.status==="paused"?<Chk size={13} color="#10b981"/>:<Clk size={13} color="#f59e0b"/>,action:()=>togglePause(car)},{l:"Boost",ic:<TUp size={13} color={BC}/>},{l:"Delete",ic:<Trash size={13} color="#ef4444"/>,action:()=>deleteListing(car)}].map((a,i)=><button key={i} onClick={a.action||undefined} style={{flex:1,padding:"10px 0",background:"none",border:"none",borderRight:i<4?`1px solid ${t.bd}`:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:500,color:a.l==="Messages"||a.l==="Boost"?BC:a.l==="Delete"?"#ef4444":t.tx2}}>{a.ic}{a.l}</button>)}
+          {[{l:"Edit",ic:<Edit size={13} color={t.tx2}/>,action:()=>nav(`/sell?edit=${car.id}`)},{l:"Messages",ic:<Chat size={13} color={BC}/>,action:()=>nav("/messages")},{l:car.status==="paused"?"Activate":"Pause",ic:car.status==="paused"?<Chk size={13} color="#10b981"/>:<Clk size={13} color="#f59e0b"/>,action:()=>togglePause(car)},{l:"Boost",ic:<TUp size={13} color={car.boosted?"#10b981":BC}/>,action:()=>boostListing(car)},{l:"Delete",ic:<Trash size={13} color="#ef4444"/>,action:()=>deleteListing(car)}].map((a,i)=><button key={i} onClick={a.action||undefined} style={{flex:1,padding:"10px 0",background:"none",border:"none",borderRight:i<4?`1px solid ${t.bd}`:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:500,color:a.l==="Messages"||a.l==="Boost"?BC:a.l==="Delete"?"#ef4444":t.tx2}}>{a.ic}{a.l}</button>)}
         </div>
       </div>)
     )}
