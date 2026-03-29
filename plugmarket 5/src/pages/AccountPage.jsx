@@ -8,6 +8,8 @@ const SB_URL = import.meta.env.VITE_SUPABASE_URL || "https://tmftxqwqwceuiydleua
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtZnR4cXdxd2NldWl5ZGxldWFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDA2MzEsImV4cCI6MjA5MDI3NjYzMX0.k5TOln3e4M8PxH2tH22-6BsFimH84InVfNOWP8riaCM";
 const sbHeaders = (token) => ({ "apikey": SB_KEY, "Authorization": `Bearer ${token || SB_KEY}`, "Content-Type": "application/json", "Prefer": "return=representation" });
 async function sbQuery(table, params = "", token) { try { const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, { headers: sbHeaders(token) }); if (!r.ok) return []; return await r.json(); } catch { return []; } }
+async function sbUpdate(table, match, data, token) { try { const r = await fetch(`${SB_URL}/rest/v1/${table}?${match}`, { method: "PATCH", headers: sbHeaders(token), body: JSON.stringify(data) }); return r.ok; } catch { return false; } }
+async function sbDelete(table, match, token) { try { const r = await fetch(`${SB_URL}/rest/v1/${table}?${match}`, { method: "DELETE", headers: sbHeaders(token) }); return r.ok; } catch { return false; } }
 
 // Icons
 const I=({d,size=16,color="currentColor"})=><svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{d}</svg>;
@@ -82,31 +84,42 @@ function ListingsPage({t,onBack,nav,user,session}){
   const[filter,setFilter]=useState("all");
   const[listings,setListings]=useState([]);
   const[loading,setLoading]=useState(true);
+  const token=session?.access_token;
+  const uid=user?.id;
 
-  useEffect(()=>{
-    if(!user)return;
-    const token=session?.access_token;
-    const uid=user.id;
-    if(!token||!uid){setLoading(false);return;}
-    (async()=>{
-      const rows=await sbQuery("listings",`seller_id=eq.${uid}&order=created_at.desc`,token);
-      if(rows.length>0){
-        const ids=rows.map(r=>r.id);
-        const photos=await sbQuery("listing_photos",`listing_id=in.(${ids.join(",")})&position=eq.0`,token);
-        const photoMap={};
-        photos.forEach(p=>{photoMap[p.listing_id]=p.url});
-        setListings(rows.map(r=>({
-          id:r.id,make:r.make,model:`${r.model}${r.variant?" "+r.variant:""}`,year:r.year,
-          price:r.price_eur,km:r.mileage_km,
-          img:photoMap[r.id]||"https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=400&h=260&fit=crop",
-          status:r.status||"active",views:r.view_count||0,inquiries:r.inquiry_count||0,
-          saved:r.save_count||0,days:Math.max(0,Math.round((Date.now()-new Date(r.created_at).getTime())/86400000)),
-          soh:r.state_of_health_pct||100,battery:r.battery_capacity_kwh?`${r.battery_capacity_kwh} kWh`:"—",
-        })));
-      }
-      setLoading(false);
-    })();
-  },[user,session]);
+  const loadListings=async()=>{
+    if(!token||!uid)return;
+    const rows=await sbQuery("listings",`seller_id=eq.${uid}&status=neq.deleted&order=created_at.desc`,token);
+    if(rows.length>0){
+      const ids=rows.map(r=>r.id);
+      const photos=await sbQuery("listing_photos",`listing_id=in.(${ids.join(",")})&position=eq.0`,token);
+      const photoMap={};
+      photos.forEach(p=>{photoMap[p.listing_id]=p.url});
+      setListings(rows.map(r=>({
+        id:r.id,make:r.make,model:`${r.model}${r.variant?" "+r.variant:""}`,year:r.year,
+        price:r.price_eur,km:r.mileage_km,
+        img:photoMap[r.id]||"https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=400&h=260&fit=crop",
+        status:r.status||"active",views:r.view_count||0,inquiries:r.inquiry_count||0,
+        saved:r.save_count||0,days:Math.max(0,Math.round((Date.now()-new Date(r.created_at).getTime())/86400000)),
+        soh:r.state_of_health_pct||100,battery:r.battery_capacity_kwh?`${r.battery_capacity_kwh} kWh`:"—",
+      })));
+    } else { setListings([]); }
+    setLoading(false);
+  };
+
+  useEffect(()=>{loadListings()},[user,session]);
+
+  const togglePause=async(car)=>{
+    const newStatus=car.status==="paused"?"active":"paused";
+    const ok=await sbUpdate("listings",`id=eq.${car.id}`,{status:newStatus},token);
+    if(ok) setListings(prev=>prev.map(l=>l.id===car.id?{...l,status:newStatus}:l));
+  };
+
+  const deleteListing=async(car)=>{
+    if(!confirm(`Delete "${car.year} ${car.make} ${car.model}"? This cannot be undone.`))return;
+    const ok=await sbUpdate("listings",`id=eq.${car.id}`,{status:"deleted"},token);
+    if(ok) setListings(prev=>prev.filter(l=>l.id!==car.id));
+  };
 
   const items=filter==="all"?listings:listings.filter(l=>l.status===filter);
   const tv=listings.reduce((a,l)=>a+l.views,0);
@@ -125,8 +138,8 @@ function ListingsPage({t,onBack,nav,user,session}){
     {items.length===0?(
       <div style={{textAlign:"center",padding:"40px 0"}}><Car size={36} color={t.tx3}/><div style={{fontSize:14,fontWeight:600,color:t.tx2,marginTop:10}}>{loading?"Loading...":"No listings yet"}</div><div style={{fontSize:12,color:t.tx3,marginTop:4}}>Create your first listing to start selling</div></div>
     ):(
-      items.map(car=><div key={car.id} style={{...cs(t),marginBottom:12,overflow:"hidden"}}>
-        <div style={{display:"flex"}}>
+      items.map(car=><div key={car.id} style={{...cs(t),marginBottom:12,overflow:"hidden",cursor:"pointer"}}>
+        <div onClick={()=>nav(`/listing/${car.id}`)} style={{display:"flex"}}>
           <div style={{width:130,minHeight:120,flexShrink:0,position:"relative"}}><img src={car.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/><div style={{position:"absolute",top:8,left:8}}><SBadge status={car.status}/></div></div>
           <div style={{flex:1,padding:"12px 14px",display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
             <div><div style={{fontSize:14,fontWeight:600,color:t.tx}}>{car.year} {car.make} {car.model}</div><div style={{fontSize:12,color:t.tx2,marginTop:2}}>{car.km.toLocaleString()} km · {car.battery} · {car.soh}% SoH</div><div style={{fontSize:16,fontWeight:700,color:BC,marginTop:4}}>€{car.price.toLocaleString()}</div></div>
@@ -134,7 +147,7 @@ function ListingsPage({t,onBack,nav,user,session}){
           </div>
         </div>
         <div style={{display:"flex",borderTop:`1px solid ${t.bd}`}}>
-          {[{l:"Edit",ic:<Edit size={13} color={t.tx2}/>},{l:"Messages",ic:<Chat size={13} color={BC}/>,action:()=>nav("/messages")},{l:car.status==="paused"?"Activate":"Pause",ic:car.status==="paused"?<Chk size={13} color="#10b981"/>:<Clk size={13} color="#f59e0b"/>},{l:"Boost",ic:<TUp size={13} color={BC}/>},{l:"Delete",ic:<Trash size={13} color="#ef4444"/>}].map((a,i)=><button key={i} onClick={a.action||undefined} style={{flex:1,padding:"10px 0",background:"none",border:"none",borderRight:i<4?`1px solid ${t.bd}`:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:500,color:a.l==="Messages"?BC:t.tx2}}>{a.ic}{a.l}</button>)}
+          {[{l:"Edit",ic:<Edit size={13} color={t.tx2}/>,action:()=>nav(`/sell?edit=${car.id}`)},{l:"Messages",ic:<Chat size={13} color={BC}/>,action:()=>nav("/messages")},{l:car.status==="paused"?"Activate":"Pause",ic:car.status==="paused"?<Chk size={13} color="#10b981"/>:<Clk size={13} color="#f59e0b"/>,action:()=>togglePause(car)},{l:"Boost",ic:<TUp size={13} color={BC}/>},{l:"Delete",ic:<Trash size={13} color="#ef4444"/>,action:()=>deleteListing(car)}].map((a,i)=><button key={i} onClick={a.action||undefined} style={{flex:1,padding:"10px 0",background:"none",border:"none",borderRight:i<4?`1px solid ${t.bd}`:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:500,color:a.l==="Messages"||a.l==="Boost"?BC:a.l==="Delete"?"#ef4444":t.tx2}}>{a.ic}{a.l}</button>)}
         </div>
       </div>)
     )}
