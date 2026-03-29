@@ -366,7 +366,7 @@ export default function ListingDetailPage() {
       {/* Seller card */}
       <div style={{ ...cs(th), padding: 20 }}>
         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Seller</div>
-        <div onClick={() => navigate(`/search?seller=${car.seller_id}`)} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, cursor: "pointer" }}>
+        <div onClick={() => navigate(`/seller/${car.seller_id}`)} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, cursor: "pointer" }}>
           <div style={{ width: 44, height: 44, borderRadius: 12, background: GR, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 16 }}>
             {(car.contact_name || "?")[0].toUpperCase()}
           </div>
