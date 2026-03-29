@@ -224,8 +224,8 @@ export default function SellPage(){
     const listing = await sbInsert("listings", {
       seller_id: uid,
       make, model, variant, year: +year, mileage_km: +km,
-      condition: condition.toLowerCase().replace(/ /g,"_"),
-      exterior_color: color, interior_color: intColor, drivetrain: drive,
+      condition: condition ? condition.toLowerCase().replace(/ /g,"_").replace("certified_pre-owned","certified") : null,
+      exterior_color: color || null, interior_color: intColor || null, drivetrain: drive || null,
       vin: vin || null, first_registration: regDate || null,
       previous_owners: owners ? +owners : null,
       accident_free: accidentFree, service_history: serviceHistory || null,
