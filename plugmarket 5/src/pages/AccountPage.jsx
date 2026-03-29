@@ -231,13 +231,10 @@ function SecurityPage({t,onBack}){return <>
 
 function PaymentPage({t,onBack}){return <>
   <SubH title="Payment methods" t={t} onBack={onBack}/>
-  <div style={{padding:"16px 0"}}>
-    {[{type:"visa",last4:"4821",exp:"08/27",def:true},{type:"mastercard",last4:"3156",exp:"12/26",def:false}].map((m,i)=><div key={i} style={{...cs(t),padding:16,marginBottom:10,display:"flex",alignItems:"center",gap:14}}><div style={{width:48,height:32,borderRadius:6,background:t.sec,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:m.type==="visa"?"#1a1f71":"#eb001b",border:`1px solid ${t.bd}`}}>{m.type==="visa"?"VISA":"MC"}</div><div style={{flex:1}}><div style={{fontSize:13,fontWeight:500,color:t.tx}}>{m.type==="visa"?"Visa":"Mastercard"} •••• {m.last4}</div><div style={{fontSize:11,color:t.tx3,marginTop:2}}>Expires {m.exp}</div></div>{m.def&&<Badge label="Default" color={BC} bg="rgba(255,117,0,0.1)"/>}<button style={{background:"none",border:"none",cursor:"pointer",padding:4}}><Dots size={16} color={t.tx3}/></button></div>)}
-    <button style={{width:"100%",height:48,borderRadius:12,border:`2px dashed ${t.bd}`,background:"none",color:BC,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><PlusLn size={18} color={BC}/> Add payment method</button>
-    <div style={{...cs(t),padding:16,marginTop:14}}>
-      <div style={{fontSize:12,fontWeight:600,color:t.tx3,textTransform:"uppercase",letterSpacing:0.5,marginBottom:10}}>Billing history</div>
-      {[{desc:"Listing boost — Tesla Model 3 LR",date:"Mar 15, 2026",amount:"€9.99"},{desc:"Listing boost — BMW iX3",date:"Mar 8, 2026",amount:"€9.99"},{desc:"Premium plan — monthly",date:"Mar 1, 2026",amount:"€14.99"}].map((b,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:i<2?`1px solid ${t.bd}`:"none"}}><div><div style={{fontSize:13,fontWeight:500,color:t.tx}}>{b.desc}</div><div style={{fontSize:11,color:t.tx3,marginTop:2}}>{b.date}</div></div><span style={{fontSize:13,fontWeight:600,color:t.tx}}>{b.amount}</span></div>)}
-    </div>
+  <div style={{textAlign:"center",padding:"60px 0"}}>
+    <CC size={48} color={t.tx3}/>
+    <div style={{fontSize:16,fontWeight:600,color:t.tx,marginTop:16}}>Coming soon</div>
+    <div style={{fontSize:13,color:t.tx2,marginTop:6,lineHeight:1.6}}>Payment methods and billing will be available here once we integrate with Stripe.</div>
   </div>
 </>}
 
@@ -447,7 +444,7 @@ export default function AccountPage(){
       <Sect t={t} title="Account">
         <Row t={t} icon={<Usr size={18} color={t.tx2}/>} label="Edit profile" desc="Name, photo, location" onClick={()=>setPage("edit")}/>
         <Row t={t} icon={<Shld size={18} color={t.tx2}/>} label="Security" desc="Password, 2FA, sessions" onClick={()=>setPage("security")}/>
-        <Row t={t} icon={<CC size={18} color={t.tx2}/>} label="Payment methods" desc="Visa •••• 4821" onClick={()=>setPage("payment")}/>
+        <Row t={t} icon={<CC size={18} color={t.tx2}/>} label="Payment methods" desc="Coming soon" onClick={()=>setPage("payment")}/>
         <Row t={t} icon={<Globe size={18} color={t.tx2}/>} label="Language & region" desc="English · EUR · Romania" onClick={()=>setPage("language")}/>
       </Sect>
       <Sect t={t} title="Notifications">

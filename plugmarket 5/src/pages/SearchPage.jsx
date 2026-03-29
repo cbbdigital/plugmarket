@@ -151,7 +151,7 @@ export default function SearchPage() {
   const[showF,setShowF]=useState(false);
   const[favIds,setFavIds]=useState([]);
   const toggleFav=(id)=>setFavIds(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
-  const[allListings,setAllListings]=useState(SLS);
+  const[allListings,setAllListings]=useState([]);
   const[dbLoading,setDbLoading]=useState(true);
 
   const updateUrl=()=>{
@@ -185,7 +185,7 @@ export default function SearchPage() {
   const mods=make?MK[make]||[]:[];
   const COLORS=["Black","White","Silver","Gray","Blue","Red","Green","Yellow","Orange","Brown"];
   const filtered=useMemo(()=>{
-    let r=(allListings||SLS).filter(l=>{
+    let r=(allListings||[]).filter(l=>{
       if(make&&l.mk!==make)return false;if(model&&l.md!==model)return false;
       if(co&&l.co!==co)return false;if(cond&&l.cn!==cond)return false;
       if(dr&&l.dr!==dr)return false;if(pMin&&l.pr<+pMin)return false;
@@ -358,7 +358,9 @@ export default function SearchPage() {
       </div>
 
       {/* Results */}
-      {filtered.length===0?(
+      {dbLoading?(
+        <div style={{textAlign:"center",padding:"40px 0"}}><div style={{width:32,height:32,border:`3px solid ${BC}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style><div style={{fontSize:12,color:t.tx3,marginTop:12}}>Loading listings...</div></div>
+      ):filtered.length===0?(
         <div style={{textAlign:"center",padding:"40px 0"}}><Srch size={32} color={t.tx3}/><div style={{fontSize:14,fontWeight:600,color:t.tx2,marginTop:10}}>No matches</div><button onClick={clear} style={{marginTop:12,padding:"7px 16px",borderRadius:8,border:"none",background:BC,color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer"}}>Reset</button></div>
       ):(
         <div style={{display:"flex",flexDirection:"column",gap:10}}>{filtered.map(l=><SC key={l.id} l={l}/>)}</div>
