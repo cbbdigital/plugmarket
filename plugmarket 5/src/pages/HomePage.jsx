@@ -103,6 +103,8 @@ function useAuth() {
   return { session, token, user, save };
 }
 
+const FALLBACK_IMG = "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=480&h=300&fit=crop";
+
 /* ── Listing data hook — loads from Supabase, falls back to mock ── */
 function useListings() {
   const [listings, setListings] = useState([]);
