@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useNavigate } from "react-router-dom";
+import { useAuth } from "../lib/auth";
 import { BC, GR, cs } from "../styles/theme";
 
 // Icons
@@ -301,7 +302,16 @@ function TermsPage({t}){
 // ══ Main ══
 export default function AccountPage(){
   const { t, dark, setDark } = useOutletContext();
+  const { user, signOut } = useAuth();
+  const nav = useNavigate();
   const[page,setPage]=useState("home");
+
+  // If not logged in, redirect to login
+  if (!user) {
+    nav("/login");
+    return null;
+  }
+
   const[notifEmail,setNotifEmail]=useState(true);
   const[notifPush,setNotifPush]=useState(true);
   const[notifNewMsg,setNotifNewMsg]=useState(true);
@@ -372,7 +382,7 @@ export default function AccountPage(){
         <Row t={t} icon={<Chat size={18} color={t.tx2}/>} label="Contact support" desc="Get help from our team" onClick={()=>setPage("contact")}/>
         <Row t={t} icon={<File size={18} color={t.tx2}/>} label="Terms & Privacy" onClick={()=>setPage("terms")}/>
       </Sect>
-      <Sect t={t}><Row t={t} icon={<Out size={18} color="#ef4444"/>} label="Log out" danger onClick={()=>{}}/></Sect>
+      <Sect t={t}><Row t={t} icon={<Out size={18} color="#ef4444"/>} label="Log out" danger onClick={()=>{signOut();nav("/login")}}/></Sect>
       <div style={{textAlign:"center",padding:"16px 0 8px"}}><div style={{fontSize:11,color:t.tx3}}>PlugMarket.eu · v1.0.2</div></div>
     </>;
   };
