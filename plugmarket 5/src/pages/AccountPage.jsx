@@ -101,7 +101,7 @@ function ListingsPage({t,onBack,nav,user,session}){
           img:photoMap[r.id]||"https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=400&h=260&fit=crop",
           status:r.status||"active",views:r.view_count||0,inquiries:r.inquiry_count||0,
           saved:r.save_count||0,days:Math.max(0,Math.round((Date.now()-new Date(r.created_at).getTime())/86400000)),
-          soh:r.soh_percent||100,battery:r.battery_kwh?`${r.battery_kwh} kWh`:"—",
+          soh:r.state_of_health_pct||100,battery:r.battery_capacity_kwh?`${r.battery_capacity_kwh} kWh`:"—",
         })));
       }
       setLoading(false);
