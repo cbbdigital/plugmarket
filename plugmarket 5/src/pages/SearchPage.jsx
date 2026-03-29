@@ -1,6 +1,11 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useOutletContext, useNavigate, useSearchParams } from "react-router-dom";
 
+// ── Supabase REST client ──
+const SB_URL = import.meta.env.VITE_SUPABASE_URL || "https://tmftxqwqwceuiydleuag.supabase.co";
+const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtZnR4cXdxd2NldWl5ZGxldWFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDA2MzEsImV4cCI6MjA5MDI3NjYzMX0.k5TOln3e4M8PxH2tH22-6BsFimH84InVfNOWP8riaCM";
+async function sbGet(table,params){try{const r=await fetch(`${SB_URL}/rest/v1/${table}?${params}`,{headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`}});if(!r.ok)return[];return await r.json()}catch{return[]}}
+
 /* ── Icons ── */
 const I=({d,size=16,color="currentColor"})=><svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{d}</svg>;
 const Bolt=p=><I {...p} d={<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>}/>;
@@ -146,7 +151,30 @@ export default function SearchPage() {
   const[showF,setShowF]=useState(false);
   const[favIds,setFavIds]=useState([]);
   const toggleFav=(id)=>setFavIds(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
-  const allListings=SLS;
+  const[allListings,setAllListings]=useState(SLS);
+  const[dbLoading,setDbLoading]=useState(true);
+
+  useEffect(()=>{
+    (async()=>{
+      const rows=await sbGet("listings","status=eq.active&order=created_at.desc");
+      if(rows.length>0){
+        const ids=rows.map(r=>r.id);
+        const photos=await sbGet("listing_photos",`listing_id=in.(${ids.join(",")})&order=position.asc`);
+        const photoMap={};
+        photos.forEach(p=>{if(!photoMap[p.listing_id])photoMap[p.listing_id]=[];photoMap[p.listing_id].push(p.url)});
+        const FALLBACK="https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=480&h=300&fit=crop";
+        setAllListings(rows.map(r=>({
+          id:r.id,mk:r.make,md:r.model,vr:r.variant||"",yr:r.year,km:r.mileage_km,pr:r.price_eur,
+          bat:r.battery_capacity_kwh||0,rng:r.range_real_km||0,dc:r.dc_charge_max_kw||0,
+          dr:(r.drivetrain||"").toUpperCase(),cn:r.condition==="certified_pre_owned"?"Certified":r.condition==="new"?"New":"Used",
+          co:r.country||"",ct:r.city||"",hp:r.state_of_health_pct||100,
+          ft:r.is_boosted||false,dy:Math.max(0,Math.round((Date.now()-new Date(r.created_at).getTime())/86400000)),
+          imgs:photoMap[r.id]||[FALLBACK],
+        })));
+      }
+      setDbLoading(false);
+    })();
+  },[]);
   const mods=make?MK[make]||[]:[];
   const COLORS=["Black","White","Silver","Gray","Blue","Red","Green","Yellow","Orange","Brown"];
   const filtered=useMemo(()=>{
