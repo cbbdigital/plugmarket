@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useOutletContext, useNavigate } from "react-router-dom";
+import { useOutletContext, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import { BC, GR, cs } from "../styles/theme";
 
@@ -42,6 +42,27 @@ async function sbUploadPhoto(userId, listingId, file, position, token) {
   });
   if (!uploadRes.ok) { console.error("Upload error:", await uploadRes.text()); return null; }
   return `${SB_URL}/storage/v1/object/public/listing-photos/${path}`;
+}
+
+async function sbGet(table, params, token) {
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {
+      headers: { "apikey": SB_KEY, "Authorization": `Bearer ${token || SB_KEY}` }
+    });
+    if (!r.ok) return [];
+    return await r.json();
+  } catch { return []; }
+}
+
+async function sbUpdate(table, match, data, token) {
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/${table}?${match}`, {
+      method: "PATCH", headers: sbHeaders(token), body: JSON.stringify(data),
+    });
+    if (!r.ok) { console.error("Update error:", await r.text()); return null; }
+    const res = await r.json();
+    return res?.[0] || res;
+  } catch (e) { console.error("Update failed:", e); return null; }
 }
 
 // ── Data ──
@@ -159,10 +180,13 @@ export default function SellPage(){
   const { t, dark: d } = useOutletContext();
   const { user, session } = useAuth();
   const nav = useNavigate();
+  const [sp] = useSearchParams();
+  const editId = sp.get("edit");
   const [narrow,setNarrow]=useState(()=>window.innerWidth<480);
   useEffect(()=>{const h=()=>setNarrow(window.innerWidth<480);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h)},[]);
   const g2=narrow?"1fr":"1fr 1fr";
   const [step,setStep]=useState(1);
+  const [editLoading,setEditLoading]=useState(!!editId);
 
   // Step 1
   const [make,setMake]=useState("");
@@ -216,20 +240,76 @@ export default function SellPage(){
   useEffect(() => { if (!user) nav("/login"); }, [user, nav]);
   if (!user) return null;
 
+  // Load existing listing for editing
+  useEffect(() => {
+    if (!editId || !session?.access_token) return;
+    (async () => {
+      setEditLoading(true);
+      const rows = await sbGet("listings", `id=eq.${editId}&select=*`, session.access_token);
+      if (rows.length > 0) {
+        const c = rows[0];
+        // Reverse-map enums back to display values
+        const condRev = {new:"New",used:"Used",certified_pre_owned:"Certified Pre-Owned"};
+        const driveRev = {rwd:"RWD",awd:"AWD",fwd:"FWD"};
+        const portRev = {ccs2:"CCS2",type2:"Type 2",chademo:"CHAdeMO",ccs2_type2:"CCS2 / Type 2"};
+
+        setMake(c.make || "");
+        setModel(c.model || "");
+        setVariant(c.variant || "");
+        setYear(c.year ? String(c.year) : "");
+        setKm(c.mileage_km ? String(c.mileage_km) : "");
+        setCondition(condRev[c.condition] || c.condition || "");
+        setColor(c.exterior_color || "");
+        setIntColor(c.interior_color || "");
+        setDrive(driveRev[c.drivetrain] || c.drivetrain || "");
+        setVin(c.vin || "");
+        setRegDate(c.first_registration || "");
+        setOwners(c.previous_owners != null ? String(c.previous_owners) : "");
+        setAccidentFree(c.accident_free !== false);
+        setServiceHistory(c.service_history || "");
+
+        setBattery(c.battery_capacity_kwh ? String(c.battery_capacity_kwh) : "");
+        setUsable(c.usable_capacity_kwh ? String(c.usable_capacity_kwh) : "");
+        setSoh(c.state_of_health_pct ? String(c.state_of_health_pct) : "");
+        setRangeReal(c.range_real_km ? String(c.range_real_km) : "");
+        setRangeWinter(c.range_winter_km ? String(c.range_winter_km) : "");
+        setDcCharge(c.dc_charge_max_kw ? String(c.dc_charge_max_kw) : "");
+        setAcCharge(c.ac_charge_kw ? String(c.ac_charge_kw) : "");
+        setPort(portRev[c.charge_port] || c.charge_port || "");
+        setPowerKw(c.power_kw ? String(c.power_kw) : "");
+
+        setPrice(c.price_eur ? String(c.price_eur) : "");
+        setNegotiable(c.negotiable !== false);
+        setVatDeduct(c.vat_deductible === true);
+        setDescription(c.description || "");
+
+        setSellerName(c.contact_name || "");
+        setSellerType(c.seller_type || "private");
+        setPhone(c.contact_phone || "");
+        setEmail(c.contact_email || "");
+        setCity(c.city || "");
+        setCountry(c.country || "");
+
+        // Load existing photos as URLs
+        const ph = await sbGet("listing_photos", `listing_id=eq.${editId}&order=position.asc`, session.access_token);
+        if (ph.length > 0) setPhotos(ph.map(p => p.url));
+      }
+      setEditLoading(false);
+    })();
+  }, [editId, session?.access_token]);
+
   const publishListing = async () => {
     setPublishing(true);
     const token = session?.access_token;
     const uid = user?.id;
     if (!token || !uid) { setPublishing(false); alert("Session expired. Please sign in again."); nav("/login"); return; }
 
-    // 1. Insert listing
     // Map form values to Supabase enum values
     const condMap = {"New":"new","Used":"used","Certified Pre-Owned":"certified_pre_owned"};
     const driveMap = {"RWD":"rwd","AWD":"awd","FWD":"fwd"};
     const portMap = {"CCS2":"ccs2","Type 2":"type2","CHAdeMO":"chademo","CCS2 / Type 2":"ccs2_type2"};
 
-    const listing = await sbInsert("listings", {
-      seller_id: uid,
+    const data = {
       make, model, variant: variant || null, year: +year, mileage_km: +km,
       condition: condMap[condition] || null,
       exterior_color: color || null, interior_color: intColor || null, drivetrain: driveMap[drive] || null,
@@ -246,17 +326,43 @@ export default function SellPage(){
       contact_name: sellerName || null, contact_phone: phone || null, contact_email: email || null, seller_type: sellerType,
       city: city || null, country: country || null,
       status: "active",
-    }, token);
+    };
 
-    if (!listing?.id) { setPublishing(false); alert("Failed to create listing. Please try again."); return; }
+    let listingId;
 
-    // 2. Upload photos to Supabase Storage
-    for (let i = 0; i < photos.length; i++) {
-      const photoUrl = await sbUploadPhoto(uid, listing.id, photos[i], i, token);
-      if (photoUrl) {
-        await sbInsert("listing_photos", {
-          listing_id: listing.id, url: photoUrl, position: i,
-        }, token);
+    if (editId) {
+      // UPDATE existing listing
+      const updated = await sbUpdate("listings", `id=eq.${editId}`, data, token);
+      if (!updated) { setPublishing(false); alert("Failed to update listing."); return; }
+      listingId = editId;
+
+      // Handle photos: find new photos (base64) that need uploading
+      const newPhotos = photos.filter(p => p.startsWith("data:"));
+      const existingPhotos = photos.filter(p => !p.startsWith("data:"));
+
+      if (newPhotos.length > 0) {
+        // Upload new photos starting after existing positions
+        const startPos = existingPhotos.length;
+        for (let i = 0; i < newPhotos.length; i++) {
+          const photoUrl = await sbUploadPhoto(uid, listingId, newPhotos[i], startPos + i, token);
+          if (photoUrl) {
+            await sbInsert("listing_photos", { listing_id: listingId, url: photoUrl, position: startPos + i }, token);
+          }
+        }
+      }
+    } else {
+      // CREATE new listing
+      data.seller_id = uid;
+      const listing = await sbInsert("listings", data, token);
+      if (!listing?.id) { setPublishing(false); alert("Failed to create listing. Please try again."); return; }
+      listingId = listing.id;
+
+      // Upload all photos
+      for (let i = 0; i < photos.length; i++) {
+        const photoUrl = await sbUploadPhoto(uid, listingId, photos[i], i, token);
+        if (photoUrl) {
+          await sbInsert("listing_photos", { listing_id: listingId, url: photoUrl, position: i }, token);
+        }
       }
     }
 
@@ -333,13 +439,24 @@ export default function SellPage(){
 
   const cardS = {background:t.card,borderRadius:16,border:`1px solid ${t.bd}`,boxShadow:`0 2px 8px ${t.sh}`,padding:20,marginBottom:20};
 
+  // ── Loading edit data ──
+  if(editLoading){
+    return(
+      <div style={{padding:"80px 0",textAlign:"center"}}>
+        <div style={{width:36,height:36,border:`3px solid ${BC}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto"}}/>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        <p style={{marginTop:16,fontSize:13,color:t.tx2}}>Loading listing data...</p>
+      </div>
+    );
+  }
+
   // ── Success screen ──
   if(submitted){
     return(
       <div style={{textAlign:"center"}}>
         <div style={{padding:"70px 0"}}>
           <div style={{width:68,height:68,borderRadius:"50%",background:"rgba(16,185,129,0.15)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto"}}><CheckIcon size={30} color="#059669"/></div>
-          <h2 style={{fontSize:22,fontWeight:700,marginTop:18}}>Your listing is live!</h2>
+          <h2 style={{fontSize:22,fontWeight:700,marginTop:18}}>{editId ? "Listing updated!" : "Your listing is live!"}</h2>
           <p style={{fontSize:13,color:t.tx2,marginTop:6,lineHeight:1.6}}>
             Your {make} {model} has been published successfully.<br/>
             You'll receive notifications when buyers contact you.
@@ -365,7 +482,7 @@ export default function SellPage(){
     <>
         {/* HEADER */}
         <div style={{padding:"24px 0 6px"}}>
-          <h1 style={{fontSize:22,fontWeight:700,margin:0}}>Sell your EV</h1>
+          <h1 style={{fontSize:22,fontWeight:700,margin:0}}>{editId ? "Edit listing" : "Sell your EV"}</h1>
           <p style={{fontSize:13,color:t.tx2,margin:"4px 0 0"}}>List your electric vehicle in minutes. Reach thousands of buyers across Europe.</p>
         </div>
 
@@ -642,7 +759,7 @@ export default function SellPage(){
             <button onClick={()=>{if(canNext())setStep(step+1)}} style={{padding:"10px 22px",borderRadius:10,border:"none",background:canNext()?GR:"rgba(128,128,128,0.15)",color:canNext()?"#fff":"#9ca3af",fontSize:13,fontWeight:600,cursor:canNext()?"pointer":"default",display:"flex",alignItems:"center",gap:6,boxShadow:canNext()?"0 2px 8px rgba(255,117,0,0.3)":"none"}}>Next <ChevR size={14} color={canNext()?"#fff":"#9ca3af"}/></button>
           ):(
             <button onClick={publishListing} disabled={publishing} style={{padding:"12px 24px",borderRadius:12,border:"none",background:publishing?"rgba(128,128,128,0.3)":"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:14,fontWeight:600,cursor:publishing?"default":"pointer",display:"flex",alignItems:"center",gap:8,boxShadow:publishing?"none":"0 4px 14px rgba(16,185,129,0.3)",opacity:publishing?0.7:1}}>
-              <CheckIcon size={16} color="#fff"/> {publishing?"Publishing...":"Publish listing"}
+              <CheckIcon size={16} color="#fff"/> {publishing ? (editId ? "Updating..." : "Publishing...") : (editId ? "Update listing" : "Publish listing")}
             </button>
           )}
         </div>
