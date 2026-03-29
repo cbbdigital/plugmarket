@@ -286,12 +286,12 @@ function ImgSlider({imgs,height,children,borderRadius=0}){
   );
 }
 /* ── Promoted Card ── */
-function PCard({c,favIds,toggleFav,t}){
+function PCard({c,favIds,toggleFav,t,onPress}){
   const fav=favIds.includes(c.id);
   const fl=gf(c.co);
   const bc={Sponsored:BG,Premium:"linear-gradient(135deg,#f59e0b,#d97706)","Top Deal":"linear-gradient(135deg,#10b981,#059669)"}[c.bg]||BG;
   return(
-    <div style={{minWidth:270,flex:"0 0 270px",...cs(t),borderRadius:16,overflow:"hidden",cursor:"pointer"}}>
+    <div onClick={()=>onPress&&onPress(c.id)} style={{minWidth:270,flex:"0 0 270px",...cs(t),borderRadius:16,overflow:"hidden",cursor:"pointer"}}>
       <ImgSlider imgs={c.imgs} height={160}>
         <div style={{position:"absolute",top:8,left:8,background:bc,color:"#fff",fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:6,textTransform:"uppercase"}}>{c.bg}</div>
         <button onClick={e=>{e.stopPropagation();toggleFav(c.id)}} style={{position:"absolute",top:8,right:8,width:30,height:30,borderRadius:"50%",border:"none",background:"rgba(0,0,0,0.35)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><Hrt size={14} filled={fav} color={fav?"#f43f5e":"#fff"}/></button>
@@ -311,10 +311,10 @@ function PCard({c,favIds,toggleFav,t}){
   );
 }
 /* ── Recent Card ── */
-function RCard({c,t}){
+function RCard({c,t,onPress}){
   const fl=gf(c.co);
   return(
-    <div style={{minWidth:210,flex:"0 0 210px",...cs(t),borderRadius:14,overflow:"hidden",cursor:"pointer"}}>
+    <div onClick={()=>onPress&&onPress(c.id)} style={{minWidth:210,flex:"0 0 210px",...cs(t),borderRadius:14,overflow:"hidden",cursor:"pointer"}}>
       <ImgSlider imgs={c.imgs} height={120}/>
       <div style={{padding:"10px 12px"}}>
         <div style={{fontSize:13,fontWeight:600,color:t.tx}}>{c.mk} {c.md}</div>
@@ -644,7 +644,7 @@ export default function HomePage() {
           <button onClick={()=>navigate("/search")} style={{display:"flex",alignItems:"center",gap:3,background:"none",border:"none",color:BC,fontSize:12,fontWeight:600,cursor:"pointer"}}>View all<CR size={13} color={BC}/></button>
         </div>
         <div style={{display:"flex",gap:14,overflowX:"auto",paddingBottom:6,maskImage:"linear-gradient(to right,black 95%,transparent 100%)",WebkitMaskImage:"linear-gradient(to right,black 95%,transparent 100%)"}}>
-          {featuredListings.map(c=><PCard key={c.id} c={c} favIds={favIds} toggleFav={toggleFav} t={t}/>)}
+          {featuredListings.map(c=><PCard key={c.id} c={c} favIds={favIds} toggleFav={toggleFav} t={t} onPress={(id)=>navigate(`/listing/${id}`)}/>)}
         </div>
       </div>
       <div style={{padding:"0 0 20px"}}>
@@ -653,7 +653,7 @@ export default function HomePage() {
           <button onClick={()=>navigate("/search")} style={{display:"flex",alignItems:"center",gap:3,background:"none",border:"none",color:BC,fontSize:12,fontWeight:600,cursor:"pointer"}}>View all<CR size={13} color={BC}/></button>
         </div>
         <div style={{display:"flex",gap:12,overflowX:"auto",paddingBottom:6,maskImage:"linear-gradient(to right,black 95%,transparent 100%)",WebkitMaskImage:"linear-gradient(to right,black 95%,transparent 100%)"}}>
-          {recentListings.map(c=><RCard key={c.id} c={c} t={t}/>)}
+          {recentListings.map(c=><RCard key={c.id} c={c} t={t} onPress={(id)=>navigate(`/listing/${id}`)}/>)}
         </div>
       </div>
 

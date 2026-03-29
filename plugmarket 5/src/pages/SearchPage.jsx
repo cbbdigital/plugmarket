@@ -199,7 +199,7 @@ export default function SearchPage() {
     const fav=favIds.includes(l.id);
     const dt=l.dy===0?"Just listed":`${l.dy}d ago`;
     return(
-      <div style={{...cs(t),borderRadius:14,padding:12,display:"flex",gap:12}}>
+      <div onClick={()=>navigate(`/listing/${l.id}`)} style={{...cs(t),borderRadius:14,padding:12,display:"flex",gap:12,cursor:"pointer"}}>
         <div style={{width:160,minWidth:160,height:140,borderRadius:10,overflow:"hidden",flexShrink:0}}>
           <ImgSlider imgs={l.imgs} height={140} borderRadius={10}>
             {l.ft&&<div style={{position:"absolute",top:6,left:6,background:BG,color:"#fff",fontSize:8,fontWeight:700,padding:"2px 6px",borderRadius:4}}>FEATURED</div>}
