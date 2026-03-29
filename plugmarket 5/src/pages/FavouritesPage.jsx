@@ -236,7 +236,8 @@ function FavCard({l,toggleFav,t}){
 export default function FavouritesPage() {
   const { t } = useOutletContext();
   const navigate = useNavigate();
-  const [favIds, setFavIds] = useState([]);
+  const [favIds, setFavIds] = useState(()=>{try{return JSON.parse(localStorage.getItem("pm_favs")||"[]")}catch{return[]}});
+  useEffect(()=>{try{localStorage.setItem("pm_favs",JSON.stringify(favIds))}catch{}},[favIds]);
   const auth = useAuth();
 
   useEffect(() => {

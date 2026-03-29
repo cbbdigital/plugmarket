@@ -558,7 +558,8 @@ function EVFinder({goSearch,t}){
 export default function HomePage() {
   const { t, dark } = useOutletContext();
   const navigate = useNavigate();
-  const [favIds, setFavIds] = useState([]);
+  const [favIds, setFavIds] = useState(()=>{try{return JSON.parse(localStorage.getItem("pm_favs")||"[]")}catch{return[]}});
+  useEffect(()=>{try{localStorage.setItem("pm_favs",JSON.stringify(favIds))}catch{}},[favIds]);
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
   const [co, setCo] = useState("");
@@ -619,7 +620,7 @@ export default function HomePage() {
                 <div style={{position:"relative"}}><input type="number" placeholder="Min battery" defaultValue="" style={{...is(t),paddingRight:34}}/><span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",fontSize:11,color:t.tx3}}>kWh</span></div>
               </div>
             </div>
-            <button onClick={()=>navigate("/search")} style={{width:"100%",height:44,borderRadius:12,border:"none",background:BG,color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:2}}>
+            <button onClick={()=>{const p=new URLSearchParams();if(make)p.set("make",make);if(model)p.set("model",model);if(co)p.set("co",co);if(yMin)p.set("yMin",yMin);if(pMin)p.set("pMin",pMin);if(pMax)p.set("pMax",pMax);if(rngMin)p.set("rMin",rngMin);navigate(`/search?${p.toString()}`)}} style={{width:"100%",height:44,borderRadius:12,border:"none",background:BG,color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:2}}>
               <Srch size={17} color="#fff"/>Search {allListings.length} EVs
             </button>
           </div>
