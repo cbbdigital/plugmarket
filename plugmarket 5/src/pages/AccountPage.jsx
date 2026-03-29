@@ -67,12 +67,12 @@ const REVIEWS=[
 function Toggle({value,onChange}){return <div onClick={()=>onChange(!value)} style={{width:44,height:24,borderRadius:12,background:value?BC:"rgba(128,128,128,0.2)",cursor:"pointer",position:"relative",transition:"background 0.2s",flexShrink:0}}><div style={{width:20,height:20,borderRadius:10,background:"#fff",position:"absolute",top:2,left:value?22:2,transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.15)"}}/></div>}
 function Badge({label,color,bg}){return <span style={{fontSize:10,fontWeight:600,color,background:bg,padding:"3px 8px",borderRadius:6}}>{label}</span>}
 function SBadge({status}){const m={active:{l:"Active",c:"#10b981",b:"rgba(16,185,129,0.1)"},paused:{l:"Paused",c:"#f59e0b",b:"rgba(245,158,11,0.1)"}};const s=m[status]||m.active;return <Badge label={s.l} color={s.c} bg={s.b}/>}
-function Row({icon,label,desc,t,onClick,right,danger}){return <div onClick={onClick} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 0",borderBottom:`1px solid ${t.dv}`,cursor:onClick?"pointer":"default"}}><div style={{width:36,height:36,borderRadius:10,background:danger?"rgba(239,68,68,0.08)":t.card2,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{icon}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:danger?"#ef4444":t.tx}}>{label}</div>{desc&&<div style={{fontSize:11,color:t.tx3,marginTop:1}}>{desc}</div>}</div>{right||(onClick&&<ChR size={16} color={t.tx3}/>)}</div>}
+function Row({icon,label,desc,t,onClick,right,danger}){return <div onClick={onClick} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 0",borderBottom:`1px solid ${t.bd}`,cursor:onClick?"pointer":"default"}}><div style={{width:36,height:36,borderRadius:10,background:danger?"rgba(239,68,68,0.08)":t.sec,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{icon}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:danger?"#ef4444":t.tx}}>{label}</div>{desc&&<div style={{fontSize:11,color:t.tx3,marginTop:1}}>{desc}</div>}</div>{right||(onClick&&<ChR size={16} color={t.tx3}/>)}</div>}
 function Sect({title,children,t}){return <div style={{...cs(t),padding:"4px 18px",marginBottom:14}}>{title&&<div style={{fontSize:12,fontWeight:600,color:t.tx3,textTransform:"uppercase",letterSpacing:0.5,padding:"14px 0 4px"}}>{title}</div>}{children}</div>}
 function SubH({title,t}){return <div style={{padding:"14px 0 10px"}}><span style={{fontSize:17,fontWeight:700}}>{title}</span></div>}
 
 // ── Sub-pages ──
-function ListingsPage({t,onBack}){
+function ListingsPage({t,onBack,nav}){
   const[filter,setFilter]=useState("all");
   const items=filter==="all"?LISTINGS:LISTINGS.filter(l=>l.status===filter);
   const tv=LISTINGS.reduce((a,l)=>a+l.views,0);
@@ -93,11 +93,11 @@ function ListingsPage({t,onBack}){
           <div style={{display:"flex",gap:12,fontSize:11,color:t.tx3,marginTop:6}}><span style={{display:"flex",alignItems:"center",gap:3}}><Eye size={12} color={t.tx3}/>{car.views}</span><span style={{display:"flex",alignItems:"center",gap:3}}><Chat size={12} color={t.tx3}/>{car.inquiries}</span><span style={{display:"flex",alignItems:"center",gap:3}}><Hrt size={12} color={t.tx3}/>{car.saved}</span><span style={{display:"flex",alignItems:"center",gap:3}}><Clk size={12} color={t.tx3}/>{car.days}d</span></div>
         </div>
       </div>
-      <div style={{display:"flex",borderTop:`1px solid ${t.dv}`}}>
-        {[{l:"Edit",ic:<Edit size={13} color={t.tx2}/>},{l:car.status==="paused"?"Activate":"Pause",ic:car.status==="paused"?<Chk size={13} color="#10b981"/>:<Clk size={13} color="#f59e0b"/>},{l:"Boost",ic:<TUp size={13} color={BC}/>},{l:"Delete",ic:<Trash size={13} color="#ef4444"/>}].map((a,i)=><button key={i} style={{flex:1,padding:"10px 0",background:"none",border:"none",borderRight:i<3?`1px solid ${t.dv}`:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:500,color:t.tx2}}>{a.ic}{a.l}</button>)}
+      <div style={{display:"flex",borderTop:`1px solid ${t.bd}`}}>
+        {[{l:"Edit",ic:<Edit size={13} color={t.tx2}/>},{l:"Messages",ic:<Chat size={13} color={BC}/>,action:()=>nav("/messages")},{l:car.status==="paused"?"Activate":"Pause",ic:car.status==="paused"?<Chk size={13} color="#10b981"/>:<Clk size={13} color="#f59e0b"/>},{l:"Boost",ic:<TUp size={13} color={BC}/>},{l:"Delete",ic:<Trash size={13} color="#ef4444"/>}].map((a,i)=><button key={i} onClick={a.action||undefined} style={{flex:1,padding:"10px 0",background:"none",border:"none",borderRight:i<4?`1px solid ${t.bd}`:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:500,color:a.l==="Messages"?BC:t.tx2}}>{a.ic}{a.l}</button>)}
       </div>
     </div>)}
-    <button style={{width:"100%",height:48,borderRadius:12,border:`2px dashed ${t.bd}`,background:"none",color:BC,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:8}}><PlusLn size={18} color={BC}/> Sell another EV</button>
+    <button onClick={()=>nav("/sell")} style={{width:"100%",height:48,borderRadius:12,border:`2px dashed ${t.bd}`,background:"none",color:BC,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:8}}><PlusLn size={18} color={BC}/> Sell another EV</button>
   </>;
 }
 
@@ -118,8 +118,8 @@ function ReviewsPage({t,onBack}){
   const dist=[5,4,3,2,1].map(n=>({n,c:REVIEWS.filter(r=>r.rating===n).length}));
   return <>
     <SubH title="Reviews" t={t} onBack={onBack}/>
-    <div style={{...cs(t),padding:20,margin:"16px 0 14px"}}><div style={{display:"flex",alignItems:"center",gap:20}}><div style={{textAlign:"center"}}><div style={{fontSize:40,fontWeight:800,color:t.tx}}>{avg}</div><div style={{display:"flex",gap:2,justifyContent:"center",marginTop:4}}>{[1,2,3,4,5].map(i=><Star key={i} size={14} color="#f59e0b" filled={i<=Math.round(avg)}/>)}</div><div style={{fontSize:11,color:t.tx3,marginTop:4}}>{REVIEWS.length} reviews</div></div><div style={{flex:1}}>{dist.map(dd=><div key={dd.n} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}><span style={{fontSize:11,color:t.tx3,width:10,textAlign:"right"}}>{dd.n}</span><Star size={10} color="#f59e0b" filled/><div style={{flex:1,height:6,borderRadius:3,background:t.card2,overflow:"hidden"}}><div style={{width:`${REVIEWS.length?(dd.c/REVIEWS.length)*100:0}%`,height:"100%",borderRadius:3,background:"#f59e0b"}}/></div><span style={{fontSize:10,color:t.tx3,width:14,textAlign:"right"}}>{dd.c}</span></div>)}</div></div></div>
-    {REVIEWS.map(r=><div key={r.id} style={{...cs(t),padding:16,marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:38,height:38,borderRadius:"50%",background:t.card2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:t.tx2}}>{r.name.split(" ").map(w=>w[0]).join("")}</div><div><div style={{fontSize:13,fontWeight:600,color:t.tx}}>{r.name}</div><div style={{fontSize:11,color:t.tx3}}>{r.city} · {r.date}</div></div></div><div style={{display:"flex",gap:2}}>{[1,2,3,4,5].map(i=><Star key={i} size={12} color="#f59e0b" filled={i<=r.rating}/>)}</div></div><p style={{fontSize:13,color:t.tx2,lineHeight:1.6,margin:"10px 0 0"}}>{r.text}</p><div style={{fontSize:11,color:t.tx3,marginTop:8,display:"flex",alignItems:"center",gap:4}}><Car size={12} color={t.tx3}/> {r.vehicle}</div></div>)}
+    <div style={{...cs(t),padding:20,margin:"16px 0 14px"}}><div style={{display:"flex",alignItems:"center",gap:20}}><div style={{textAlign:"center"}}><div style={{fontSize:40,fontWeight:800,color:t.tx}}>{avg}</div><div style={{display:"flex",gap:2,justifyContent:"center",marginTop:4}}>{[1,2,3,4,5].map(i=><Star key={i} size={14} color="#f59e0b" filled={i<=Math.round(avg)}/>)}</div><div style={{fontSize:11,color:t.tx3,marginTop:4}}>{REVIEWS.length} reviews</div></div><div style={{flex:1}}>{dist.map(dd=><div key={dd.n} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}><span style={{fontSize:11,color:t.tx3,width:10,textAlign:"right"}}>{dd.n}</span><Star size={10} color="#f59e0b" filled/><div style={{flex:1,height:6,borderRadius:3,background:t.sec,overflow:"hidden"}}><div style={{width:`${REVIEWS.length?(dd.c/REVIEWS.length)*100:0}%`,height:"100%",borderRadius:3,background:"#f59e0b"}}/></div><span style={{fontSize:10,color:t.tx3,width:14,textAlign:"right"}}>{dd.c}</span></div>)}</div></div></div>
+    {REVIEWS.map(r=><div key={r.id} style={{...cs(t),padding:16,marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:38,height:38,borderRadius:"50%",background:t.sec,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:t.tx2}}>{r.name.split(" ").map(w=>w[0]).join("")}</div><div><div style={{fontSize:13,fontWeight:600,color:t.tx}}>{r.name}</div><div style={{fontSize:11,color:t.tx3}}>{r.city} · {r.date}</div></div></div><div style={{display:"flex",gap:2}}>{[1,2,3,4,5].map(i=><Star key={i} size={12} color="#f59e0b" filled={i<=r.rating}/>)}</div></div><p style={{fontSize:13,color:t.tx2,lineHeight:1.6,margin:"10px 0 0"}}>{r.text}</p><div style={{fontSize:11,color:t.tx3,marginTop:8,display:"flex",alignItems:"center",gap:4}}><Car size={12} color={t.tx3}/> {r.vehicle}</div></div>)}
   </>;
 }
 
@@ -131,7 +131,7 @@ function EditPage({t,onBack}){
     <div style={{display:"flex",justifyContent:"center",padding:"28px 0 20px"}}><div style={{position:"relative"}}><div style={{width:88,height:88,borderRadius:"50%",background:GR,display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,fontWeight:700,color:"#fff"}}>CM</div><div style={{position:"absolute",bottom:0,right:0,width:30,height:30,borderRadius:"50%",background:t.card,border:`2px solid ${t.bg}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",boxShadow:"0 2px 6px rgba(0,0,0,0.15)"}}><Cam size={14} color={t.tx2}/></div></div></div>
     <div style={{...cs(t),padding:18,marginBottom:14}}><div style={{display:"flex",flexDirection:"column",gap:14}}>
       <div><label style={{fontSize:12,fontWeight:600,color:t.tx2,marginBottom:4,display:"block"}}>Full name</label><input value={name} onChange={e=>setName(e.target.value)} style={inp}/></div>
-      <div><label style={{fontSize:12,fontWeight:600,color:t.tx2,marginBottom:4,display:"block"}}>Email</label><div style={{...inp,display:"flex",alignItems:"center",color:t.tx3,background:t.card2}}>ciprian@plugmarket.eu <span style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:4}}><Chk size={13} color="#10b981"/><span style={{fontSize:11,color:"#10b981"}}>Verified</span></span></div></div>
+      <div><label style={{fontSize:12,fontWeight:600,color:t.tx2,marginBottom:4,display:"block"}}>Email</label><div style={{...inp,display:"flex",alignItems:"center",color:t.tx3,background:t.sec}}>ciprian@plugmarket.eu <span style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:4}}><Chk size={13} color="#10b981"/><span style={{fontSize:11,color:"#10b981"}}>Verified</span></span></div></div>
       <div><label style={{fontSize:12,fontWeight:600,color:t.tx2,marginBottom:4,display:"block"}}>Phone</label><input value={phone} onChange={e=>setPhone(e.target.value)} style={inp}/></div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
         <div><label style={{fontSize:12,fontWeight:600,color:t.tx2,marginBottom:4,display:"block"}}>City</label><input value={city} onChange={e=>setCity(e.target.value)} style={inp}/></div>
@@ -149,7 +149,7 @@ function SecurityPage({t,onBack}){return <>
     <Sect t={t} title="Password"><Row t={t} icon={<Key size={18} color={BC}/>} label="Change password" desc="Last changed 3 months ago" onClick={()=>{}}/></Sect>
     <Sect t={t} title="Two-factor authentication"><Row t={t} icon={<Shld size={18} color="#10b981"/>} label="2FA enabled" desc="Authenticator app" right={<Badge label="Active" color="#10b981" bg="rgba(16,185,129,0.1)"/>}/></Sect>
     <Sect t={t} title="Active sessions">
-      {[{dev:"Chrome on macOS",loc:"Satu Mare, Romania",time:"Current session",active:true},{dev:"PlugMarket App on iPhone",loc:"Satu Mare, Romania",time:"2 hours ago",active:false}].map((s,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 0",borderBottom:`1px solid ${t.dv}`}}><div><div style={{fontSize:13,fontWeight:500,color:t.tx}}>{s.dev}</div><div style={{fontSize:11,color:t.tx3,marginTop:2}}>{s.loc} · {s.time}</div></div>{s.active?<Badge label="Active" color="#10b981" bg="rgba(16,185,129,0.1)"/>:<button style={{fontSize:11,color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Revoke</button>}</div>)}
+      {[{dev:"Chrome on macOS",loc:"Satu Mare, Romania",time:"Current session",active:true},{dev:"PlugMarket App on iPhone",loc:"Satu Mare, Romania",time:"2 hours ago",active:false}].map((s,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 0",borderBottom:`1px solid ${t.bd}`}}><div><div style={{fontSize:13,fontWeight:500,color:t.tx}}>{s.dev}</div><div style={{fontSize:11,color:t.tx3,marginTop:2}}>{s.loc} · {s.time}</div></div>{s.active?<Badge label="Active" color="#10b981" bg="rgba(16,185,129,0.1)"/>:<button style={{fontSize:11,color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Revoke</button>}</div>)}
     </Sect>
     <Sect t={t} title="Data & privacy">
       <Row t={t} icon={<DL size={18} color={t.tx2}/>} label="Download my data" desc="Request a copy of your account data" onClick={()=>{}}/>
@@ -161,11 +161,11 @@ function SecurityPage({t,onBack}){return <>
 function PaymentPage({t,onBack}){return <>
   <SubH title="Payment methods" t={t} onBack={onBack}/>
   <div style={{padding:"16px 0"}}>
-    {[{type:"visa",last4:"4821",exp:"08/27",def:true},{type:"mastercard",last4:"3156",exp:"12/26",def:false}].map((m,i)=><div key={i} style={{...cs(t),padding:16,marginBottom:10,display:"flex",alignItems:"center",gap:14}}><div style={{width:48,height:32,borderRadius:6,background:t.card2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:m.type==="visa"?"#1a1f71":"#eb001b",border:`1px solid ${t.bd}`}}>{m.type==="visa"?"VISA":"MC"}</div><div style={{flex:1}}><div style={{fontSize:13,fontWeight:500,color:t.tx}}>{m.type==="visa"?"Visa":"Mastercard"} •••• {m.last4}</div><div style={{fontSize:11,color:t.tx3,marginTop:2}}>Expires {m.exp}</div></div>{m.def&&<Badge label="Default" color={BC} bg="rgba(255,117,0,0.1)"/>}<button style={{background:"none",border:"none",cursor:"pointer",padding:4}}><Dots size={16} color={t.tx3}/></button></div>)}
+    {[{type:"visa",last4:"4821",exp:"08/27",def:true},{type:"mastercard",last4:"3156",exp:"12/26",def:false}].map((m,i)=><div key={i} style={{...cs(t),padding:16,marginBottom:10,display:"flex",alignItems:"center",gap:14}}><div style={{width:48,height:32,borderRadius:6,background:t.sec,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:m.type==="visa"?"#1a1f71":"#eb001b",border:`1px solid ${t.bd}`}}>{m.type==="visa"?"VISA":"MC"}</div><div style={{flex:1}}><div style={{fontSize:13,fontWeight:500,color:t.tx}}>{m.type==="visa"?"Visa":"Mastercard"} •••• {m.last4}</div><div style={{fontSize:11,color:t.tx3,marginTop:2}}>Expires {m.exp}</div></div>{m.def&&<Badge label="Default" color={BC} bg="rgba(255,117,0,0.1)"/>}<button style={{background:"none",border:"none",cursor:"pointer",padding:4}}><Dots size={16} color={t.tx3}/></button></div>)}
     <button style={{width:"100%",height:48,borderRadius:12,border:`2px dashed ${t.bd}`,background:"none",color:BC,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><PlusLn size={18} color={BC}/> Add payment method</button>
     <div style={{...cs(t),padding:16,marginTop:14}}>
       <div style={{fontSize:12,fontWeight:600,color:t.tx3,textTransform:"uppercase",letterSpacing:0.5,marginBottom:10}}>Billing history</div>
-      {[{desc:"Listing boost — Tesla Model 3 LR",date:"Mar 15, 2026",amount:"€9.99"},{desc:"Listing boost — BMW iX3",date:"Mar 8, 2026",amount:"€9.99"},{desc:"Premium plan — monthly",date:"Mar 1, 2026",amount:"€14.99"}].map((b,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:i<2?`1px solid ${t.dv}`:"none"}}><div><div style={{fontSize:13,fontWeight:500,color:t.tx}}>{b.desc}</div><div style={{fontSize:11,color:t.tx3,marginTop:2}}>{b.date}</div></div><span style={{fontSize:13,fontWeight:600,color:t.tx}}>{b.amount}</span></div>)}
+      {[{desc:"Listing boost — Tesla Model 3 LR",date:"Mar 15, 2026",amount:"€9.99"},{desc:"Listing boost — BMW iX3",date:"Mar 8, 2026",amount:"€9.99"},{desc:"Premium plan — monthly",date:"Mar 1, 2026",amount:"€14.99"}].map((b,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:i<2?`1px solid ${t.bd}`:"none"}}><div><div style={{fontSize:13,fontWeight:500,color:t.tx}}>{b.desc}</div><div style={{fontSize:11,color:t.tx3,marginTop:2}}>{b.date}</div></div><span style={{fontSize:13,fontWeight:600,color:t.tx}}>{b.amount}</span></div>)}
     </div>
   </div>
 </>}
@@ -214,7 +214,7 @@ function HelpPage({t}){
           <span style={{fontSize:13,fontWeight:500,color:t.tx,flex:1}}>{f.q}</span>
           <div style={{transform:open===i?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.2s",flexShrink:0}}><ChDn size={16} color={t.tx3}/></div>
         </div>
-        {open===i&&<div style={{padding:"0 16px 14px",fontSize:13,color:t.tx2,lineHeight:1.7,borderTop:`1px solid ${t.dv}`}}><div style={{paddingTop:12}}>{f.a}</div></div>}
+        {open===i&&<div style={{padding:"0 16px 14px",fontSize:13,color:t.tx2,lineHeight:1.7,borderTop:`1px solid ${t.bd}`}}><div style={{paddingTop:12}}>{f.a}</div></div>}
       </div>)}
     </div>
   </>;
@@ -316,7 +316,7 @@ export default function AccountPage(){
   const goHome=()=>setPage("home");
 
   const content = ()=>{
-    if(page==="listings") return <ListingsPage t={t} onBack={goHome}/>;
+    if(page==="listings") return <ListingsPage t={t} onBack={goHome} nav={nav}/>;
     if(page==="sold") return <SoldPage t={t} onBack={goHome}/>;
     if(page==="reviews") return <ReviewsPage t={t} onBack={goHome}/>;
     if(page==="edit") return <EditPage t={t} onBack={goHome}/>;
@@ -338,10 +338,10 @@ export default function AccountPage(){
             <div style={{fontSize:12,color:t.tx2,marginTop:2}}>ciprian@plugmarket.eu</div>
             <div style={{display:"flex",alignItems:"center",gap:4,marginTop:4}}><Map size={12} color={t.tx3}/><span style={{fontSize:11,color:t.tx3}}>Satu Mare, Romania</span></div>
           </div>
-          <button onClick={()=>setPage("edit")} style={{width:36,height:36,borderRadius:10,border:`1px solid ${t.bd}`,background:t.card2,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Edit size={16} color={t.tx2}/></button>
+          <button onClick={()=>setPage("edit")} style={{width:36,height:36,borderRadius:10,border:`1px solid ${t.bd}`,background:t.sec,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Edit size={16} color={t.tx2}/></button>
         </div>
-        <div style={{display:"flex",gap:1,marginTop:16,background:t.dv,borderRadius:12,overflow:"hidden"}}>
-          {[{n:"3",l:"Listings"},{n:"12",l:"Saved"},{n:"28",l:"Messages"},{n:"4.9",l:"Rating"}].map((s,i)=><div key={i} style={{flex:1,background:t.card2,padding:"12px 0",textAlign:"center"}}><div style={{fontSize:17,fontWeight:700,color:t.tx}}>{s.n}</div><div style={{fontSize:10,color:t.tx3,marginTop:2}}>{s.l}</div></div>)}
+        <div style={{display:"flex",gap:1,marginTop:16,background:t.bd,borderRadius:12,overflow:"hidden"}}>
+          {[{n:"3",l:"Listings"},{n:"12",l:"Saved"},{n:"28",l:"Messages"},{n:"4.9",l:"Rating"}].map((s,i)=><div key={i} style={{flex:1,background:t.sec,padding:"12px 0",textAlign:"center"}}><div style={{fontSize:17,fontWeight:700,color:t.tx}}>{s.n}</div><div style={{fontSize:10,color:t.tx3,marginTop:2}}>{s.l}</div></div>)}
         </div>
         <div style={{display:"flex",gap:8,marginTop:12}}>
           <div style={{fontSize:11,color:t.tx3,display:"flex",alignItems:"center",gap:4}}><Chk size={12} color="#10b981"/> Verified seller</div>
@@ -367,8 +367,8 @@ export default function AccountPage(){
         <Row t={t} icon={<Tag size={18} color={t.tx2}/>} label="Price drop alerts" right={<Toggle value={notifPrice} onChange={setNotifPrice}/>}/>
       </Sect>
       <Sect t={t} title="Appearance">
-        <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px 0",borderBottom:`1px solid ${t.dv}`}}>
-          <div style={{width:36,height:36,borderRadius:10,background:t.card2,display:"flex",alignItems:"center",justifyContent:"center"}}>{dark?<Moon size={18} color={BC}/>:<Sun size={18} color="#f59e0b"/>}</div>
+        <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px 0",borderBottom:`1px solid ${t.bd}`}}>
+          <div style={{width:36,height:36,borderRadius:10,background:t.sec,display:"flex",alignItems:"center",justifyContent:"center"}}>{dark?<Moon size={18} color={BC}/>:<Sun size={18} color="#f59e0b"/>}</div>
           <div style={{flex:1}}><div style={{fontSize:13,fontWeight:500,color:t.tx}}>Dark mode</div><div style={{fontSize:11,color:t.tx3,marginTop:1}}>{dark?"Dark theme active":"Light theme active"}</div></div>
           <Toggle value={dark} onChange={setDark}/>
         </div>
