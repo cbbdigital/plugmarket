@@ -3,6 +3,12 @@ import { useOutletContext, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import { BC, GR, cs } from "../styles/theme";
 
+// ── Supabase REST client ──
+const SB_URL = import.meta.env.VITE_SUPABASE_URL || "https://tmftxqwqwceuiydleuag.supabase.co";
+const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtZnR4cXdxd2NldWl5ZGxldWFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDA2MzEsImV4cCI6MjA5MDI3NjYzMX0.k5TOln3e4M8PxH2tH22-6BsFimH84InVfNOWP8riaCM";
+const sbHeaders = (token) => ({ "apikey": SB_KEY, "Authorization": `Bearer ${token || SB_KEY}`, "Content-Type": "application/json", "Prefer": "return=representation" });
+async function sbQuery(table, params = "", token) { try { const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, { headers: sbHeaders(token) }); if (!r.ok) return []; return await r.json(); } catch { return []; } }
+
 // Icons
 const I=({d,size=16,color="currentColor"})=><svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{d}</svg>;
 const Bolt=p=><I {...p} d={<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>}/>;
@@ -72,31 +78,67 @@ function Sect({title,children,t}){return <div style={{...cs(t),padding:"4px 18px
 function SubH({title,t}){return <div style={{padding:"14px 0 10px"}}><span style={{fontSize:17,fontWeight:700}}>{title}</span></div>}
 
 // ── Sub-pages ──
-function ListingsPage({t,onBack,nav}){
+function ListingsPage({t,onBack,nav,user}){
   const[filter,setFilter]=useState("all");
-  const items=filter==="all"?LISTINGS:LISTINGS.filter(l=>l.status===filter);
-  const tv=LISTINGS.reduce((a,l)=>a+l.views,0);
-  const ti=LISTINGS.reduce((a,l)=>a+l.inquiries,0);
+  const[listings,setListings]=useState([]);
+  const[loading,setLoading]=useState(true);
+
+  useEffect(()=>{
+    if(!user)return;
+    const token=user.access_token||JSON.parse(localStorage.getItem("pm_session")||"{}").access_token;
+    const uid=user.id||user.user?.id||JSON.parse(localStorage.getItem("pm_session")||"{}").user?.id;
+    if(!token||!uid)return;
+    (async()=>{
+      const rows=await sbQuery("listings",`seller_id=eq.${uid}&order=created_at.desc`,token);
+      // Fetch cover photos
+      if(rows.length>0){
+        const ids=rows.map(r=>r.id);
+        const photos=await sbQuery("listing_photos",`listing_id=in.(${ids.join(",")})&position=eq.0`,token);
+        const photoMap={};
+        photos.forEach(p=>{photoMap[p.listing_id]=p.url});
+        setListings(rows.map(r=>({
+          id:r.id,make:r.make,model:`${r.model}${r.variant?" "+r.variant:""}`,year:r.year,
+          price:r.price_eur,km:r.mileage_km,
+          img:photoMap[r.id]||"https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=400&h=260&fit=crop",
+          status:r.status||"active",views:r.view_count||0,inquiries:r.inquiry_count||0,
+          saved:r.save_count||0,days:Math.max(0,Math.round((Date.now()-new Date(r.created_at).getTime())/86400000)),
+          soh:r.soh_percent||100,battery:r.battery_kwh?`${r.battery_kwh} kWh`:"—",
+        })));
+      }
+      setLoading(false);
+    })();
+  },[user]);
+
+  const items=filter==="all"?listings:listings.filter(l=>l.status===filter);
+  const tv=listings.reduce((a,l)=>a+l.views,0);
+  const ti=listings.reduce((a,l)=>a+l.inquiries,0);
+
+  if(loading) return <div style={{textAlign:"center",padding:"60px 0",color:t.tx3}}>Loading listings...</div>;
+
   return <>
     <SubH title="My listings" t={t} onBack={onBack}/>
     <div style={{display:"flex",gap:8,padding:"16px 0"}}>
-      {[{n:LISTINGS.length,l:"Active",ic:<Car size={14} color={BC}/>},{n:tv,l:"Total views",ic:<Eye size={14} color="#6366f1"/>},{n:ti,l:"Inquiries",ic:<Chat size={14} color="#10b981"/>}].map((s,i)=><div key={i} style={{flex:1,...cs(t),padding:"14px 12px",display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>{s.ic}<span style={{fontSize:18,fontWeight:700,color:t.tx}}>{s.n}</span><span style={{fontSize:10,color:t.tx3}}>{s.l}</span></div>)}
+      {[{n:listings.filter(l=>l.status==="active").length,l:"Active",ic:<Car size={14} color={BC}/>},{n:tv,l:"Total views",ic:<Eye size={14} color="#6366f1"/>},{n:ti,l:"Inquiries",ic:<Chat size={14} color="#10b981"/>}].map((s,i)=><div key={i} style={{flex:1,...cs(t),padding:"14px 12px",display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>{s.ic}<span style={{fontSize:18,fontWeight:700,color:t.tx}}>{s.n}</span><span style={{fontSize:10,color:t.tx3}}>{s.l}</span></div>)}
     </div>
     <div style={{display:"flex",gap:6,marginBottom:14}}>
       {[{v:"all",l:"All"},{v:"active",l:"Active"},{v:"paused",l:"Paused"}].map(f=><button key={f.v} onClick={()=>setFilter(f.v)} style={{padding:"6px 14px",borderRadius:8,border:filter===f.v?"none":`1px solid ${t.bd}`,background:filter===f.v?GR:t.card,color:filter===f.v?"#fff":t.tx2,fontSize:12,fontWeight:500,cursor:"pointer"}}>{f.l}</button>)}
     </div>
-    {items.map(car=><div key={car.id} style={{...cs(t),marginBottom:12,overflow:"hidden"}}>
-      <div style={{display:"flex"}}>
-        <div style={{width:130,minHeight:120,flexShrink:0,position:"relative"}}><img src={car.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/><div style={{position:"absolute",top:8,left:8}}><SBadge status={car.status}/></div></div>
-        <div style={{flex:1,padding:"12px 14px",display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
-          <div><div style={{fontSize:14,fontWeight:600,color:t.tx}}>{car.year} {car.make} {car.model}</div><div style={{fontSize:12,color:t.tx2,marginTop:2}}>{car.km.toLocaleString()} km · {car.battery} · {car.soh}% SoH</div><div style={{fontSize:16,fontWeight:700,color:BC,marginTop:4}}>€{car.price.toLocaleString()}</div></div>
-          <div style={{display:"flex",gap:12,fontSize:11,color:t.tx3,marginTop:6}}><span style={{display:"flex",alignItems:"center",gap:3}}><Eye size={12} color={t.tx3}/>{car.views}</span><span style={{display:"flex",alignItems:"center",gap:3}}><Chat size={12} color={t.tx3}/>{car.inquiries}</span><span style={{display:"flex",alignItems:"center",gap:3}}><Hrt size={12} color={t.tx3}/>{car.saved}</span><span style={{display:"flex",alignItems:"center",gap:3}}><Clk size={12} color={t.tx3}/>{car.days}d</span></div>
+    {items.length===0?(
+      <div style={{textAlign:"center",padding:"40px 0"}}><Car size={36} color={t.tx3}/><div style={{fontSize:14,fontWeight:600,color:t.tx2,marginTop:10}}>{loading?"Loading...":"No listings yet"}</div><div style={{fontSize:12,color:t.tx3,marginTop:4}}>Create your first listing to start selling</div></div>
+    ):(
+      items.map(car=><div key={car.id} style={{...cs(t),marginBottom:12,overflow:"hidden"}}>
+        <div style={{display:"flex"}}>
+          <div style={{width:130,minHeight:120,flexShrink:0,position:"relative"}}><img src={car.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/><div style={{position:"absolute",top:8,left:8}}><SBadge status={car.status}/></div></div>
+          <div style={{flex:1,padding:"12px 14px",display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
+            <div><div style={{fontSize:14,fontWeight:600,color:t.tx}}>{car.year} {car.make} {car.model}</div><div style={{fontSize:12,color:t.tx2,marginTop:2}}>{car.km.toLocaleString()} km · {car.battery} · {car.soh}% SoH</div><div style={{fontSize:16,fontWeight:700,color:BC,marginTop:4}}>€{car.price.toLocaleString()}</div></div>
+            <div style={{display:"flex",gap:12,fontSize:11,color:t.tx3,marginTop:6}}><span style={{display:"flex",alignItems:"center",gap:3}}><Eye size={12} color={t.tx3}/>{car.views}</span><span style={{display:"flex",alignItems:"center",gap:3}}><Chat size={12} color={t.tx3}/>{car.inquiries}</span><span style={{display:"flex",alignItems:"center",gap:3}}><Hrt size={12} color={t.tx3}/>{car.saved}</span><span style={{display:"flex",alignItems:"center",gap:3}}><Clk size={12} color={t.tx3}/>{car.days}d</span></div>
+          </div>
         </div>
-      </div>
-      <div style={{display:"flex",borderTop:`1px solid ${t.bd}`}}>
-        {[{l:"Edit",ic:<Edit size={13} color={t.tx2}/>},{l:"Messages",ic:<Chat size={13} color={BC}/>,action:()=>nav("/messages")},{l:car.status==="paused"?"Activate":"Pause",ic:car.status==="paused"?<Chk size={13} color="#10b981"/>:<Clk size={13} color="#f59e0b"/>},{l:"Boost",ic:<TUp size={13} color={BC}/>},{l:"Delete",ic:<Trash size={13} color="#ef4444"/>}].map((a,i)=><button key={i} onClick={a.action||undefined} style={{flex:1,padding:"10px 0",background:"none",border:"none",borderRight:i<4?`1px solid ${t.bd}`:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:500,color:a.l==="Messages"?BC:t.tx2}}>{a.ic}{a.l}</button>)}
-      </div>
-    </div>)}
+        <div style={{display:"flex",borderTop:`1px solid ${t.bd}`}}>
+          {[{l:"Edit",ic:<Edit size={13} color={t.tx2}/>},{l:"Messages",ic:<Chat size={13} color={BC}/>,action:()=>nav("/messages")},{l:car.status==="paused"?"Activate":"Pause",ic:car.status==="paused"?<Chk size={13} color="#10b981"/>:<Clk size={13} color="#f59e0b"/>},{l:"Boost",ic:<TUp size={13} color={BC}/>},{l:"Delete",ic:<Trash size={13} color="#ef4444"/>}].map((a,i)=><button key={i} onClick={a.action||undefined} style={{flex:1,padding:"10px 0",background:"none",border:"none",borderRight:i<4?`1px solid ${t.bd}`:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:500,color:a.l==="Messages"?BC:t.tx2}}>{a.ic}{a.l}</button>)}
+        </div>
+      </div>)
+    )}
     <button onClick={()=>nav("/sell")} style={{width:"100%",height:48,borderRadius:12,border:`2px dashed ${t.bd}`,background:"none",color:BC,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:8}}><PlusLn size={18} color={BC}/> Sell another EV</button>
   </>;
 }
@@ -316,7 +358,7 @@ export default function AccountPage(){
   const goHome=()=>setPage("home");
 
   const content = ()=>{
-    if(page==="listings") return <ListingsPage t={t} onBack={goHome} nav={nav}/>;
+    if(page==="listings") return <ListingsPage t={t} onBack={goHome} nav={nav} user={user}/>;
     if(page==="sold") return <SoldPage t={t} onBack={goHome}/>;
     if(page==="reviews") return <ReviewsPage t={t} onBack={goHome}/>;
     if(page==="edit") return <EditPage t={t} onBack={goHome}/>;
