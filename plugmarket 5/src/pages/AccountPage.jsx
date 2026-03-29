@@ -52,15 +52,6 @@ const ChDn=p=><I {...p} d={<polyline points="6 9 12 15 18 9"/>}/>;
 // Data
 const COUNTRIES=[{c:"RO",n:"Romania"},{c:"DE",n:"Germany"},{c:"FR",n:"France"},{c:"NL",n:"Netherlands"},{c:"BE",n:"Belgium"},{c:"AT",n:"Austria"},{c:"IT",n:"Italy"},{c:"ES",n:"Spain"},{c:"PL",n:"Poland"},{c:"SE",n:"Sweden"},{c:"NO",n:"Norway"},{c:"DK",n:"Denmark"},{c:"CZ",n:"Czech Rep."},{c:"PT",n:"Portugal"}];
 const LANGS=[{c:"en",n:"English"},{c:"de",n:"Deutsch"},{c:"fr",n:"Français"},{c:"ro",n:"Română"},{c:"nl",n:"Nederlands"},{c:"es",n:"Español"},{c:"it",n:"Italiano"},{c:"pl",n:"Polski"},{c:"sv",n:"Svenska"}];
-const LISTINGS=[
-  {id:1,make:"Tesla",model:"Model 3 LR",year:2023,price:38900,km:24500,img:"https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=400&h=260&fit=crop",status:"active",views:342,inquiries:12,saved:28,days:14,soh:97,battery:"75 kWh"},
-  {id:2,make:"BMW",model:"iX3",year:2022,price:41500,km:38200,img:"https://images.unsplash.com/photo-1619317190803-58529786b291?w=400&h=260&fit=crop",status:"active",views:187,inquiries:5,saved:14,days:7,soh:95,battery:"80 kWh"},
-  {id:3,make:"Volkswagen",model:"ID.4 Pro",year:2023,price:35200,km:18700,img:"https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=400&h=260&fit=crop",status:"paused",views:94,inquiries:2,saved:6,days:21,soh:99,battery:"77 kWh"},
-];
-const SOLD=[
-  {id:4,make:"Hyundai",model:"Ioniq 5",year:2022,price:33500,soldPrice:32800,km:42000,img:"https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400&h=260&fit=crop",soldDate:"Feb 12, 2026",daysListed:18,buyer:"Thomas K.",buyerCity:"Munich"},
-  {id:5,make:"Renault",model:"Megane E-Tech",year:2023,price:28900,soldPrice:28200,km:15600,img:"https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?w=400&h=260&fit=crop",soldDate:"Dec 5, 2025",daysListed:9,buyer:"Anna S.",buyerCity:"Vienna"},
-];
 const REVIEWS=[
   {id:1,name:"Thomas K.",city:"Munich",rating:5,date:"Feb 14, 2026",text:"Excellent seller! The Ioniq 5 was exactly as described. Very transparent about battery health and provided all documentation.",vehicle:"Hyundai Ioniq 5"},
   {id:2,name:"Anna S.",city:"Vienna",rating:5,date:"Dec 8, 2025",text:"Perfect transaction. Ciprian was honest about every detail, even minor scratches I wouldn't have noticed. Would buy from again.",vehicle:"Renault Megane E-Tech"},
@@ -155,15 +146,35 @@ function ListingsPage({t,onBack,nav,user,session}){
   </>;
 }
 
-function SoldPage({t,onBack}){
-  const rev=SOLD.reduce((a,l)=>a+l.soldPrice,0);
-  const avg=Math.round(SOLD.reduce((a,l)=>a+l.daysListed,0)/SOLD.length);
+function SoldPage({t,onBack,user,session}){
+  const[sold,setSold]=useState([]);
+  const[loading,setLoading]=useState(true);
+  useEffect(()=>{
+    if(!user||!session?.access_token)return;
+    (async()=>{
+      const rows=await sbQuery("listings",`seller_id=eq.${user.id}&status=eq.sold&order=sold_at.desc`,session.access_token);
+      if(rows.length>0){
+        const ids=rows.map(r=>r.id);
+        const photos=await sbQuery("listing_photos",`listing_id=in.(${ids.join(",")})&position=eq.0`,session.access_token);
+        const photoMap={};photos.forEach(p=>{photoMap[p.listing_id]=p.url});
+        setSold(rows.map(r=>({id:r.id,make:r.make,model:`${r.model}${r.variant?" "+r.variant:""}`,year:r.year,price:r.price_eur,soldPrice:r.sold_price_eur||r.price_eur,km:r.mileage_km,img:photoMap[r.id]||"https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=400&h=260&fit=crop",soldDate:r.sold_at?new Date(r.sold_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"—",daysListed:r.sold_at?Math.max(1,Math.round((new Date(r.sold_at)-new Date(r.created_at))/86400000)):0})));
+      }
+      setLoading(false);
+    })();
+  },[user,session]);
+  const rev=sold.reduce((a,l)=>a+(l.soldPrice||0),0);
+  const avg=sold.length?Math.round(sold.reduce((a,l)=>a+l.daysListed,0)/sold.length):0;
+  if(loading) return <div style={{textAlign:"center",padding:"60px 0",color:t.tx3}}>Loading...</div>;
   return <>
     <SubH title="Sold vehicles" t={t} onBack={onBack}/>
     <div style={{display:"flex",gap:8,padding:"16px 0"}}>
-      {[{n:`€${rev.toLocaleString()}`,l:"Total revenue",c:"#10b981"},{n:SOLD.length,l:"Vehicles sold",c:t.tx},{n:`${avg}d`,l:"Avg. sell time",c:BC}].map((s,i)=><div key={i} style={{flex:1,...cs(t),padding:"14px 12px",textAlign:"center"}}><div style={{fontSize:18,fontWeight:700,color:s.c}}>{s.n}</div><div style={{fontSize:10,color:t.tx3,marginTop:2}}>{s.l}</div></div>)}
+      {[{n:`€${rev.toLocaleString()}`,l:"Total revenue",c:"#10b981"},{n:sold.length,l:"Vehicles sold",c:t.tx},{n:sold.length?`${avg}d`:"—",l:"Avg. sell time",c:BC}].map((s,i)=><div key={i} style={{flex:1,...cs(t),padding:"14px 12px",textAlign:"center"}}><div style={{fontSize:18,fontWeight:700,color:s.c}}>{s.n}</div><div style={{fontSize:10,color:t.tx3,marginTop:2}}>{s.l}</div></div>)}
     </div>
-    {SOLD.map(car=><div key={car.id} style={{...cs(t),marginBottom:12,overflow:"hidden"}}><div style={{display:"flex"}}><div style={{width:130,minHeight:120,flexShrink:0,position:"relative"}}><img src={car.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover",filter:"grayscale(30%)"}}/><div style={{position:"absolute",top:8,left:8}}><Badge label="Sold" color="#6366f1" bg="rgba(99,102,241,0.15)"/></div></div><div style={{flex:1,padding:"12px 14px"}}><div style={{fontSize:14,fontWeight:600,color:t.tx}}>{car.year} {car.make} {car.model}</div><div style={{fontSize:12,color:t.tx2,marginTop:2}}>{car.km.toLocaleString()} km</div><div style={{display:"flex",alignItems:"baseline",gap:6,marginTop:6}}><span style={{fontSize:16,fontWeight:700,color:"#10b981"}}>€{car.soldPrice.toLocaleString()}</span>{car.soldPrice<car.price&&<span style={{fontSize:11,color:t.tx3,textDecoration:"line-through"}}>€{car.price.toLocaleString()}</span>}</div><div style={{fontSize:11,color:t.tx3,marginTop:6}}>Sold to {car.buyer} · {car.buyerCity}</div><div style={{display:"flex",gap:8,marginTop:4,fontSize:11,color:t.tx3}}><span>{car.soldDate}</span><span>·</span><span>{car.daysListed} days listed</span></div></div></div></div>)}
+    {sold.length===0?(
+      <div style={{textAlign:"center",padding:"40px 0"}}><Tag size={36} color={t.tx3}/><div style={{fontSize:14,fontWeight:600,color:t.tx2,marginTop:10}}>No sold vehicles yet</div></div>
+    ):(
+      sold.map(car=><div key={car.id} style={{...cs(t),marginBottom:12,overflow:"hidden"}}><div style={{display:"flex"}}><div style={{width:130,minHeight:120,flexShrink:0,position:"relative"}}><img src={car.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover",filter:"grayscale(30%)"}}/><div style={{position:"absolute",top:8,left:8}}><Badge label="Sold" color="#6366f1" bg="rgba(99,102,241,0.15)"/></div></div><div style={{flex:1,padding:"12px 14px"}}><div style={{fontSize:14,fontWeight:600,color:t.tx}}>{car.year} {car.make} {car.model}</div><div style={{fontSize:12,color:t.tx2,marginTop:2}}>{car.km.toLocaleString()} km</div><div style={{display:"flex",alignItems:"baseline",gap:6,marginTop:6}}><span style={{fontSize:16,fontWeight:700,color:"#10b981"}}>€{car.soldPrice.toLocaleString()}</span>{car.soldPrice<car.price&&<span style={{fontSize:11,color:t.tx3,textDecoration:"line-through"}}>€{car.price.toLocaleString()}</span>}</div><div style={{display:"flex",gap:8,marginTop:4,fontSize:11,color:t.tx3}}><span>{car.soldDate}</span><span>·</span><span>{car.daysListed} days listed</span></div></div></div></div>)
+    )}
   </>;
 }
 
@@ -356,7 +367,7 @@ function TermsPage({t}){
 // ══ Main ══
 export default function AccountPage(){
   const { t, dark, setDark } = useOutletContext();
-  const { user, session, signOut } = useAuth();
+  const { user, session, signOut, profile } = useAuth();
   const nav = useNavigate();
   const [sp] = useSearchParams();
   const[page,setPage]=useState(sp.get("page")||"home");
@@ -364,15 +375,33 @@ export default function AccountPage(){
   const[notifPush,setNotifPush]=useState(true);
   const[notifNewMsg,setNotifNewMsg]=useState(true);
   const[notifPrice,setNotifPrice]=useState(true);
+  const[stats,setStats]=useState({listings:0,saved:0,messages:0,rating:0,sold:0,reviews:0});
 
   useEffect(() => { if (!user) nav("/login"); }, [user, nav]);
+
+  useEffect(()=>{
+    if(!user||!session?.access_token)return;
+    const token=session.access_token;
+    const uid=user.id;
+    (async()=>{
+      const listings=await sbQuery("listings",`seller_id=eq.${uid}&status=neq.deleted&select=id,status`,token);
+      const active=listings.filter(l=>l.status==="active").length;
+      const sold=listings.filter(l=>l.status==="sold").length;
+      const favs=await sbQuery("favourites",`user_id=eq.${uid}&select=id`,token);
+      const convos=await sbQuery("conversations",`or=(buyer_id.eq.${uid},seller_id.eq.${uid})&select=id`,token);
+      const reviews=await sbQuery("reviews",`seller_id=eq.${uid}&select=rating`,token);
+      const avgRating=reviews.length>0?(reviews.reduce((a,r)=>a+r.rating,0)/reviews.length).toFixed(1):"—";
+      setStats({listings:active,saved:favs.length,messages:convos.length,rating:avgRating,sold,reviews:reviews.length});
+    })();
+  },[user,session]);
+
   if (!user) return null;
 
   const goHome=()=>setPage("home");
 
   const content = ()=>{
     if(page==="listings") return <ListingsPage t={t} onBack={goHome} nav={nav} user={user} session={session}/>;
-    if(page==="sold") return <SoldPage t={t} onBack={goHome}/>;
+    if(page==="sold") return <SoldPage t={t} onBack={goHome} user={user} session={session}/>;
     if(page==="reviews") return <ReviewsPage t={t} onBack={goHome}/>;
     if(page==="edit") return <EditPage t={t} onBack={goHome}/>;
     if(page==="security") return <SecurityPage t={t} onBack={goHome}/>;
@@ -387,27 +416,27 @@ export default function AccountPage(){
       {/* Profile card */}
       <div style={{...cs(t),padding:20,marginTop:10,marginBottom:14}}>
         <div style={{display:"flex",alignItems:"center",gap:16}}>
-          <div style={{width:64,height:64,borderRadius:"50%",background:GR,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:700,color:"#fff",flexShrink:0}}>CM</div>
+          <div style={{width:64,height:64,borderRadius:"50%",background:GR,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:700,color:"#fff",flexShrink:0}}>{(profile?.full_name||user?.email||"?").split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2)}</div>
           <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:18,fontWeight:700,color:t.tx}}>Ciprian M.</div>
-            <div style={{fontSize:12,color:t.tx2,marginTop:2}}>ciprian@plugmarket.eu</div>
-            <div style={{display:"flex",alignItems:"center",gap:4,marginTop:4}}><Map size={12} color={t.tx3}/><span style={{fontSize:11,color:t.tx3}}>Satu Mare, Romania</span></div>
+            <div style={{fontSize:18,fontWeight:700,color:t.tx}}>{profile?.full_name||user?.email}</div>
+            <div style={{fontSize:12,color:t.tx2,marginTop:2}}>{user?.email}</div>
+            {profile?.city&&<div style={{display:"flex",alignItems:"center",gap:4,marginTop:4}}><Map size={12} color={t.tx3}/><span style={{fontSize:11,color:t.tx3}}>{profile.city}{profile.country?`, ${profile.country}`:""}</span></div>}
           </div>
           <button onClick={()=>setPage("edit")} style={{width:36,height:36,borderRadius:10,border:`1px solid ${t.bd}`,background:t.sec,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Edit size={16} color={t.tx2}/></button>
         </div>
         <div style={{display:"flex",gap:1,marginTop:16,background:t.bd,borderRadius:12,overflow:"hidden"}}>
-          {[{n:"3",l:"Listings"},{n:"12",l:"Saved"},{n:"28",l:"Messages"},{n:"4.9",l:"Rating"}].map((s,i)=><div key={i} style={{flex:1,background:t.sec,padding:"12px 0",textAlign:"center"}}><div style={{fontSize:17,fontWeight:700,color:t.tx}}>{s.n}</div><div style={{fontSize:10,color:t.tx3,marginTop:2}}>{s.l}</div></div>)}
+          {[{n:stats.listings,l:"Listings"},{n:stats.saved,l:"Saved"},{n:stats.messages,l:"Messages"},{n:stats.rating,l:"Rating"}].map((s,i)=><div key={i} style={{flex:1,background:t.sec,padding:"12px 0",textAlign:"center"}}><div style={{fontSize:17,fontWeight:700,color:t.tx}}>{s.n}</div><div style={{fontSize:10,color:t.tx3,marginTop:2}}>{s.l}</div></div>)}
         </div>
         <div style={{display:"flex",gap:8,marginTop:12}}>
-          <div style={{fontSize:11,color:t.tx3,display:"flex",alignItems:"center",gap:4}}><Chk size={12} color="#10b981"/> Verified seller</div>
-          <div style={{fontSize:11,color:t.tx3}}>Member since Jan 2024</div>
+          {profile?.is_verified&&<div style={{fontSize:11,color:t.tx3,display:"flex",alignItems:"center",gap:4}}><Chk size={12} color="#10b981"/> Verified seller</div>}
+          <div style={{fontSize:11,color:t.tx3}}>Member since {new Date(user?.created_at||Date.now()).toLocaleDateString("en-US",{month:"short",year:"numeric"})}</div>
         </div>
       </div>
 
       <Sect t={t} title="My vehicles">
-        <Row t={t} icon={<Car size={18} color={BC}/>} label="My listings" desc="3 active listings" onClick={()=>setPage("listings")}/>
-        <Row t={t} icon={<Tag size={18} color={t.tx2}/>} label="Sold vehicles" desc="2 vehicles sold" onClick={()=>setPage("sold")}/>
-        <Row t={t} icon={<Star size={18} color="#f59e0b" filled/>} label="Reviews" desc="4.9 avg from 7 reviews" onClick={()=>setPage("reviews")}/>
+        <Row t={t} icon={<Car size={18} color={BC}/>} label="My listings" desc={`${stats.listings} active listing${stats.listings!==1?"s":""}`} onClick={()=>setPage("listings")}/>
+        <Row t={t} icon={<Tag size={18} color={t.tx2}/>} label="Sold vehicles" desc={`${stats.sold} vehicle${stats.sold!==1?"s":""} sold`} onClick={()=>setPage("sold")}/>
+        <Row t={t} icon={<Star size={18} color="#f59e0b" filled/>} label="Reviews" desc={stats.reviews>0?`${stats.rating} avg from ${stats.reviews} review${stats.reviews!==1?"s":""}`:"No reviews yet"} onClick={()=>setPage("reviews")}/>
       </Sect>
       <Sect t={t} title="Account">
         <Row t={t} icon={<Usr size={18} color={t.tx2}/>} label="Edit profile" desc="Name, photo, location" onClick={()=>setPage("edit")}/>
