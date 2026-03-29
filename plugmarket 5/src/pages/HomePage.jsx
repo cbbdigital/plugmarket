@@ -570,6 +570,8 @@ export default function HomePage() {
   const auth = useAuth();
   const { listings: dbListings, loading: dbLoading } = useListings();
   const allListings = dbListings.length > 0 ? dbListings : SLS;
+  const featuredListings = dbListings.length > 0 ? dbListings.filter(l=>l.ft).slice(0,4) : PRO;
+  const recentListings = dbListings.length > 0 ? dbListings.slice(0,5) : REC;
   const filteredCount = allListings.filter(l=>{
     if(make&&l.mk!==make)return false;
     if(model&&l.md!==model)return false;
@@ -642,7 +644,7 @@ export default function HomePage() {
           <button onClick={()=>navigate("/search")} style={{display:"flex",alignItems:"center",gap:3,background:"none",border:"none",color:BC,fontSize:12,fontWeight:600,cursor:"pointer"}}>View all<CR size={13} color={BC}/></button>
         </div>
         <div style={{display:"flex",gap:14,overflowX:"auto",paddingBottom:6,maskImage:"linear-gradient(to right,black 95%,transparent 100%)",WebkitMaskImage:"linear-gradient(to right,black 95%,transparent 100%)"}}>
-          {PRO.map(c=><PCard key={c.id} c={c} favIds={favIds} toggleFav={toggleFav} t={t}/>)}
+          {featuredListings.map(c=><PCard key={c.id} c={c} favIds={favIds} toggleFav={toggleFav} t={t}/>)}
         </div>
       </div>
       <div style={{padding:"0 0 20px"}}>
@@ -651,7 +653,7 @@ export default function HomePage() {
           <button onClick={()=>navigate("/search")} style={{display:"flex",alignItems:"center",gap:3,background:"none",border:"none",color:BC,fontSize:12,fontWeight:600,cursor:"pointer"}}>View all<CR size={13} color={BC}/></button>
         </div>
         <div style={{display:"flex",gap:12,overflowX:"auto",paddingBottom:6,maskImage:"linear-gradient(to right,black 95%,transparent 100%)",WebkitMaskImage:"linear-gradient(to right,black 95%,transparent 100%)"}}>
-          {REC.map(c=><RCard key={c.id} c={c} t={t}/>)}
+          {recentListings.map(c=><RCard key={c.id} c={c} t={t}/>)}
         </div>
       </div>
 
