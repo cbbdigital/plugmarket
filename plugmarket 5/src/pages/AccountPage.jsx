@@ -196,7 +196,7 @@ function ReviewsPage({t,onBack}){
 
 function EditPage({t,onBack}){
   const[name,setName]=useState("Ciprian M.");const[phone,setPhone]=useState("+40 742 000 000");const[city,setCity]=useState("Satu Mare");const[country,setCountry]=useState("RO");const[bio,setBio]=useState("EV enthusiast from Romania. Currently driving a Tesla Model 3 LR.");const[saved,setSaved]=useState(false);
-  const inp={width:"100%",height:42,borderRadius:10,border:`1px solid ${t.inpBd}`,background:t.inp,color:t.tx,padding:"0 14px",fontSize:13,boxSizing:"border-box",outline:"none"};
+  const inp={width:"100%",height:42,borderRadius:10,border:`1px solid ${t.bd}`,background:t.inp,color:t.tx,padding:"0 14px",fontSize:13,boxSizing:"border-box",outline:"none"};
   return <>
     <SubH title="Edit profile" t={t} onBack={onBack}/>
     <div style={{display:"flex",justifyContent:"center",padding:"28px 0 20px"}}><div style={{position:"relative"}}><div style={{width:88,height:88,borderRadius:"50%",background:GR,display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,fontWeight:700,color:"#fff"}}>CM</div><div style={{position:"absolute",bottom:0,right:0,width:30,height:30,borderRadius:"50%",background:t.card,border:`2px solid ${t.bg}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",boxShadow:"0 2px 6px rgba(0,0,0,0.15)"}}><Cam size={14} color={t.tx2}/></div></div></div>
@@ -243,7 +243,7 @@ function PaymentPage({t,onBack}){return <>
 
 function LangPage({t,onBack}){
   const[lang,setLang]=useState("en");const[curr,setCurr]=useState("EUR");const[region,setRegion]=useState("RO");const[saved,setSaved]=useState(false);
-  const inp={width:"100%",height:42,borderRadius:10,border:`1px solid ${t.inpBd}`,background:t.inp,color:t.tx,padding:"0 14px",fontSize:13,boxSizing:"border-box",outline:"none",appearance:"none",WebkitAppearance:"none",cursor:"pointer"};
+  const inp={width:"100%",height:42,borderRadius:10,border:`1px solid ${t.bd}`,background:t.inp,color:t.tx,padding:"0 14px",fontSize:13,boxSizing:"border-box",outline:"none",appearance:"none",WebkitAppearance:"none",cursor:"pointer"};
   const Cv=()=><div style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}}><ChDn size={14} color={t.tx3}/></div>;
   return <>
     <SubH title="Language & region" t={t} onBack={onBack}/>

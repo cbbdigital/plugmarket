@@ -90,7 +90,7 @@ function HealthRing({ pct, size, dark }) {
 
 function DetailRow({ label, value, icon, t }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid " + t.dv }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid " + t.bd }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, color: t.tx2, fontSize: 13 }}>{icon}{label}</div>
       <span style={{ fontSize: 13, fontWeight: 600, color: t.tx }}>{value}</span>
     </div>

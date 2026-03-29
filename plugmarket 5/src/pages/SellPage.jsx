@@ -210,6 +210,7 @@ export default function SellPage(){
 
   const [submitted,setSubmitted]=useState(false);
   const [publishing,setPublishing]=useState(false);
+  const [uploading, setUploading] = useState(false);
 
   // Auth redirect
   useEffect(() => { if (!user) nav("/login"); }, [user, nav]);
@@ -266,7 +267,6 @@ export default function SellPage(){
   const models = make ? MAKES_DATA[make]||[] : [];
   const years = Array.from({length:8},(_,i)=>String(2025-i));
 
-  const [uploading, setUploading] = useState(false);
 
   const compressImage = (file, maxSizeKB = 2500) => {
     return new Promise((resolve) => {
