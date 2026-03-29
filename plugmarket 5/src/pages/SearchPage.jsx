@@ -129,13 +129,13 @@ function ImgSlider({imgs,height,children,borderRadius=0}){
 export default function SearchPage() {
   const { t } = useOutletContext();
   const navigate = useNavigate();
-  const[make,setMake]=useState(iMk||"");
-  const[model,setModel]=useState(iMd||"");
-  const[co,setCo]=useState(iCo||"");
+  const[make,setMake]=useState("");
+  const[model,setModel]=useState("");
+  const[co,setCo]=useState("");
   const[cond,setCond]=useState("");
   const[dr,setDr]=useState("");
-  const[pMin,setPMin]=useState(iPm||"");
-  const[pMax,setPMax]=useState(iPx||"");
+  const[pMin,setPMin]=useState("");
+  const[pMax,setPMax]=useState("");
   const[rMin,setRMin]=useState("");
   const[batMin,setBatMin]=useState(20);
   const[batMax,setBatMax]=useState(120);
@@ -143,6 +143,9 @@ export default function SearchPage() {
   const[doors,setDoors]=useState("");
   const[sort,setSort]=useState("newest");
   const[showF,setShowF]=useState(false);
+  const[favIds,setFavIds]=useState([]);
+  const toggleFav=(id)=>setFavIds(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
+  const allListings=SLS;
   const mods=make?MK[make]||[]:[];
   const COLORS=["Black","White","Silver","Gray","Blue","Red","Green","Yellow","Orange","Brown"];
   const filtered=useMemo(()=>{
