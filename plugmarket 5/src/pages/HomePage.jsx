@@ -9,20 +9,18 @@ const sb = {
   headers: (token) => ({
     "apikey": SB_KEY,
     "Authorization": `Bearer ${token || SB_KEY}`,
-    "Content-Type": "application/json",
-    "Prefer": "return=representation",
   }),
   async query(table, params = "", token) {
     try {
-      const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, { headers: this.headers(token) });
-      if (!r.ok) return [];
+      const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, { headers: { "apikey": SB_KEY, "Authorization": `Bearer ${token || SB_KEY}` } });
+      if (!r.ok) { console.error("sb.query failed:", r.status, await r.text()); return []; }
       return await r.json();
-    } catch { return []; }
+    } catch (e) { console.error("sb.query error:", e); return []; }
   },
   async insert(table, data, token) {
     try {
       const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
-        method: "POST", headers: this.headers(token), body: JSON.stringify(data),
+        method: "POST", headers: { "apikey": SB_KEY, "Authorization": `Bearer ${token || SB_KEY}`, "Content-Type": "application/json", "Prefer": "return=representation" }, body: JSON.stringify(data),
       });
       if (!r.ok) return null;
       const res = await r.json();
@@ -32,7 +30,7 @@ const sb = {
   async update(table, match, data, token) {
     try {
       const r = await fetch(`${SB_URL}/rest/v1/${table}?${match}`, {
-        method: "PATCH", headers: this.headers(token), body: JSON.stringify(data),
+        method: "PATCH", headers: { "apikey": SB_KEY, "Authorization": `Bearer ${token || SB_KEY}`, "Content-Type": "application/json", "Prefer": "return=representation" }, body: JSON.stringify(data),
       });
       if (!r.ok) return null;
       return await r.json();
@@ -41,7 +39,7 @@ const sb = {
   async remove(table, match, token) {
     try {
       await fetch(`${SB_URL}/rest/v1/${table}?${match}`, {
-        method: "DELETE", headers: this.headers(token),
+        method: "DELETE", headers: { "apikey": SB_KEY, "Authorization": `Bearer ${token || SB_KEY}`, "Content-Type": "application/json", "Prefer": "return=representation" },
       });
       return true;
     } catch { return false; }
