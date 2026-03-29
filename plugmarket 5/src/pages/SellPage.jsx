@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useNavigate } from "react-router-dom";
+import { useAuth } from "../lib/auth";
 import { BC, GR, cs } from "../styles/theme";
 
 // ── Data ──
@@ -115,6 +116,9 @@ function Toggle({label,value,onChange,t}){
 
 export default function SellPage(){
   const { t, dark: d } = useOutletContext();
+  const { user } = useAuth();
+  const nav = useNavigate();
+  if (!user) { nav("/login"); return null; }
   const [narrow,setNarrow]=useState(()=>window.innerWidth<480);
   useEffect(()=>{const h=()=>setNarrow(window.innerWidth<480);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h)},[]);
   const g2=narrow?"1fr":"1fr 1fr";
@@ -299,12 +303,12 @@ export default function SellPage(){
                 <Inp label="Gross battery capacity" value={battery} onChange={setBattery} ph="e.g. 75" unit="kWh" type="number" req t={t}/>
                 <Inp label="Nett battery capacity" value={usable} onChange={setUsable} ph="e.g. 72.5" unit="kWh" type="number" t={t}/>
               </div>
-                  <div style={{display:"grid",gridTemplateColumns:g2,gap:12}}>
+              <div style={{display:"grid",gridTemplateColumns:g2,gap:12}}>
                 <Inp label="State of Health (SoH)" value={soh} onChange={setSoh} ph="e.g. 97" unit="%" type="number" req t={t}/>
-              </div>
               <div style={{display:"grid",gridTemplateColumns:g2,gap:12}}>
                 <Inp label="Range estimate (summer)" value={rangeReal} onChange={setRangeReal} ph="e.g. 520" unit="km" type="number" t={t}/>
                 <Inp label="Range estimate (winter)" value={rangeWinter} onChange={setRangeWinter} ph="e.g. 380" unit="km" type="number" t={t}/>
+              </div>
               </div>
               <div style={{fontSize:13,fontWeight:600,color:t.tx,marginTop:8}}>Charging</div>
               <div style={{display:"grid",gridTemplateColumns:g2,gap:12}}>
