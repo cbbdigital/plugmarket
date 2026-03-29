@@ -151,6 +151,7 @@ const ChevR = (p) => <Ic {...p} d={<polyline points="9 18 15 12 9 6"/>}/>;
 const ChevDown = (p) => <Ic {...p} d={<polyline points="6 9 12 15 18 9"/>}/>;
 const PlusIcon = (p) => <Ic {...p} d={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></>}/>;
 const TrashIcon = (p) => <Ic {...p} d={<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></>}/>;
+const XIcon = (p) => <Ic {...p} d={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>}/>;
 const InfoIcon = (p) => <Ic {...p} d={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></>}/>;
 const HomeIcon = (p) => <Ic {...p} d={<><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>}/>;
 const SearchIcon = (p) => <Ic {...p} d={<><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>}/>;
@@ -211,6 +212,70 @@ function Toggle({label,value,onChange,t}){
   );
 }
 
+/* ─── Photo Lightbox (keyboard arrows + touch swipe + thumbnails) ─── */
+function PhotoLightbox({ photos, startIndex, onClose, t }) {
+  const [idx, setIdx] = useState(startIndex);
+  const touchRef = useRef({ x: 0, t: 0 });
+
+  const go = useCallback((dir) => {
+    setIdx(prev => {
+      const next = prev + dir;
+      if (next < 0) return photos.length - 1;
+      if (next >= photos.length) return 0;
+      return next;
+    });
+  }, [photos.length]);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "ArrowLeft") go(-1);
+      else if (e.key === "ArrowRight") go(1);
+      else if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [go, onClose]);
+
+  const onTouchStart = (e) => { touchRef.current = { x: e.touches[0].clientX, t: Date.now() }; };
+  const onTouchEnd = (e) => {
+    const dx = e.changedTouches[0].clientX - touchRef.current.x;
+    const dt = Date.now() - touchRef.current.t;
+    if (Math.abs(dx) > 40 && dt < 500) go(dx < 0 ? 1 : -1);
+  };
+
+  const arrowStyle = (side) => ({
+    position: "absolute", top: "50%", transform: "translateY(-50%)",
+    [side]: 12, width: 40, height: 40, borderRadius: 20,
+    background: "rgba(0,0,0,0.5)", border: "none",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    cursor: "pointer", zIndex: 10,
+  });
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center" }}
+      onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <button onClick={onClose} style={{ position: "absolute", top: 16, right: 16, zIndex: 10, width: 36, height: 36, borderRadius: 18, background: "rgba(255,255,255,0.1)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+        <XIcon size={18} color="#fff" />
+      </button>
+      {photos.length > 1 && <button onClick={() => go(-1)} style={arrowStyle("left")}><ChevL size={20} color="#fff" /></button>}
+      {photos.length > 1 && <button onClick={() => go(1)} style={arrowStyle("right")}><ChevR size={20} color="#fff" /></button>}
+      <img src={photos[idx]} alt="" style={{ maxWidth: "90vw", maxHeight: "80vh", objectFit: "contain", borderRadius: 8 }} />
+      <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", background: "rgba(0,0,0,0.6)", borderRadius: 12, padding: "4px 14px", fontSize: 13, color: "#fff", fontWeight: 500 }}>
+        {idx + 1} / {photos.length}
+      </div>
+      {photos.length > 1 && (
+        <div style={{ position: "absolute", bottom: 52, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6, maxWidth: "80vw", overflowX: "auto", padding: "4px 0" }}>
+          {photos.map((p, i) => (
+            <div key={i} onClick={() => setIdx(i)} style={{ width: 48, height: 34, borderRadius: 6, overflow: "hidden", cursor: "pointer", border: i === idx ? `2px solid ${BC}` : "2px solid transparent", opacity: i === idx ? 1 : 0.5, transition: "all 0.2s", flexShrink: 0 }}>
+              <img src={p} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SellPage(){
   const { t, dark: d } = useOutletContext();
   const { user, session } = useAuth();
@@ -254,6 +319,9 @@ export default function SellPage(){
 
   // Step 3
   const [photos,setPhotos]=useState([]);
+  const [lightboxIdx,setLightboxIdx]=useState(null);
+  // Per-photo progress: { id, progress (0-100), status: 'compressing'|'done'|'error' }
+  const [photoProgress,setPhotoProgress]=useState({});
 
   // Step 4
   const [price,setPrice]=useState("");
@@ -371,6 +439,7 @@ export default function SellPage(){
     };
 
     let listingId;
+    const readyPhotos = photos.filter(p => typeof p === "string");
 
     if (editId) {
       // UPDATE existing listing
@@ -379,8 +448,8 @@ export default function SellPage(){
       listingId = editId;
 
       // Handle photos: find new photos (base64) that need uploading
-      const newPhotos = photos.filter(p => p.startsWith("data:"));
-      const existingPhotos = photos.filter(p => !p.startsWith("data:"));
+      const newPhotos = readyPhotos.filter(p => p.startsWith("data:"));
+      const existingPhotos = readyPhotos.filter(p => !p.startsWith("data:"));
 
       if (newPhotos.length > 0) {
         // Upload new photos starting after existing positions
@@ -400,8 +469,8 @@ export default function SellPage(){
       listingId = listing.id;
 
       // Upload all photos
-      for (let i = 0; i < photos.length; i++) {
-        const photoUrl = await sbUploadPhoto(uid, listingId, photos[i], i, token);
+      for (let i = 0; i < readyPhotos.length; i++) {
+        const photoUrl = await sbUploadPhoto(uid, listingId, readyPhotos[i], i, token);
         if (photoUrl) {
           await sbInsert("listing_photos", { listing_id: listingId, url: photoUrl, position: i }, token);
         }
@@ -463,6 +532,8 @@ export default function SellPage(){
   };
 
   const fileInputRef = useRef(null);
+  const dragItem = useRef(null);
+  const dragOver = useRef(null);
 
   const addPhoto = () => {
     if (fileInputRef.current) fileInputRef.current.click();
@@ -491,34 +562,55 @@ export default function SellPage(){
     setUploading(true);
     const remaining = 20 - photos.length;
     const toProcess = files.slice(0, remaining);
-    const compressed = [];
+
     for (let j = 0; j < toProcess.length; j++) {
       const file = toProcess[j];
+      const photoId = `upload_${Date.now()}_${j}`;
       setUploadProg(`${j + 1}/${toProcess.length}`);
+
+      // Set initial progress
+      setPhotoProgress(prev => ({ ...prev, [photoId]: { progress: 0, status: "compressing" } }));
+
+      // Add placeholder to photos array
+      setPhotos(prev => [...prev, { _uploading: true, _id: photoId }]);
+
+      // Animate progress during compression
+      const progInterval = setInterval(() => {
+        setPhotoProgress(prev => {
+          const cur = prev[photoId];
+          if (!cur || cur.progress >= 85) return prev;
+          return { ...prev, [photoId]: { ...cur, progress: cur.progress + Math.random() * 12 } };
+        });
+      }, 180);
+
       let fileToCompress = file;
-      // Convert HEIC to JPEG first
       if (isHeic(file)) {
         try {
           const heic2any = await getHeic2any();
           if (heic2any) {
             const result = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.85 });
-            // heic2any may return a single blob or an array
             const blob = Array.isArray(result) ? result[0] : result;
             fileToCompress = new File([blob], file.name.replace(/\.heic|\.heif/i, ".jpg"), { type: "image/jpeg" });
           }
         } catch (err) {
           console.warn("HEIC conversion failed for", file.name, err);
-          // Still try to compress the original — might work on Safari
         }
       }
+
       try {
         const result = await compressImage(fileToCompress);
-        compressed.push(result);
+        clearInterval(progInterval);
+        setPhotoProgress(prev => ({ ...prev, [photoId]: { progress: 100, status: "done" } }));
+        // Replace placeholder with actual data URL
+        setPhotos(prev => prev.map(p => p._id === photoId ? result : p));
       } catch (err) {
+        clearInterval(progInterval);
         console.warn("Compression failed for", file.name, err);
+        setPhotoProgress(prev => ({ ...prev, [photoId]: { progress: 0, status: "error" } }));
+        // Remove failed placeholder
+        setPhotos(prev => prev.filter(p => p._id !== photoId));
       }
     }
-    setPhotos(prev => [...prev, ...compressed]);
     setUploading(false);
     setUploadProg("");
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -536,7 +628,7 @@ export default function SellPage(){
   const canNext = () => {
     if(step===1) return make&&model&&year&&km&&condition;
     if(step===2) return battery&&soh&&dcCharge;
-    if(step===3) return photos.length>=1;
+    if(step===3) return photos.filter(p=>typeof p==="string").length>=1;
     if(step===4) return price;
     if(step===5) return sellerName&&phone&&email&&city&&country;
     return true;
@@ -567,7 +659,7 @@ export default function SellPage(){
             You'll receive notifications when buyers contact you.
           </p>
           <div style={{background:t.card,borderRadius:16,boxShadow:`0 2px 8px ${t.sh}`,border:`1px solid ${t.bd}`,padding:"2px 16px",textAlign:"left",marginTop:20}}>
-            {[["Vehicle",`${make} ${model} ${variant}`.trim()],["Price",`€${Number(price).toLocaleString()}`],["Photos",`${photos.length} uploaded`]].map(([k,v],i)=>(
+            {[["Vehicle",`${make} ${model} ${variant}`.trim()],["Price",`€${Number(price).toLocaleString()}`],["Photos",`${photos.filter(p=>typeof p==="string").length} uploaded`]].map(([k,v],i)=>(
               <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"8px 0",borderBottom:i<2?`1px solid ${t.bd}`:"none"}}>
                 <span style={{color:t.tx2}}>{k}</span>
                 <span style={{fontWeight:600}}>{v}</span>
@@ -585,6 +677,16 @@ export default function SellPage(){
 
   return(
     <>
+        {/* Photo Lightbox */}
+        {lightboxIdx !== null && (
+          <PhotoLightbox
+            photos={photos.filter(p => typeof p === "string")}
+            startIndex={lightboxIdx}
+            onClose={() => setLightboxIdx(null)}
+            t={t}
+          />
+        )}
+
         {/* HEADER */}
         <div style={{padding:"24px 0 6px"}}>
           <h1 style={{fontSize:22,fontWeight:700,margin:0}}>{editId ? "Edit listing" : "Sell your EV"}</h1>
@@ -727,25 +829,58 @@ export default function SellPage(){
               </div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(110px,1fr))",gap:10}}>
                 <input ref={fileInputRef} type="file" accept="image/*,.heic,.heif" multiple onChange={handleFileSelect} style={{display:"none"}}/>
-                {photos.map((ph,i)=>(
-                  <div key={i} style={{position:"relative",aspectRatio:"4/3",borderRadius:12,overflow:"hidden",boxShadow:`inset 0 0 0 1px ${t.bd}`}}>
-                    <img src={ph} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.target.style.display="none"}}/>
+                {photos.map((ph,i)=>{
+                  const isPlaceholder = typeof ph === "object" && ph._uploading;
+                  const prog = isPlaceholder ? photoProgress[ph._id] : null;
+                  return (
+                  <div key={isPlaceholder ? ph._id : i}
+                    draggable={!isPlaceholder}
+                    onDragStart={()=>{dragItem.current=i}}
+                    onDragEnter={()=>{dragOver.current=i}}
+                    onDragEnd={()=>{
+                      if(dragItem.current!==null&&dragOver.current!==null&&dragItem.current!==dragOver.current){
+                        const arr=[...photos];const[m]=arr.splice(dragItem.current,1);arr.splice(dragOver.current,0,m);setPhotos(arr);
+                      }
+                      dragItem.current=null;dragOver.current=null;
+                    }}
+                    onDragOver={e=>e.preventDefault()}
+                    style={{position:"relative",aspectRatio:"4/3",borderRadius:12,overflow:"hidden",boxShadow:`inset 0 0 0 1px ${t.bd}`,cursor:isPlaceholder?"default":"grab"}}>
+                    {isPlaceholder ? (
+                      <div style={{width:"100%",height:"100%",background:t.sec,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4}}>
+                        <div style={{width:20,height:20,border:`2px solid ${BC}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+                        <span style={{fontSize:10,color:t.tx3}}>{prog?.status==="compressing"?"Compressing...":"Processing..."}</span>
+                      </div>
+                    ) : (
+                      <img src={ph} alt="" style={{width:"100%",height:"100%",objectFit:"cover",cursor:"pointer"}}
+                        onClick={()=>{const readyPhotos=photos.filter(p=>typeof p==="string");const ri=readyPhotos.indexOf(ph);if(ri>=0)setLightboxIdx(ri)}}
+                        onError={e=>{e.target.style.display="none"}}/>
+                    )}
+                    {/* Progress bar */}
+                    {isPlaceholder && prog && prog.status !== "done" && (
+                      <div style={{position:"absolute",bottom:0,left:0,right:0,height:4,background:"rgba(0,0,0,0.3)"}}>
+                        <div style={{height:"100%",width:`${Math.min(prog.progress||0,100)}%`,background:`linear-gradient(90deg,${BC},#FF9533)`,borderRadius:2,transition:"width 0.2s ease"}}/>
+                      </div>
+                    )}
+                    {!isPlaceholder && (
                     <div style={{position:"absolute",top:4,right:4,display:"flex",gap:3}}>
                       {i>0&&<button onClick={()=>movePhoto(i,i-1)} style={{width:22,height:22,borderRadius:5,border:"none",background:"rgba(0,0,0,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff"}}>‹</button>}
                       {i<photos.length-1&&<button onClick={()=>movePhoto(i,i+1)} style={{width:22,height:22,borderRadius:5,border:"none",background:"rgba(0,0,0,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff"}}>›</button>}
                       <button onClick={()=>removePhoto(i)} style={{width:22,height:22,borderRadius:5,border:"none",background:"rgba(0,0,0,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><TrashIcon size={11} color="#fff"/></button>
                     </div>
-                    {i===0&&<div style={{position:"absolute",bottom:4,left:4,fontSize:9,fontWeight:700,background:BC,color:"#fff",padding:"2px 6px",borderRadius:4,textTransform:"uppercase"}}>Cover</div>}
+                    )}
+                    {i===0&&!isPlaceholder&&<div style={{position:"absolute",bottom:4,left:4,fontSize:9,fontWeight:700,background:BC,color:"#fff",padding:"2px 6px",borderRadius:4,textTransform:"uppercase"}}>Cover</div>}
                   </div>
-                ))}
+                  );
+                })}
                 {photos.length<20&&(
                   <div onClick={addPhoto} style={{aspectRatio:"4/3",borderRadius:10,border:`2px dashed ${d?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.1)"}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",gap:6,background:t.sec,opacity:uploading?0.5:1}}>
                     <PlusIcon size={22} color={t.tx3}/>
-                    <span style={{fontSize:11,color:t.tx3,fontWeight:500}}>{uploading?`Processing ${uploadProg}...`:"Add photo"}</span>
+                    <span style={{fontSize:11,color:t.tx3,fontWeight:500}}>{uploading?`Processing ${uploadProg}...`:"Add photos"}</span>
                   </div>
                 )}
               </div>
-              <div style={{fontSize:12,color:t.tx3}}>{photos.length}/20 photos · First photo is the cover image</div>
+              <div style={{fontSize:12,color:t.tx3}}>{photos.filter(p=>typeof p==="string").length}/20 photos · Drag to reorder · Click to preview</div>
+              <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
             </div>
           )}
 
@@ -849,10 +984,10 @@ export default function SellPage(){
                 <h2 style={{fontSize:16,fontWeight:700,margin:0}}>Review your listing</h2>
               </div>
               <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-                {photos.slice(0,3).map((ph,i)=>(
-                  <div key={i} style={{width:96,height:64,borderRadius:8,overflow:"hidden"}}><img src={ph} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>
+                {photos.filter(p=>typeof p==="string").slice(0,3).map((ph,i)=>(
+                  <div key={i} onClick={()=>setLightboxIdx(i)} style={{width:96,height:64,borderRadius:8,overflow:"hidden",cursor:"pointer"}}><img src={ph} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>
                 ))}
-                {photos.length>3&&<div style={{width:96,height:64,borderRadius:8,background:t.sec,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:600,color:t.tx2}}>+{photos.length-3} more</div>}
+                {photos.filter(p=>typeof p==="string").length>3&&<div onClick={()=>setLightboxIdx(3)} style={{width:96,height:64,borderRadius:8,background:t.sec,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:600,color:t.tx2,cursor:"pointer"}}>+{photos.filter(p=>typeof p==="string").length-3} more</div>}
               </div>
               {[
                 {s:"Vehicle",si:1,rows:[
