@@ -467,6 +467,23 @@ export default function SellPage(){
     if (fileInputRef.current) fileInputRef.current.click();
   };
 
+  // Load heic2any from CDN on first use
+  const heic2anyRef = useRef(null);
+  const getHeic2any = () => new Promise((resolve) => {
+    if (heic2anyRef.current) return resolve(heic2anyRef.current);
+    if (window.heic2any) { heic2anyRef.current = window.heic2any; return resolve(window.heic2any); }
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
+    s.onload = () => { heic2anyRef.current = window.heic2any; resolve(window.heic2any); };
+    s.onerror = () => resolve(null);
+    document.head.appendChild(s);
+  });
+
+  const isHeic = (file) => {
+    const name = file.name?.toLowerCase() || "";
+    return name.endsWith(".heic") || name.endsWith(".heif") || file.type === "image/heic" || file.type === "image/heif";
+  };
+
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -475,7 +492,18 @@ export default function SellPage(){
     const toProcess = files.slice(0, remaining);
     const compressed = [];
     for (const file of toProcess) {
-      const result = await compressImage(file);
+      let fileToCompress = file;
+      // Convert HEIC to JPEG first
+      if (isHeic(file)) {
+        try {
+          const heic2any = await getHeic2any();
+          if (heic2any) {
+            const blob = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.85 });
+            fileToCompress = new File([blob], file.name.replace(/\.heic|\.heif/i, ".jpg"), { type: "image/jpeg" });
+          }
+        } catch (err) { console.warn("HEIC conversion failed:", err); }
+      }
+      const result = await compressImage(fileToCompress);
       compressed.push(result);
     }
     setPhotos(prev => [...prev, ...compressed]);
