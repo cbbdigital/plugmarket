@@ -36,6 +36,7 @@ async function sbUploadPhoto(userId, listingId, file, position, token) {
       "apikey": SB_KEY,
       "Authorization": `Bearer ${token}`,
       "Content-Type": "image/jpeg",
+      "x-upsert": "true",
     },
     body: blob,
   });
@@ -221,11 +222,16 @@ export default function SellPage(){
     if (!token || !uid) { setPublishing(false); alert("Session expired. Please sign in again."); nav("/login"); return; }
 
     // 1. Insert listing
+    // Map form values to Supabase enum values
+    const condMap = {"New":"new","Used":"used","Certified Pre-Owned":"certified_pre_owned"};
+    const driveMap = {"RWD":"rwd","AWD":"awd","FWD":"fwd"};
+    const portMap = {"CCS2":"ccs2","Type 2":"type2","CHAdeMO":"chademo","CCS2 / Type 2":"ccs2_type2"};
+
     const listing = await sbInsert("listings", {
       seller_id: uid,
-      make, model, variant, year: +year, mileage_km: +km,
-      condition: condition ? condition.toLowerCase().replace(/ /g,"_").replace("certified_pre-owned","certified") : null,
-      exterior_color: color || null, interior_color: intColor || null, drivetrain: drive || null,
+      make, model, variant: variant || null, year: +year, mileage_km: +km,
+      condition: condMap[condition] || null,
+      exterior_color: color || null, interior_color: intColor || null, drivetrain: driveMap[drive] || null,
       vin: vin || null, first_registration: regDate || null,
       previous_owners: owners ? +owners : null,
       accident_free: accidentFree, service_history: serviceHistory || null,
@@ -233,11 +239,11 @@ export default function SellPage(){
       state_of_health_pct: soh ? +soh : null,
       range_real_km: rangeReal ? +rangeReal : null, range_winter_km: rangeWinter ? +rangeWinter : null,
       dc_charge_max_kw: dcCharge ? +dcCharge : null, ac_charge_kw: acCharge ? +acCharge : null,
-      charge_port: port || null, power_kw: powerKw ? +powerKw : null,
+      charge_port: portMap[port] || null, power_kw: powerKw ? +powerKw : null,
       price_eur: +price, negotiable, vat_deductible: vatDeduct,
       description: description || null,
-      contact_name: sellerName, contact_phone: phone, contact_email: email, seller_type: sellerType,
-      city, country,
+      contact_name: sellerName || null, contact_phone: phone || null, contact_email: email || null, seller_type: sellerType,
+      city: city || null, country: country || null,
       status: "active",
     }, token);
 
