@@ -27,15 +27,17 @@ async function sbInsert(table, data, token) {
 
 async function sbUploadPhoto(userId, listingId, file, position, token) {
   const path = `${userId}/${listingId}/${position}.jpg`;
-  // Convert base64 to blob
+  // Convert base64/data-url to blob
   const res = await fetch(file);
   const blob = await res.blob();
+  // Use the blob's actual type, fallback to jpeg
+  const contentType = blob.type && blob.type.startsWith("image/") ? blob.type : "image/jpeg";
   const uploadRes = await fetch(`${SB_URL}/storage/v1/object/listing-photos/${path}`, {
     method: "POST",
     headers: {
       "apikey": SB_KEY,
       "Authorization": `Bearer ${token}`,
-      "Content-Type": "image/jpeg",
+      "Content-Type": contentType,
       "x-upsert": "true",
     },
     body: blob,
@@ -378,27 +380,43 @@ export default function SellPage(){
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (e) => {
+        const dataUrl = e.target.result;
         const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          let w = img.width, h = img.height;
-          const maxDim = 1920;
-          if (w > maxDim || h > maxDim) {
-            if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
-            else { w = Math.round(w * maxDim / h); h = maxDim; }
-          }
-          canvas.width = w;
-          canvas.height = h;
-          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-          let quality = 0.8;
-          let result = canvas.toDataURL("image/jpeg", quality);
-          while (result.length > maxSizeKB * 1370 && quality > 0.3) {
-            quality -= 0.1;
-            result = canvas.toDataURL("image/jpeg", quality);
-          }
-          resolve(result);
+        let done = false;
+        // Timeout: if image can't decode in 5s (e.g. HEIC on Chrome), use raw file
+        const timer = setTimeout(() => {
+          if (!done) { done = true; resolve(dataUrl); }
+        }, 5000);
+        img.onerror = () => {
+          if (!done) { done = true; clearTimeout(timer); resolve(dataUrl); }
         };
-        img.src = e.target.result;
+        img.onload = () => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          try {
+            const canvas = document.createElement("canvas");
+            let w = img.width, h = img.height;
+            const maxDim = 1920;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+              else { w = Math.round(w * maxDim / h); h = maxDim; }
+            }
+            canvas.width = w;
+            canvas.height = h;
+            canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+            let quality = 0.8;
+            let result = canvas.toDataURL("image/jpeg", quality);
+            while (result.length > maxSizeKB * 1370 && quality > 0.3) {
+              quality -= 0.1;
+              result = canvas.toDataURL("image/jpeg", quality);
+            }
+            resolve(result);
+          } catch {
+            resolve(dataUrl);
+          }
+        };
+        img.src = dataUrl;
       };
       reader.readAsDataURL(file);
     });
@@ -586,7 +604,7 @@ export default function SellPage(){
                 <span style={{fontSize:12,color:t.tx2,lineHeight:1.5}}>Listings with 6+ photos get 3x more views. Include exterior (front, rear, sides), interior, dashboard, boot, and any damage.</span>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(110px,1fr))",gap:10}}>
-                <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileSelect} style={{display:"none"}}/>
+                <input ref={fileInputRef} type="file" accept="image/*,.heic,.heif" multiple onChange={handleFileSelect} style={{display:"none"}}/>
                 {photos.map((ph,i)=>(
                   <div key={i} style={{position:"relative",aspectRatio:"4/3",borderRadius:12,overflow:"hidden",boxShadow:`inset 0 0 0 1px ${t.bd}`}}>
                     <img src={ph} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
