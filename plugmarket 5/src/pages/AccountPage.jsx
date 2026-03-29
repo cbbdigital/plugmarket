@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useOutletContext, useNavigate } from "react-router-dom";
+import { useOutletContext, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import { BC, GR, cs } from "../styles/theme";
 
@@ -345,7 +345,8 @@ export default function AccountPage(){
   const { t, dark, setDark } = useOutletContext();
   const { user, session, signOut } = useAuth();
   const nav = useNavigate();
-  const[page,setPage]=useState("home");
+  const [sp] = useSearchParams();
+  const[page,setPage]=useState(sp.get("page")||"home");
   const[notifEmail,setNotifEmail]=useState(true);
   const[notifPush,setNotifPush]=useState(true);
   const[notifNewMsg,setNotifNewMsg]=useState(true);
