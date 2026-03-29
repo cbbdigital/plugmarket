@@ -78,19 +78,18 @@ function Sect({title,children,t}){return <div style={{...cs(t),padding:"4px 18px
 function SubH({title,t}){return <div style={{padding:"14px 0 10px"}}><span style={{fontSize:17,fontWeight:700}}>{title}</span></div>}
 
 // ── Sub-pages ──
-function ListingsPage({t,onBack,nav,user}){
+function ListingsPage({t,onBack,nav,user,session}){
   const[filter,setFilter]=useState("all");
   const[listings,setListings]=useState([]);
   const[loading,setLoading]=useState(true);
 
   useEffect(()=>{
     if(!user)return;
-    const token=user.access_token||JSON.parse(localStorage.getItem("pm_session")||"{}").access_token;
-    const uid=user.id||user.user?.id||JSON.parse(localStorage.getItem("pm_session")||"{}").user?.id;
-    if(!token||!uid)return;
+    const token=session?.access_token;
+    const uid=user.id;
+    if(!token||!uid){setLoading(false);return;}
     (async()=>{
       const rows=await sbQuery("listings",`seller_id=eq.${uid}&order=created_at.desc`,token);
-      // Fetch cover photos
       if(rows.length>0){
         const ids=rows.map(r=>r.id);
         const photos=await sbQuery("listing_photos",`listing_id=in.(${ids.join(",")})&position=eq.0`,token);
@@ -107,7 +106,7 @@ function ListingsPage({t,onBack,nav,user}){
       }
       setLoading(false);
     })();
-  },[user]);
+  },[user,session]);
 
   const items=filter==="all"?listings:listings.filter(l=>l.status===filter);
   const tv=listings.reduce((a,l)=>a+l.views,0);
@@ -344,7 +343,7 @@ function TermsPage({t}){
 // ══ Main ══
 export default function AccountPage(){
   const { t, dark, setDark } = useOutletContext();
-  const { user, signOut } = useAuth();
+  const { user, session, signOut } = useAuth();
   const nav = useNavigate();
   const[page,setPage]=useState("home");
   const[notifEmail,setNotifEmail]=useState(true);
@@ -358,7 +357,7 @@ export default function AccountPage(){
   const goHome=()=>setPage("home");
 
   const content = ()=>{
-    if(page==="listings") return <ListingsPage t={t} onBack={goHome} nav={nav} user={user}/>;
+    if(page==="listings") return <ListingsPage t={t} onBack={goHome} nav={nav} user={user} session={session}/>;
     if(page==="sold") return <SoldPage t={t} onBack={goHome}/>;
     if(page==="reviews") return <ReviewsPage t={t} onBack={goHome}/>;
     if(page==="edit") return <EditPage t={t} onBack={goHome}/>;
