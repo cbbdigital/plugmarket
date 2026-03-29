@@ -44,7 +44,7 @@ const InfoIcon = (p) => <Ic {...p} d={<><circle cx="12" cy="12" r="10"/><line x1
 function HealthRing({ pct, size = 72, d }) {
   const r = (size - 8) / 2, circ = 2 * Math.PI * r;
   const offset = circ * (1 - pct / 100);
-  const c = pct >= 96 ? "#10b981" : pct >= 93 ? "#f59e0b" : "#ef4444";
+  const c = pct >= 90 ? "#10b981" : pct >= 80 ? "#f59e0b" : "#ef4444";
   return (
     <div style={{ position: "relative", width: size, height: size }}>
       <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
@@ -77,6 +77,11 @@ function cs(t) {
 }
 
 // ── Price Analysis ──
+function fmtCond(c) {
+  if (!c) return "";
+  const m = { new: "New", used: "Used", certified_pre_owned: "Certified Pre-Owned" };
+  return m[c] || c.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+}
 function getMkt(make, price) {
   const avgs = { Tesla:44900, BMW:52800, Volkswagen:38200, Mercedes:56700, Audi:51200, Hyundai:41500, Kia:39800, BYD:33200, Porsche:89500, Renault:34100, Skoda:37600, Volvo:46300, MG:29800, Polestar:47200, Cupra:39100, Ford:44800, NIO:46500, Fiat:28900 };
   const avg = avgs[make] || 42200;
@@ -100,6 +105,7 @@ export default function ListingDetailPage() {
   const [tab, setTab] = useState("overview");
   const [fullscreen, setFullscreen] = useState(false);
   const [galleryMode, setGalleryMode] = useState("single");
+  const [copied, setCopied] = useState(false);
   const [winW, setWinW] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
 
   useEffect(() => {
@@ -155,6 +161,7 @@ export default function ListingDetailPage() {
   );
 
   const allPhotos = photos.length > 0 ? photos : ["https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=800&h=500&fit=crop"];
+  const [imgErr, setImgErr] = useState({});
   const prevPhoto = () => setPhotoIdx(i => i === 0 ? allPhotos.length - 1 : i - 1);
   const nextPhoto = () => setPhotoIdx(i => i === allPhotos.length - 1 ? 0 : i + 1);
   const mkt = getMkt(car.make, Number(car.price_eur));
@@ -202,8 +209,8 @@ export default function ListingDetailPage() {
         <button onClick={() => setFav(!fav)} style={{ flex: 1, height: 40, borderRadius: 10, border: `1px solid ${th.bd}`, background: th.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, color: fav ? "#ef4444" : th.tx2, fontSize: 13 }}>
           <HeartIcon size={16} filled={fav} color={fav ? "#ef4444" : th.tx2}/> {fav ? "Saved" : "Save"}
         </button>
-        <button style={{ flex: 1, height: 40, borderRadius: 10, border: `1px solid ${th.bd}`, background: th.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, color: th.tx2, fontSize: 13 }}>
-          <ShareIcon size={16} color={th.tx2}/> Share
+        <button onClick={()=>{navigator.clipboard.writeText(window.location.href);setCopied(true);setTimeout(()=>setCopied(false),2000)}} style={{ flex: 1, height: 40, borderRadius: 10, border: `1px solid ${th.bd}`, background: th.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, color: copied ? "#10b981" : th.tx2, fontSize: 13 }}>
+          {copied ? <><CheckIcon size={16} color="#10b981"/> Link copied!</> : <><ShareIcon size={16} color={th.tx2}/> Share</>}
         </button>
       </div>
 
@@ -246,7 +253,7 @@ export default function ListingDetailPage() {
                 ["DC charge", car.dc_charge_max_kw ? `${car.dc_charge_max_kw} kW` : "—"],
                 ["Drivetrain", car.drivetrain || "—"],
                 ["Colour", car.exterior_color || "—"],
-                ["Condition", car.condition || "—"],
+                ["Condition", fmtCond(car.condition) || "—"],
                 ["Doors", car.doors || "—"],
               ].map(([label, val], i) => (
                 <div key={i} style={{ padding: "8px 0", borderBottom: `1px solid ${th.divider}`, fontSize: 13 }}>
@@ -355,12 +362,12 @@ export default function ListingDetailPage() {
       {/* Seller card */}
       <div style={{ ...cs(th), padding: 20 }}>
         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Seller</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+        <div onClick={() => navigate(`/search?seller=${car.seller_id}`)} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, cursor: "pointer" }}>
           <div style={{ width: 44, height: 44, borderRadius: 12, background: GR, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 16 }}>
             {(car.contact_name || "?")[0].toUpperCase()}
           </div>
           <div>
-            <div style={{ fontWeight: 600, fontSize: 14 }}>{car.contact_name || "Seller"}</div>
+            <div style={{ fontWeight: 600, fontSize: 14, color: BC }}>{car.contact_name || "Seller"}</div>
             <div style={{ fontSize: 12, color: th.tx2 }}>{car.seller_type === "dealer" ? "Dealer" : "Private seller"} · {car.city}</div>
           </div>
         </div>
@@ -441,7 +448,7 @@ export default function ListingDetailPage() {
         <div style={{ fontSize: 13, color: th.tx2, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <MapIcon size={14} color={th.tx2}/> {car.city}{car.country ? `, ${car.country}` : ""}
           <span>·</span> {car.mileage_km ? `${Number(car.mileage_km).toLocaleString()} km` : ""}
-          <span>·</span> {car.condition || ""}
+          <span>·</span> {fmtCond(car.condition) || ""}
         </div>
       </div>
 

@@ -445,6 +445,13 @@ export default function SellPage(){
   };
 
   const removePhoto = (idx) => setPhotos(photos.filter((_,i)=>i!==idx));
+  const movePhoto = (from, to) => {
+    if (to < 0 || to >= photos.length) return;
+    const arr = [...photos];
+    const [item] = arr.splice(from, 1);
+    arr.splice(to, 0, item);
+    setPhotos(arr);
+  };
 
   const canNext = () => {
     if(step===1) return make&&model&&year&&km&&condition;
@@ -607,8 +614,12 @@ export default function SellPage(){
                 <input ref={fileInputRef} type="file" accept="image/*,.heic,.heif" multiple onChange={handleFileSelect} style={{display:"none"}}/>
                 {photos.map((ph,i)=>(
                   <div key={i} style={{position:"relative",aspectRatio:"4/3",borderRadius:12,overflow:"hidden",boxShadow:`inset 0 0 0 1px ${t.bd}`}}>
-                    <img src={ph} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                    <button onClick={()=>removePhoto(i)} style={{position:"absolute",top:4,right:4,width:24,height:24,borderRadius:6,border:"none",background:"rgba(0,0,0,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><TrashIcon size={12} color="#fff"/></button>
+                    <img src={ph} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.target.style.display="none"}}/>
+                    <div style={{position:"absolute",top:4,right:4,display:"flex",gap:3}}>
+                      {i>0&&<button onClick={()=>movePhoto(i,i-1)} style={{width:22,height:22,borderRadius:5,border:"none",background:"rgba(0,0,0,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff"}}>‹</button>}
+                      {i<photos.length-1&&<button onClick={()=>movePhoto(i,i+1)} style={{width:22,height:22,borderRadius:5,border:"none",background:"rgba(0,0,0,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff"}}>›</button>}
+                      <button onClick={()=>removePhoto(i)} style={{width:22,height:22,borderRadius:5,border:"none",background:"rgba(0,0,0,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><TrashIcon size={11} color="#fff"/></button>
+                    </div>
                     {i===0&&<div style={{position:"absolute",bottom:4,left:4,fontSize:9,fontWeight:700,background:BC,color:"#fff",padding:"2px 6px",borderRadius:4,textTransform:"uppercase"}}>Cover</div>}
                   </div>
                 ))}

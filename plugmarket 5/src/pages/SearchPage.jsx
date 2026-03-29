@@ -149,7 +149,8 @@ export default function SearchPage() {
   const[doors,setDoors]=useState("");
   const[sort,setSort]=useState("newest");
   const[showF,setShowF]=useState(false);
-  const[favIds,setFavIds]=useState([]);
+  const[favIds,setFavIds]=useState(()=>{try{return JSON.parse(localStorage.getItem("pm_favs")||"[]")}catch{return[]}});
+  useEffect(()=>{try{localStorage.setItem("pm_favs",JSON.stringify(favIds))}catch{}},[favIds]);
   const toggleFav=(id)=>setFavIds(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
   const[allListings,setAllListings]=useState([]);
   const[dbLoading,setDbLoading]=useState(true);
@@ -161,9 +162,13 @@ export default function SearchPage() {
     setSp(p,{replace:true});
   };
 
+  const sellerFilter = sp.get("seller") || "";
+
   useEffect(()=>{
     (async()=>{
-      const rows=await sbGet("listings","status=eq.active&order=created_at.desc");
+      let query = "status=eq.active&order=created_at.desc";
+      if (sellerFilter) query += `&seller_id=eq.${sellerFilter}`;
+      const rows=await sbGet("listings",query);
       if(rows.length>0){
         const ids=rows.map(r=>r.id);
         const photos=await sbGet("listing_photos",`listing_id=in.(${ids.join(",")})&order=position.asc`);
@@ -177,11 +182,12 @@ export default function SearchPage() {
           co:r.country||"",ct:r.city||"",hp:r.state_of_health_pct||100,
           ft:r.is_boosted||false,dy:Math.max(0,Math.round((Date.now()-new Date(r.created_at).getTime())/86400000)),
           imgs:photoMap[r.id]||[FALLBACK],
+          sid:r.seller_id,
         })));
       }
       setDbLoading(false);
     })();
-  },[]);
+  },[sellerFilter]);
   const mods=make?MK[make]||[]:[];
   const COLORS=["Black","White","Silver","Gray","Blue","Red","Green","Yellow","Orange","Brown"];
   const filtered=useMemo(()=>{
@@ -345,6 +351,12 @@ export default function SearchPage() {
           </div>
         </div>
       )}
+
+      {/* Seller filter banner */}
+      {sellerFilter&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",marginBottom:10,borderRadius:10,background:t.sec,border:`1px solid ${t.bd}`}}>
+        <span style={{fontSize:12,color:t.tx2}}>Showing all listings from this seller</span>
+        <button onClick={()=>setSp({})} style={{fontSize:11,color:BC,background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Clear filter</button>
+      </div>}
 
       {/* Results header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"2px 0 12px"}}>

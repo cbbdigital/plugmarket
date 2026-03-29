@@ -112,10 +112,11 @@ function ListingsPage({t,onBack,nav,user,session}){
     if(ok) setListings(prev=>prev.filter(l=>l.id!==car.id));
   };
 
+  const[toast,setToast]=useState(null);
   const boostListing=async(car)=>{
     const ok=await sbUpdate("listings",`id=eq.${car.id}`,{is_boosted:true},token);
     if(ok) setListings(prev=>prev.map(l=>l.id===car.id?{...l,boosted:true}:l));
-    if(ok) alert(`"${car.year} ${car.make} ${car.model}" is now featured on the homepage!`);
+    if(ok){setToast(`${car.year} ${car.make} ${car.model} is now featured!`);setTimeout(()=>setToast(null),3000);}
   };
 
   const items=filter==="all"?listings:listings.filter(l=>l.status===filter);
@@ -125,6 +126,8 @@ function ListingsPage({t,onBack,nav,user,session}){
   if(loading) return <div style={{textAlign:"center",padding:"60px 0",color:t.tx3}}>Loading listings...</div>;
 
   return <>
+    {toast&&<div style={{position:"fixed",top:80,left:"50%",transform:"translateX(-50%)",zIndex:99999,background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",padding:"12px 24px",borderRadius:12,fontSize:13,fontWeight:600,boxShadow:"0 8px 24px rgba(0,0,0,0.25)",display:"flex",alignItems:"center",gap:8,animation:"fadeIn 0.3s ease"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{toast}</div>}
+    <style>{`@keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(-10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}`}</style>
     <SubH title="My listings" t={t} onBack={onBack}/>
     <div style={{display:"flex",gap:8,padding:"16px 0"}}>
       {[{n:listings.filter(l=>l.status==="active").length,l:"Active",ic:<Car size={14} color={BC}/>},{n:tv,l:"Total views",ic:<Eye size={14} color="#6366f1"/>},{n:ti,l:"Inquiries",ic:<Chat size={14} color="#10b981"/>}].map((s,i)=><div key={i} style={{flex:1,...cs(t),padding:"14px 12px",display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>{s.ic}<span style={{fontSize:18,fontWeight:700,color:t.tx}}>{s.n}</span><span style={{fontSize:10,color:t.tx3}}>{s.l}</span></div>)}
