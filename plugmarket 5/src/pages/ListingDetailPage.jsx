@@ -364,7 +364,7 @@ export default function ListingDetailPage() {
             <div style={{ fontSize: 12, color: th.tx2 }}>{car.seller_type === "dealer" ? "Dealer" : "Private seller"} · {car.city}</div>
           </div>
         </div>
-        <button style={{ width: "100%", height: 44, borderRadius: 12, border: "none", background: GR, color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+        <button onClick={() => navigate(`/messages?listing=${id}&seller=${car.seller_id}`)} style={{ width: "100%", height: 44, borderRadius: 12, border: "none", background: GR, color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
           <MailIcon size={16} color="#fff"/> Message seller
         </button>
         <button onClick={() => setShowPhone(!showPhone)} style={{ width: "100%", height: 42, borderRadius: 12, border: `1px solid ${th.bd}`, background: th.card, color: th.tx, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>

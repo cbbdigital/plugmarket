@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useOutletContext, useNavigate } from "react-router-dom";
+import { useOutletContext, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 
 /* ─── ICONS (same as dashboard) ─── */
@@ -154,6 +154,9 @@ export default function MessagesPage(){
   const { t, dark } = useOutletContext();
   const { user, session } = useAuth();
   const nav = useNavigate();
+  const [sp, setSp] = useSearchParams();
+  const incomingListing = sp.get("listing");
+  const incomingSeller = sp.get("seller");
   const[activeChat,setActiveChat]=useState(null);
   const[newMsg,setNewMsg]=useState("");
   const[search,setSearch]=useState("");
@@ -198,6 +201,44 @@ export default function MessagesPage(){
       setLoading(false);
     })();
   },[user,session]);
+
+  // Auto-open or create conversation when coming from listing page
+  useEffect(()=>{
+    if(!incomingListing||!incomingSeller||!user||!session?.access_token||loading)return;
+    if(incomingSeller===user.id)return; // can't message yourself
+    const token=session.access_token;
+    const uid=user.id;
+    (async()=>{
+      // Check if conversation already exists for this listing between these users
+      const existing=await sbGet("conversations",`listing_id=eq.${incomingListing}&or=(and(buyer_id.eq.${uid},seller_id.eq.${incomingSeller}),and(buyer_id.eq.${incomingSeller},seller_id.eq.${uid}))`,token);
+      if(existing.length>0){
+        setActiveChat(existing[0].id);
+      } else {
+        // Create new conversation
+        const newConvo=await sbPost("conversations",{
+          listing_id:incomingListing,
+          buyer_id:uid,
+          seller_id:incomingSeller,
+          last_message_text:"",
+        },token);
+        if(newConvo?.id){
+          // Fetch listing info for display
+          const listing=await sbGet("listings",`id=eq.${incomingListing}&select=make,model`,token);
+          const sellerProfile=await sbGet("profiles",`id=eq.${incomingSeller}&select=full_name`,token);
+          const carName=listing?.[0]?`${listing[0].make} ${listing[0].model}`:"Vehicle";
+          const sellerName=sellerProfile?.[0]?.full_name||"Seller";
+          setConversations(prev=>[{
+            id:newConvo.id,name:sellerName,
+            initials:sellerName.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2),
+            online:false,unread:0,car:carName,lastMsg:"",time:"now",messages:[],
+          },...prev]);
+          setActiveChat(newConvo.id);
+        }
+      }
+      // Clear URL params
+      setSp({});
+    })();
+  },[incomingListing,incomingSeller,user,session,loading]);
 
   if (!user) return null;
 
