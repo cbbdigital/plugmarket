@@ -3,6 +3,46 @@ import { useOutletContext, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import { BC, GR, cs } from "../styles/theme";
 
+// ── Supabase REST client ──
+const SB_URL = import.meta.env.VITE_SUPABASE_URL || "https://tmftxqwqwceuiydleuag.supabase.co";
+const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtZnR4cXdxd2NldWl5ZGxldWFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDA2MzEsImV4cCI6MjA5MDI3NjYzMX0.k5TOln3e4M8PxH2tH22-6BsFimH84InVfNOWP8riaCM";
+
+const sbHeaders = (token) => ({
+  "apikey": SB_KEY,
+  "Authorization": `Bearer ${token || SB_KEY}`,
+  "Content-Type": "application/json",
+  "Prefer": "return=representation",
+});
+
+async function sbInsert(table, data, token) {
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
+      method: "POST", headers: sbHeaders(token), body: JSON.stringify(data),
+    });
+    if (!r.ok) { console.error("Insert error:", await r.text()); return null; }
+    const res = await r.json();
+    return res?.[0] || res;
+  } catch (e) { console.error("Insert failed:", e); return null; }
+}
+
+async function sbUploadPhoto(userId, listingId, file, position, token) {
+  const path = `${userId}/${listingId}/${position}.jpg`;
+  // Convert base64 to blob
+  const res = await fetch(file);
+  const blob = await res.blob();
+  const uploadRes = await fetch(`${SB_URL}/storage/v1/object/listing-photos/${path}`, {
+    method: "POST",
+    headers: {
+      "apikey": SB_KEY,
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "image/jpeg",
+    },
+    body: blob,
+  });
+  if (!uploadRes.ok) { console.error("Upload error:", await uploadRes.text()); return null; }
+  return `${SB_URL}/storage/v1/object/public/listing-photos/${path}`;
+}
+
 // ── Data ──
 const MAKES_DATA = {
   Tesla: ["Model 3", "Model Y", "Model S", "Model X"],
@@ -168,10 +208,54 @@ export default function SellPage(){
   const [country,setCountry]=useState("");
 
   const [submitted,setSubmitted]=useState(false);
+  const [publishing,setPublishing]=useState(false);
 
   // Auth redirect
   useEffect(() => { if (!user) nav("/login"); }, [user, nav]);
   if (!user) return null;
+
+  const publishListing = async () => {
+    setPublishing(true);
+    const token = user?.access_token || JSON.parse(localStorage.getItem("pm_session")||"{}").access_token;
+    const uid = user?.id || user?.user?.id || JSON.parse(localStorage.getItem("pm_session")||"{}").user?.id;
+    if (!token || !uid) { setPublishing(false); alert("Please sign in again."); return; }
+
+    // 1. Insert listing
+    const listing = await sbInsert("listings", {
+      seller_id: uid,
+      make, model, variant, year: +year, mileage_km: +km,
+      condition: condition.toLowerCase().replace(/ /g,"_"),
+      exterior_color: color, interior_color: intColor, drivetrain: drive,
+      vin: vin || null, first_registration: regDate || null,
+      previous_owners: owners ? +owners : null,
+      accident_free: accidentFree, service_history: serviceHistory || null,
+      battery_kwh: battery ? +battery : null, usable_kwh: usable ? +usable : null,
+      soh_percent: soh ? +soh : null,
+      range_real_km: rangeReal ? +rangeReal : null, range_winter_km: rangeWinter ? +rangeWinter : null,
+      dc_charge_kw: dcCharge ? +dcCharge : null, ac_charge_kw: acCharge ? +acCharge : null,
+      charge_port: port || null, power_kw: powerKw ? +powerKw : null,
+      price_eur: +price, negotiable, vat_deductible: vatDeduct,
+      description: description || null,
+      seller_name: sellerName, seller_type: sellerType,
+      phone, email, city, country,
+      status: "active",
+    }, token);
+
+    if (!listing?.id) { setPublishing(false); alert("Failed to create listing. Please try again."); return; }
+
+    // 2. Upload photos to Supabase Storage
+    for (let i = 0; i < photos.length; i++) {
+      const photoUrl = await sbUploadPhoto(uid, listing.id, photos[i], i, token);
+      if (photoUrl) {
+        await sbInsert("listing_photos", {
+          listing_id: listing.id, url: photoUrl, position: i,
+        }, token);
+      }
+    }
+
+    setPublishing(false);
+    setSubmitted(true);
+  };
 
   const models = make ? MAKES_DATA[make]||[] : [];
   const years = Array.from({length:8},(_,i)=>String(2025-i));
@@ -551,8 +635,8 @@ export default function SellPage(){
           {step<6?(
             <button onClick={()=>{if(canNext())setStep(step+1)}} style={{padding:"10px 22px",borderRadius:10,border:"none",background:canNext()?GR:"rgba(128,128,128,0.15)",color:canNext()?"#fff":"#9ca3af",fontSize:13,fontWeight:600,cursor:canNext()?"pointer":"default",display:"flex",alignItems:"center",gap:6,boxShadow:canNext()?"0 2px 8px rgba(255,117,0,0.3)":"none"}}>Next <ChevR size={14} color={canNext()?"#fff":"#9ca3af"}/></button>
           ):(
-            <button onClick={()=>setSubmitted(true)} style={{padding:"12px 24px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:8,boxShadow:"0 4px 14px rgba(16,185,129,0.3)"}}>
-              <CheckIcon size={16} color="#fff"/> Publish listing
+            <button onClick={publishListing} disabled={publishing} style={{padding:"12px 24px",borderRadius:12,border:"none",background:publishing?"rgba(128,128,128,0.3)":"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:14,fontWeight:600,cursor:publishing?"default":"pointer",display:"flex",alignItems:"center",gap:8,boxShadow:publishing?"none":"0 4px 14px rgba(16,185,129,0.3)",opacity:publishing?0.7:1}}>
+              <CheckIcon size={16} color="#fff"/> {publishing?"Publishing...":"Publish listing"}
             </button>
           )}
         </div>
