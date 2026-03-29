@@ -97,7 +97,7 @@ function ListingsPage({t,onBack}){
         {[{l:"Edit",ic:<Edit size={13} color={t.tx2}/>},{l:car.status==="paused"?"Activate":"Pause",ic:car.status==="paused"?<Chk size={13} color="#10b981"/>:<Clk size={13} color="#f59e0b"/>},{l:"Boost",ic:<TUp size={13} color={BC}/>},{l:"Delete",ic:<Trash size={13} color="#ef4444"/>}].map((a,i)=><button key={i} style={{flex:1,padding:"10px 0",background:"none",border:"none",borderRight:i<3?`1px solid ${t.dv}`:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:500,color:t.tx2}}>{a.ic}{a.l}</button>)}
       </div>
     </div>)}
-    <button style={{width:"100%",height:48,borderRadius:12,border:`2px dashed ${t.bd}`,background:"none",color:BC,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:8}}><PlusLn size={18} color={BC}/> Sell another EV</button>
+    <button onClick={()=>nav("/sell")} style={{width:"100%",height:48,borderRadius:12,border:`2px dashed ${t.bd}`,background:"none",color:BC,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:8}}><PlusLn size={18} color={BC}/> Sell another EV</button>
   </>;
 }
 
