@@ -106,6 +106,7 @@ export default function ListingDetailPage() {
   const [fullscreen, setFullscreen] = useState(false);
   const [galleryMode, setGalleryMode] = useState("single");
   const [copied, setCopied] = useState(false);
+  const [imgErr, setImgErr] = useState({});
   const [winW, setWinW] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
 
   useEffect(() => {
@@ -161,7 +162,6 @@ export default function ListingDetailPage() {
   );
 
   const allPhotos = photos.length > 0 ? photos : ["https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=800&h=500&fit=crop"];
-  const [imgErr, setImgErr] = useState({});
   const prevPhoto = () => setPhotoIdx(i => i === 0 ? allPhotos.length - 1 : i - 1);
   const nextPhoto = () => setPhotoIdx(i => i === allPhotos.length - 1 ? 0 : i + 1);
   const mkt = getMkt(car.make, Number(car.price_eur));
