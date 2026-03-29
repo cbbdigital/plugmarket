@@ -118,9 +118,6 @@ export default function SellPage(){
   const { t, dark: d } = useOutletContext();
   const { user } = useAuth();
   const nav = useNavigate();
-  const [authChecked, setAuthChecked] = useState(false);
-  useEffect(() => { if (!user) nav("/login"); else setAuthChecked(true); }, [user, nav]);
-  if (!authChecked) return null;
   const [narrow,setNarrow]=useState(()=>window.innerWidth<480);
   useEffect(()=>{const h=()=>setNarrow(window.innerWidth<480);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h)},[]);
   const g2=narrow?"1fr":"1fr 1fr";
@@ -171,6 +168,10 @@ export default function SellPage(){
   const [country,setCountry]=useState("");
 
   const [submitted,setSubmitted]=useState(false);
+
+  // Auth redirect
+  useEffect(() => { if (!user) nav("/login"); }, [user, nav]);
+  if (!user) return null;
 
   const models = make ? MAKES_DATA[make]||[] : [];
   const years = Array.from({length:8},(_,i)=>String(2025-i));
