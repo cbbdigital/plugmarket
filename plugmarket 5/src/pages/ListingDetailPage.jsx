@@ -157,7 +157,7 @@ export default function ListingDetailPage() {
   const allPhotos = photos.length > 0 ? photos : ["https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=800&h=500&fit=crop"];
   const prevPhoto = () => setPhotoIdx(i => i === 0 ? allPhotos.length - 1 : i - 1);
   const nextPhoto = () => setPhotoIdx(i => i === allPhotos.length - 1 ? 0 : i + 1);
-  const mkt = getMkt(car.make, Number(car.price));
+  const mkt = getMkt(car.make, Number(car.price_eur));
   const cardStyle = { ...cs(th), padding: "4px 18px", marginBottom: 0 };
 
   // ── Equipment list ──
@@ -218,9 +218,9 @@ export default function ListingDetailPage() {
       {tab === "overview" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {/* Battery health */}
-          {car.soh && (
+          {car.state_of_health_pct && (
             <div style={{ ...cardStyle, padding: 20, display: "flex", alignItems: "center", gap: 20 }}>
-              <HealthRing pct={Number(car.soh)} d={dark}/>
+              <HealthRing pct={Number(car.state_of_health_pct)} d={dark}/>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Battery Health</div>
                 <div style={{ fontSize: 12, color: th.tx2, lineHeight: 1.5 }}>
@@ -228,7 +228,7 @@ export default function ListingDetailPage() {
                   {car.usable_capacity_kwh && ` · ${car.usable_capacity_kwh} kWh usable`}
                 </div>
                 <div style={{ fontSize: 12, color: th.tx2 }}>
-                  {car.range_summer_km && `~${car.range_summer_km} km summer`}
+                  {car.range_real_km && `~${car.range_real_km} km summer`}
                   {car.range_winter_km && ` · ~${car.range_winter_km} km winter`}
                 </div>
               </div>
@@ -243,7 +243,7 @@ export default function ListingDetailPage() {
                 ["Mileage", car.mileage_km ? `${Number(car.mileage_km).toLocaleString()} km` : "—"],
                 ["Year", car.year || "—"],
                 ["Power", car.power_kw ? `${car.power_kw} kW` : "—"],
-                ["DC charge", car.dc_charge_kw ? `${car.dc_charge_kw} kW` : "—"],
+                ["DC charge", car.dc_charge_max_kw ? `${car.dc_charge_max_kw} kW` : "—"],
                 ["Drivetrain", car.drivetrain || "—"],
                 ["Colour", car.exterior_color || "—"],
                 ["Condition", car.condition || "—"],
@@ -287,13 +287,13 @@ export default function ListingDetailPage() {
           {[
             { icon: <BatteryIcon size={14} color={BC}/>, label: "Battery (gross)", value: car.battery_capacity_kwh ? `${car.battery_capacity_kwh} kWh` : "—" },
             { icon: <BatteryIcon size={14} color={BC}/>, label: "Battery (usable)", value: car.usable_capacity_kwh ? `${car.usable_capacity_kwh} kWh` : "—" },
-            { icon: <BoltIcon size={14} color={BC}/>, label: "State of Health", value: car.soh ? `${car.soh}%` : "—" },
-            { icon: <BoltIcon size={14} color={BC}/>, label: "Max DC charge", value: car.dc_charge_kw ? `${car.dc_charge_kw} kW` : "—" },
+            { icon: <BoltIcon size={14} color={BC}/>, label: "State of Health", value: car.state_of_health_pct ? `${car.state_of_health_pct}%` : "—" },
+            { icon: <BoltIcon size={14} color={BC}/>, label: "Max DC charge", value: car.dc_charge_max_kw ? `${car.dc_charge_max_kw} kW` : "—" },
             { icon: <BoltIcon size={14} color={BC}/>, label: "AC charge", value: car.ac_charge_kw ? `${car.ac_charge_kw} kW` : "—" },
             { icon: <SpeedIcon size={14} color={BC}/>, label: "Power", value: car.power_kw ? `${car.power_kw} kW` : "—" },
             { icon: <CarIcon size={14} color={BC}/>, label: "Drivetrain", value: car.drivetrain || "—" },
             { icon: <CarIcon size={14} color={BC}/>, label: "Charge port", value: car.charge_port || "—" },
-            { icon: <MapIcon size={14} color={BC}/>, label: "Range (summer)", value: car.range_summer_km ? `${car.range_summer_km} km` : "—" },
+            { icon: <MapIcon size={14} color={BC}/>, label: "Range (summer)", value: car.range_real_km ? `${car.range_real_km} km` : "—" },
             { icon: <MapIcon size={14} color={BC}/>, label: "Range (winter)", value: car.range_winter_km ? `${car.range_winter_km} km` : "—" },
             { icon: <CarIcon size={14} color={BC}/>, label: "Exterior colour", value: car.exterior_color || "—" },
             { icon: <CarIcon size={14} color={BC}/>, label: "Interior colour", value: car.interior_color || "—" },
@@ -331,7 +331,7 @@ export default function ListingDetailPage() {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Price card */}
       <div style={{ ...cs(th), padding: 20 }}>
-        <div style={{ fontSize: 28, fontWeight: 800, marginBottom: 2 }}>€{Number(car.price).toLocaleString()}</div>
+        <div style={{ fontSize: 28, fontWeight: 800, marginBottom: 2 }}>€{Number(car.price_eur).toLocaleString()}</div>
         <div style={{ display: "flex", gap: 8, fontSize: 12, color: th.tx2, marginBottom: 16 }}>
           {car.negotiable && <span style={{ background: dark ? "rgba(255,117,0,0.1)" : "rgba(255,117,0,0.06)", color: BC, padding: "2px 8px", borderRadius: 5, fontWeight: 500 }}>Negotiable</span>}
           {car.vat_deductible && <span style={{ background: dark ? "rgba(16,185,129,0.1)" : "rgba(16,185,129,0.06)", color: "#10b981", padding: "2px 8px", borderRadius: 5, fontWeight: 500 }}>VAT deductible</span>}
