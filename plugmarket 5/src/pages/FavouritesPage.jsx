@@ -214,9 +214,9 @@ function ImgSlider({imgs,height,children,borderRadius=0}){
     </div>
   );
 }
-function FavCard({l,toggleFav,t}){
+function FavCard({l,toggleFav,t,onPress}){
   return(
-    <div style={{...cs(t),borderRadius:14,overflow:"hidden"}}>
+    <div onClick={()=>onPress&&onPress(l.id)} style={{...cs(t),borderRadius:14,overflow:"hidden",cursor:"pointer"}}>
       <ImgSlider imgs={l.imgs} height={160}>
         <button onClick={e=>{e.stopPropagation();toggleFav(l.id)}} style={{position:"absolute",top:8,right:8,width:32,height:32,borderRadius:"50%",border:"none",background:"rgba(0,0,0,0.35)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><Hrt size={14} filled color="#f43f5e"/></button>
       </ImgSlider>
@@ -278,7 +278,7 @@ export default function FavouritesPage() {
         </div>
       ):(
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:14,padding:"8px 0"}}>
-          {favs.map(l=><FavCard key={l.id} l={l} toggleFav={toggleFav} t={t}/>)}
+          {favs.map(l=><FavCard key={l.id} l={l} toggleFav={toggleFav} t={t} onPress={(id)=>navigate(`/listing/${id}`)}/>)}
         </div>
       )}
     </>
