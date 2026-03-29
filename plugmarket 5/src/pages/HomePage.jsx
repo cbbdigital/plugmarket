@@ -113,43 +113,45 @@ function useListings() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // Fetch active listings with their photos
-      const rows = await sb.query("listings", "status=eq.active&order=created_at.desc");
-      if (cancelled) return;
-      if (rows.length > 0) {
-        // Fetch all photos for these listings
-        const ids = rows.map(r => r.id);
-        const photos = await sb.query("listing_photos", `listing_id=in.(${ids.join(",")})&order=position.asc`);
-        const photoMap = {};
-        photos.forEach(p => {
-          if (!photoMap[p.listing_id]) photoMap[p.listing_id] = [];
-          photoMap[p.listing_id].push(p.url);
-        });
-        // Map DB rows to the shape the UI expects
-        const mapped = rows.map(r => ({
-          id: r.id,
-          mk: r.make,
-          md: r.model,
-          vr: r.variant || "",
-          yr: r.year,
-          km: r.mileage_km,
-          pr: r.price_eur,
-          bat: r.battery_capacity_kwh || 0,
-          rng: r.range_real_km || r.range_real_km || 0,
-          dc: r.dc_charge_max_kw || 0,
-          dr: r.drivetrain || "",
-          cn: r.condition === "certified" ? "Certified" : r.condition === "new" ? "New" : "Used",
-          co: r.country || "",
-          ct: r.city || "",
-          hp: r.state_of_health_pct || 100,
-          ft: r.is_boosted || false,
-          dy: Math.max(0, Math.round((Date.now() - new Date(r.created_at).getTime()) / 86400000)),
-          imgs: photoMap[r.id] || [FALLBACK_IMG],
-          _raw: r,
-        }));
-        setListings(mapped);
-      }
-      setLoading(false);
+      try {
+        // Fetch active listings with their photos
+        const rows = await sb.query("listings", "status=eq.active&order=created_at.desc");
+        if (cancelled) return;
+        if (rows.length > 0) {
+          // Fetch all photos for these listings
+          const ids = rows.map(r => r.id);
+          const photos = await sb.query("listing_photos", `listing_id=in.(${ids.join(",")})&order=position.asc`);
+          const photoMap = {};
+          photos.forEach(p => {
+            if (!photoMap[p.listing_id]) photoMap[p.listing_id] = [];
+            photoMap[p.listing_id].push(p.url);
+          });
+          // Map DB rows to the shape the UI expects
+          const mapped = rows.map(r => ({
+            id: r.id,
+            mk: r.make,
+            md: r.model,
+            vr: r.variant || "",
+            yr: r.year,
+            km: r.mileage_km,
+            pr: r.price_eur,
+            bat: r.battery_capacity_kwh || 0,
+            rng: r.range_real_km || r.range_real_km || 0,
+            dc: r.dc_charge_max_kw || 0,
+            dr: r.drivetrain || "",
+            cn: r.condition === "certified_pre_owned" ? "Certified" : r.condition === "new" ? "New" : "Used",
+            co: r.country || "",
+            ct: r.city || "",
+            hp: r.state_of_health_pct || 100,
+            ft: r.is_boosted || false,
+            dy: Math.max(0, Math.round((Date.now() - new Date(r.created_at).getTime()) / 86400000)),
+            imgs: photoMap[r.id] || [FALLBACK_IMG],
+            _raw: r,
+          }));
+          setListings(mapped);
+        }
+      } catch (e) { console.error("Failed to load listings:", e); }
+      if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
   }, []);

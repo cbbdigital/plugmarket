@@ -272,6 +272,7 @@ export default function SellPage(){
   const [submitted,setSubmitted]=useState(false);
   const [publishing,setPublishing]=useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProg, setUploadProg] = useState("");
 
   // Auth redirect
   useEffect(() => { if (!user) nav("/login"); }, [user, nav]);
@@ -491,23 +492,35 @@ export default function SellPage(){
     const remaining = 20 - photos.length;
     const toProcess = files.slice(0, remaining);
     const compressed = [];
-    for (const file of toProcess) {
+    for (let j = 0; j < toProcess.length; j++) {
+      const file = toProcess[j];
+      setUploadProg(`${j + 1}/${toProcess.length}`);
       let fileToCompress = file;
       // Convert HEIC to JPEG first
       if (isHeic(file)) {
         try {
           const heic2any = await getHeic2any();
           if (heic2any) {
-            const blob = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.85 });
+            const result = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.85 });
+            // heic2any may return a single blob or an array
+            const blob = Array.isArray(result) ? result[0] : result;
             fileToCompress = new File([blob], file.name.replace(/\.heic|\.heif/i, ".jpg"), { type: "image/jpeg" });
           }
-        } catch (err) { console.warn("HEIC conversion failed:", err); }
+        } catch (err) {
+          console.warn("HEIC conversion failed for", file.name, err);
+          // Still try to compress the original — might work on Safari
+        }
       }
-      const result = await compressImage(fileToCompress);
-      compressed.push(result);
+      try {
+        const result = await compressImage(fileToCompress);
+        compressed.push(result);
+      } catch (err) {
+        console.warn("Compression failed for", file.name, err);
+      }
     }
     setPhotos(prev => [...prev, ...compressed]);
     setUploading(false);
+    setUploadProg("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -728,7 +741,7 @@ export default function SellPage(){
                 {photos.length<20&&(
                   <div onClick={addPhoto} style={{aspectRatio:"4/3",borderRadius:10,border:`2px dashed ${d?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.1)"}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",gap:6,background:t.sec,opacity:uploading?0.5:1}}>
                     <PlusIcon size={22} color={t.tx3}/>
-                    <span style={{fontSize:11,color:t.tx3,fontWeight:500}}>{uploading?"Compressing...":"Add photo"}</span>
+                    <span style={{fontSize:11,color:t.tx3,fontWeight:500}}>{uploading?`Processing ${uploadProg}...`:"Add photo"}</span>
                   </div>
                 )}
               </div>
