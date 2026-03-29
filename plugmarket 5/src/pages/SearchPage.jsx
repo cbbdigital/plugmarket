@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
-import { useOutletContext, useNavigate } from "react-router-dom";
+import { useOutletContext, useNavigate, useSearchParams } from "react-router-dom";
 
 /* ── Icons ── */
 const I=({d,size=16,color="currentColor"})=><svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{d}</svg>;
@@ -129,14 +129,15 @@ function ImgSlider({imgs,height,children,borderRadius=0}){
 export default function SearchPage() {
   const { t } = useOutletContext();
   const navigate = useNavigate();
-  const[make,setMake]=useState("");
-  const[model,setModel]=useState("");
-  const[co,setCo]=useState("");
+  const [sp] = useSearchParams();
+  const[make,setMake]=useState(sp.get("make")||"");
+  const[model,setModel]=useState(sp.get("model")||"");
+  const[co,setCo]=useState(sp.get("co")||"");
   const[cond,setCond]=useState("");
   const[dr,setDr]=useState("");
-  const[pMin,setPMin]=useState("");
-  const[pMax,setPMax]=useState("");
-  const[rMin,setRMin]=useState("");
+  const[pMin,setPMin]=useState(sp.get("pMin")||"");
+  const[pMax,setPMax]=useState(sp.get("pMax")||"");
+  const[rMin,setRMin]=useState(sp.get("rMin")||"");
   const[batMin,setBatMin]=useState(20);
   const[batMax,setBatMax]=useState(120);
   const[color,setColor]=useState("");
