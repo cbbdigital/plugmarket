@@ -134,7 +134,7 @@ function ImgSlider({imgs,height,children,borderRadius=0}){
 export default function SearchPage() {
   const { t } = useOutletContext();
   const navigate = useNavigate();
-  const [sp] = useSearchParams();
+  const [sp, setSp] = useSearchParams();
   const[make,setMake]=useState(sp.get("make")||"");
   const[model,setModel]=useState(sp.get("model")||"");
   const[co,setCo]=useState(sp.get("co")||"");
@@ -153,6 +153,13 @@ export default function SearchPage() {
   const toggleFav=(id)=>setFavIds(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
   const[allListings,setAllListings]=useState(SLS);
   const[dbLoading,setDbLoading]=useState(true);
+
+  const updateUrl=()=>{
+    const p=new URLSearchParams();
+    if(make)p.set("make",make);if(model)p.set("model",model);if(co)p.set("co",co);
+    if(pMin)p.set("pMin",pMin);if(pMax)p.set("pMax",pMax);if(rMin)p.set("rMin",rMin);
+    setSp(p,{replace:true});
+  };
 
   useEffect(()=>{
     (async()=>{
@@ -237,6 +244,9 @@ export default function SearchPage() {
         <button onClick={()=>setShowF(!showF)} style={{height:42,padding:"0 14px",borderRadius:10,...ab(showF,t),fontSize:12,fontWeight:500,display:"flex",alignItems:"center",gap:5}}>
           <Flt size={13}/>{showF?"Less":"More"}
           {activeCount>0&&<span style={{minWidth:18,height:18,borderRadius:9,background:BC,color:"#fff",fontSize:10,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{activeCount}</span>}
+        </button>
+        <button onClick={updateUrl} style={{height:42,padding:"0 20px",borderRadius:10,border:"none",background:BG,color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+          <Srch size={14} color="#fff"/> Search
         </button>
       </div>
 
