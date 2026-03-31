@@ -521,7 +521,7 @@ export default function ListingDetailPage() {
 
       {/* BACK LINK */}
       <div style={{ padding: "12px 0" }}>
-        <button onClick={() => navigate(-1)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: BC, fontSize: 13, fontWeight: 500, padding: 0 }}>
+        <button onClick={() => { if (window.history.length > 2) navigate(-1); else navigate("/search"); }} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: BC, fontSize: 13, fontWeight: 500, padding: 0 }}>
           <ChevL size={15} color={BC}/> Back to results
         </button>
       </div>

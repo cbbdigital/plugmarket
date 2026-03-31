@@ -301,7 +301,7 @@ export default function SellerPage() {
         </div>
 
         {/* Back button overlaid on cover */}
-        <button onClick={function() { navigate(-1); }} style={{
+        <button onClick={function() { if (window.history.length > 2) navigate(-1); else navigate("/"); }} style={{
           position: "absolute", top: 12, left: 12, width: 36, height: 36, borderRadius: 10,
           background: "rgba(0,0,0,0.4)", border: "none", cursor: "pointer",
           display: "flex", alignItems: "center", justifyContent: "center",
