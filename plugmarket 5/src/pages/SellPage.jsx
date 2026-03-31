@@ -1040,51 +1040,79 @@ export default function SellPage(){
                 <CheckIcon size={18} color={BC}/>
                 <h2 style={{fontSize:16,fontWeight:700,margin:0}}>Review your listing</h2>
               </div>
-              <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-                {photos.filter(p=>typeof p==="string").slice(0,3).map((ph,i)=>(
-                  <div key={i} onClick={()=>setLightboxIdx(i)} style={{width:96,height:64,borderRadius:8,overflow:"hidden",cursor:"pointer"}}><img src={ph} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>
-                ))}
-                {photos.filter(p=>typeof p==="string").length>3&&<div onClick={()=>setLightboxIdx(3)} style={{width:96,height:64,borderRadius:8,background:t.sec,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:600,color:t.tx2,cursor:"pointer"}}>+{photos.filter(p=>typeof p==="string").length-3} more</div>}
-              </div>
-              {[
-                {s:"Vehicle",si:1,rows:[
-                  ["Make / Model",`${make} ${model} ${variant}`.trim()],
-                  ["Year",year],["Mileage",km?`${Number(km).toLocaleString()} km`:""],
-                  ["Condition",condition],["Exterior colour",color],["Interior",intColor?(intMaterial?`${intColor} · ${intMaterial}`:intColor):""],
-                  ["Drivetrain",drive],["Features",features.length>0?`${features.length} selected`:""],
-                ]},
-                {s:"EV specs",si:2,rows:[
-                  ["Gross battery",battery?`${battery} kWh`:""],["SoH",soh?`${soh}%`:""],
-                  ["WLTP range",(()=>{const w=getWLTP(make,model,variant,year);return w?`${w.wltp} km (official)`:""})()],
-                  ["Range (summer)",rangeReal?`${rangeReal} km`:""],["Range (winter)",rangeWinter?`${rangeWinter} km`:""],
-                  ["DC charge",dcCharge?`${dcCharge} kW`:""],["Port",port],
-                  ["Power",powerKw?`${powerKw} kW`:""],
-                ]},
-                {s:"Pricing",si:4,rows:[
-                  ["Price",price?`€${Number(price).toLocaleString()}`:""],
-                  ["Negotiable",negotiable?"Yes":"No"],["VAT deductible",vatDeduct?"Yes":"No"],
-                ]},
-                {s:"Contact",si:5,rows:[
-                  ["Seller",`${sellerName} (${sellerType})`],
-                  ["Location",`${city}, ${COUNTRIES.find(c=>c.code===country)?.name||country}`],
-                  ["Phone",phone],["Email",email],
-                ]},
-              ].map((section,idx)=>(
-                <div key={idx}>
-                  <div style={{fontSize:13,fontWeight:600,color:t.tx,marginBottom:6,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                    {section.s}
-                    <button onClick={()=>setStep(section.si)} style={{fontSize:11,color:BC,background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Edit</button>
-                  </div>
-                  <div style={{background:t.sec,borderRadius:10,padding:"2px 14px"}}>
-                    {section.rows.filter(r=>r[1]).map((r,ri,arr)=>(
-                      <div key={ri} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:ri<arr.length-1?`1px solid ${t.bd}`:"none",fontSize:13}}>
-                        <span style={{color:t.tx2}}>{r[0]}</span>
-                        <span style={{fontWeight:500}}>{r[1]}</span>
-                      </div>
-                    ))}
-                  </div>
+
+              {/* Hero: photo strip + price + title */}
+              <div style={{background:t.sec,borderRadius:14,overflow:"hidden"}}>
+                <div style={{display:"flex",gap:2,height:narrow?120:160,overflow:"hidden"}}>
+                  {photos.filter(p=>typeof p==="string").slice(0,narrow?3:5).map((ph,i)=>(
+                    <div key={i} onClick={()=>setLightboxIdx(i)} style={{flex:i===0?2:1,height:"100%",cursor:"pointer",overflow:"hidden"}}>
+                      <img src={ph} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                    </div>
+                  ))}
+                  {photos.filter(p=>typeof p==="string").length>(narrow?3:5)&&(
+                    <div onClick={()=>setLightboxIdx(narrow?3:5)} style={{flex:1,height:"100%",background:d?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.04)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:14,fontWeight:700,color:t.tx2}}>
+                      +{photos.filter(p=>typeof p==="string").length-(narrow?3:5)}
+                    </div>
+                  )}
                 </div>
-              ))}
+                <div style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+                  <div>
+                    <div style={{fontSize:18,fontWeight:800,color:t.tx}}>{make} {model} {variant}</div>
+                    <div style={{fontSize:12,color:t.tx2,marginTop:2}}>{year} · {km?`${Number(km).toLocaleString()} km`:""} · {condition}</div>
+                  </div>
+                  <div style={{fontSize:24,fontWeight:800,color:BC}}>€{price?Number(price).toLocaleString():""}</div>
+                </div>
+              </div>
+
+              {/* Cards grid — 2 columns on desktop, 1 on mobile */}
+              <div style={{display:"grid",gridTemplateColumns:narrow?"1fr":"1fr 1fr",gap:12}}>
+                {[
+                  {s:"Vehicle",si:1,icon:<CarIcon size={15} color={BC}/>,rows:[
+                    ["Make / Model",`${make} ${model}`],
+                    ["Variant",variant],
+                    ["Year",year],["Mileage",km?`${Number(km).toLocaleString()} km`:""],
+                    ["Condition",condition],["Exterior",color],
+                    ["Interior",intColor?(intMaterial?`${intColor} · ${intMaterial}`:intColor):""],
+                    ["Drivetrain",drive],
+                    ["Features",features.length>0?`${features.length} selected`:""],
+                  ]},
+                  {s:"EV specs",si:2,icon:<BatteryIcon size={15} color={BC}/>,rows:[
+                    ["Battery",battery?`${battery} kWh`:""],["SoH",soh?`${soh}%`:""],
+                    ["WLTP",(()=>{const w=getWLTP(make,model,variant,year);return w?`${w.wltp} km (official)`:""})()],
+                    ["Range (summer)",rangeReal?`${rangeReal} km`:""],["Range (winter)",rangeWinter?`${rangeWinter} km`:""],
+                    ["DC charge",dcCharge?`${dcCharge} kW`:""],["AC charge",acCharge?`${acCharge} kW`:""],
+                    ["Port",port],["Power",powerKw?`${powerKw} kW`:""],
+                  ]},
+                  {s:"Pricing",si:4,icon:<TagIcon size={15} color={BC}/>,rows:[
+                    ["Price",price?`€${Number(price).toLocaleString()}`:""],
+                    ["Negotiable",negotiable?"Yes":"No"],["VAT deductible",vatDeduct?"Yes":"No"],
+                    ["Description",description?`${description.slice(0,60)}${description.length>60?"...":""}`:""],
+                  ]},
+                  {s:"Contact",si:5,icon:<UserIcon size={15} color={BC}/>,rows:[
+                    ["Name",sellerName],["Type",sellerType==="dealer"?"Dealer":"Private"],
+                    ["Location",`${city}${country?", "+(COUNTRIES.find(c=>c.code===country)?.name||country):""}`],
+                    ["Phone",phone],["Email",email],
+                  ]},
+                ].map((section,idx)=>(
+                  <div key={idx} style={{background:t.sec,borderRadius:12,overflow:"hidden"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",borderBottom:`1px solid ${t.bd}`}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        {section.icon}
+                        <span style={{fontSize:13,fontWeight:700,color:t.tx}}>{section.s}</span>
+                      </div>
+                      <button onClick={()=>setStep(section.si)} style={{fontSize:11,color:BC,background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Edit</button>
+                    </div>
+                    <div style={{padding:"4px 14px"}}>
+                      {section.rows.filter(r=>r[1]).map((r,ri,arr)=>(
+                        <div key={ri} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:ri<arr.length-1?`1px solid ${t.bd}`:"none",fontSize:12,gap:8}}>
+                          <span style={{color:t.tx3,flexShrink:0}}>{r[0]}</span>
+                          <span style={{fontWeight:500,color:t.tx,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r[1]}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
