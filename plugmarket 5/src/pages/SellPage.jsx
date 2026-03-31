@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useOutletContext, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import { BC, GR, cs } from "../styles/theme";
+import { getWLTP } from "../lib/wltp";
 
 // ── Supabase REST client ──
 const SB_URL = import.meta.env.VITE_SUPABASE_URL || "https://tmftxqwqwceuiydleuag.supabase.co";
@@ -429,6 +430,7 @@ export default function SellPage(){
       battery_capacity_kwh: battery ? +battery : null, usable_capacity_kwh: usable ? +usable : null,
       state_of_health_pct: soh ? +soh : null,
       range_real_km: rangeReal ? +rangeReal : null, range_winter_km: rangeWinter ? +rangeWinter : null,
+      range_wltp_km: (()=>{ const w = getWLTP(make, model, variant, year); return w ? w.wltp : null; })(),
       dc_charge_max_kw: dcCharge ? +dcCharge : null, ac_charge_kw: acCharge ? +acCharge : null,
       charge_port: portMap[port] || null, power_kw: powerKw ? +powerKw : null,
       price_eur: +price, negotiable, vat_deductible: vatDeduct,
@@ -795,6 +797,21 @@ export default function SellPage(){
                 <span style={{fontSize:12,color:t.tx2,lineHeight:1.5}}>These EV-specific details help your listing stand out. Battery health (SoH) is the #1 factor buyers look for in used EVs.</span>
               </div>
               <div style={{fontSize:13,fontWeight:600,color:t.tx,marginTop:4}}>Battery & range</div>
+              {(()=>{
+                const wltp = getWLTP(make, model, variant, year);
+                if (!wltp) return null;
+                return (
+                  <div style={{background:d?"rgba(16,185,129,0.08)":"rgba(16,185,129,0.05)",borderRadius:12,padding:"12px 14px",border:`1px solid ${d?"rgba(16,185,129,0.15)":"rgba(16,185,129,0.12)"}`,display:"flex",alignItems:"center",gap:12}}>
+                    <div style={{width:36,height:36,borderRadius:10,background:"rgba(16,185,129,0.15)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                      <BoltIcon size={16} color="#10b981"/>
+                    </div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:13,fontWeight:700,color:"#10b981"}}>Official WLTP: {wltp.wltp} km</div>
+                      <div style={{fontSize:11,color:t.tx3,marginTop:1}}>Battery: {wltp.bat} kWh gross · {wltp.usable} kWh usable — auto-filled from official specs</div>
+                    </div>
+                  </div>
+                );
+              })()}
               <div style={{display:"grid",gridTemplateColumns:g2,gap:12}}>
                 <Inp label="Gross battery capacity" value={battery} onChange={setBattery} ph="e.g. 75" unit="kWh" type="number" req t={t}/>
                 <Inp label="Nett battery capacity" value={usable} onChange={setUsable} ph="e.g. 72.5" unit="kWh" type="number" t={t}/>
@@ -998,6 +1015,7 @@ export default function SellPage(){
                 ]},
                 {s:"EV specs",si:2,rows:[
                   ["Gross battery",battery?`${battery} kWh`:""],["SoH",soh?`${soh}%`:""],
+                  ["WLTP range",(()=>{const w=getWLTP(make,model,variant,year);return w?`${w.wltp} km (official)`:""})()],
                   ["Range (summer)",rangeReal?`${rangeReal} km`:""],["Range (winter)",rangeWinter?`${rangeWinter} km`:""],
                   ["DC charge",dcCharge?`${dcCharge} kW`:""],["Port",port],
                   ["Power",powerKw?`${powerKw} kW`:""],

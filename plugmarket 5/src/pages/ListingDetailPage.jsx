@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useOutletContext, useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
+import { getWLTP } from "../lib/wltp";
 
 // ── Supabase REST ──
 const SB_URL = import.meta.env.VITE_SUPABASE_URL || "https://tmftxqwqwceuiydleuag.supabase.co";
@@ -258,6 +259,9 @@ export default function ListingDetailPage() {
                   {car.range_real_km && `~${car.range_real_km} km summer`}
                   {car.range_winter_km && ` · ~${car.range_winter_km} km winter`}
                 </div>
+                {(() => { const w = car.range_wltp_km || getWLTP(car.make, car.model, car.variant, car.year)?.wltp; return w ? (
+                  <div style={{ fontSize: 11, color: "#10b981", fontWeight: 600, marginTop: 4 }}>Official WLTP: {w} km</div>
+                ) : null; })()}
               </div>
             </div>
           )}
@@ -322,6 +326,7 @@ export default function ListingDetailPage() {
             { icon: <CarIcon size={14} color={BC}/>, label: "Charge port", value: car.charge_port || "—" },
             { icon: <MapIcon size={14} color={BC}/>, label: "Range (summer)", value: car.range_real_km ? `${car.range_real_km} km` : "—" },
             { icon: <MapIcon size={14} color={BC}/>, label: "Range (winter)", value: car.range_winter_km ? `${car.range_winter_km} km` : "—" },
+            { icon: <MapIcon size={14} color="#10b981"/>, label: "WLTP range (official)", value: (() => { const w = car.range_wltp_km || getWLTP(car.make, car.model, car.variant, car.year)?.wltp; return w ? `${w} km` : "—"; })() },
             { icon: <CarIcon size={14} color={BC}/>, label: "Exterior colour", value: car.exterior_color || "—" },
             { icon: <CarIcon size={14} color={BC}/>, label: "Interior colour", value: car.interior_color || "—" },
             { icon: <CarIcon size={14} color={BC}/>, label: "Interior material", value: car.interior_material || "—" },
