@@ -547,7 +547,7 @@ export default function SellPage(){
     if (heic2anyRef.current) return resolve(heic2anyRef.current);
     if (window.heic2any) { heic2anyRef.current = window.heic2any; return resolve(window.heic2any); }
     const s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
+    s.src = "https://cdn.jsdelivr.net/npm/heic2any@0.0.5/dist/heic2any.min.js";
     s.onload = () => { heic2anyRef.current = window.heic2any; resolve(window.heic2any); };
     s.onerror = () => resolve(null);
     document.head.appendChild(s);
@@ -586,6 +586,7 @@ export default function SellPage(){
       }, 180);
 
       let fileToCompress = file;
+      let heicFailed = false;
       if (isHeic(file)) {
         try {
           const heic2any = await getHeic2any();
@@ -593,10 +594,25 @@ export default function SellPage(){
             const result = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.85 });
             const blob = Array.isArray(result) ? result[0] : result;
             fileToCompress = new File([blob], file.name.replace(/\.heic|\.heif/i, ".jpg"), { type: "image/jpeg" });
+          } else {
+            heicFailed = true;
           }
         } catch (err) {
           console.warn("HEIC conversion failed for", file.name, err);
+          heicFailed = true;
         }
+      }
+
+      // If HEIC conversion failed on a non-Safari browser, skip the file
+      if (heicFailed) {
+        clearInterval(progInterval);
+        setPhotoProgress(prev => ({ ...prev, [photoId]: { progress: 0, status: "error" } }));
+        // Replace placeholder with error marker — will be removed after 3s
+        setPhotos(prev => prev.map(p => p._id === photoId ? { _uploading: true, _id: photoId, _error: "HEIC not supported. Please convert to JPG first or upload from Safari/iPhone." } : p));
+        setTimeout(() => {
+          setPhotos(prev => prev.filter(p => p._id !== photoId));
+        }, 4000);
+        continue;
       }
 
       try {
@@ -800,6 +816,8 @@ export default function SellPage(){
               {(()=>{
                 const wltp = getWLTP(make, model, variant, year);
                 if (!wltp) return null;
+                const sohNum = soh ? parseFloat(soh) : null;
+                const degradedWltp = sohNum ? Math.round(wltp.wltp * sohNum / 100) : null;
                 return (
                   <div style={{background:d?"rgba(16,185,129,0.08)":"rgba(16,185,129,0.05)",borderRadius:12,padding:"12px 14px",border:`1px solid ${d?"rgba(16,185,129,0.15)":"rgba(16,185,129,0.12)"}`,display:"flex",alignItems:"center",gap:12}}>
                     <div style={{width:36,height:36,borderRadius:10,background:"rgba(16,185,129,0.15)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
@@ -807,6 +825,9 @@ export default function SellPage(){
                     </div>
                     <div style={{flex:1}}>
                       <div style={{fontSize:13,fontWeight:700,color:"#10b981"}}>Official WLTP: {wltp.wltp} km</div>
+                      {degradedWltp && degradedWltp < wltp.wltp && (
+                        <div style={{fontSize:12,fontWeight:600,color:BC,marginTop:2}}>Estimated at {soh}% SoH: ~{degradedWltp} km</div>
+                      )}
                       <div style={{fontSize:11,color:t.tx3,marginTop:1}}>Battery: {wltp.bat} kWh gross · {wltp.usable} kWh usable — auto-filled from official specs</div>
                     </div>
                   </div>
@@ -863,9 +884,15 @@ export default function SellPage(){
                     onDragOver={e=>e.preventDefault()}
                     style={{position:"relative",aspectRatio:"4/3",borderRadius:12,overflow:"hidden",boxShadow:`inset 0 0 0 1px ${t.bd}`,cursor:isPlaceholder?"default":"grab"}}>
                     {isPlaceholder ? (
-                      <div style={{width:"100%",height:"100%",background:t.sec,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4}}>
-                        <div style={{width:20,height:20,border:`2px solid ${BC}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
-                        <span style={{fontSize:10,color:t.tx3}}>{prog?.status==="compressing"?"Compressing...":"Processing..."}</span>
+                      <div style={{width:"100%",height:"100%",background:t.sec,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4,padding:6,textAlign:"center"}}>
+                        {ph._error ? (
+                          <span style={{fontSize:9,color:"#ef4444",fontWeight:500,lineHeight:1.3}}>{ph._error}</span>
+                        ) : (
+                          <>
+                            <div style={{width:20,height:20,border:`2px solid ${BC}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+                            <span style={{fontSize:10,color:t.tx3}}>{prog?.status==="compressing"?"Compressing...":"Processing..."}</span>
+                          </>
+                        )}
                       </div>
                     ) : (
                       <img src={ph} alt="" style={{width:"100%",height:"100%",objectFit:"cover",cursor:"pointer"}}
