@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
+import { EV_DB, getRecommendationText } from "../data/evdb";
 
 /* ── Supabase REST client (no SDK needed) ── */
 const SB_URL = "https://tmftxqwqwceuiydleuag.supabase.co";
@@ -199,43 +200,7 @@ const BD="#4D2300";
 /* ── Data ── */
 const MK={Tesla:["Model 3","Model Y","Model S","Model X"],BMW:["iX3","iX1","i4","i5","i7","iX"],Volkswagen:["ID.3","ID.4","ID.5","ID.7"],Mercedes:["EQA","EQB","EQE","EQS"],Audi:["Q4 e-tron","Q6 e-tron","e-tron GT"],Hyundai:["Ioniq 5","Ioniq 6"],Kia:["EV6","EV9"],BYD:["Dolphin","Seal","Seal U"],Porsche:["Taycan"],Renault:["Megane E-Tech","Renault 5"],Skoda:["Enyaq","Elroq"],Volvo:["EX30","EX40","EX90"],MG:["MG4","ZS EV"],Cupra:["Born","Tavascan"],Ford:["Mustang Mach-E"],NIO:["ET5","ET7"],Fiat:["500e"]};
 const CO=[{c:"DE",n:"Germany",f:"🇩🇪"},{c:"FR",n:"France",f:"🇫🇷"},{c:"NL",n:"Netherlands",f:"🇳🇱"},{c:"BE",n:"Belgium",f:"🇧🇪"},{c:"AT",n:"Austria",f:"🇦🇹"},{c:"IT",n:"Italy",f:"🇮🇹"},{c:"ES",n:"Spain",f:"🇪🇸"},{c:"PL",n:"Poland",f:"🇵🇱"},{c:"RO",n:"Romania",f:"🇷🇴"},{c:"SE",n:"Sweden",f:"🇸🇪"},{c:"NO",n:"Norway",f:"🇳🇴"},{c:"CZ",n:"Czech Rep.",f:"🇨🇿"}];
-/* ── Extra photo pool (simulates multi-photo listings) ── */
-const XP=[
-  "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=480&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=480&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=480&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1542362567-b07e54358753?w=480&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=480&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=480&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=480&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=480&h=300&fit=crop",
-];
-const mkImgs=(main,id)=>[main,XP[(id*3)%XP.length],XP[(id*3+1)%XP.length],XP[(id*3+2)%XP.length]];
 
-const PRO=[
-  {id:1,mk:"Tesla",md:"Model Y",vr:"Long Range AWD",yr:2025,km:2100,pr:52900,rng:533,dc:250,ct:"Munich",co:"DE",imgs:mkImgs("https://images.unsplash.com/photo-1619317190803-58529786b291?w=400&h=260&fit=crop",1),bg:"Sponsored"},
-  {id:2,mk:"Porsche",md:"Taycan",vr:"4S",yr:2024,km:12400,pr:79900,rng:464,dc:270,ct:"Stuttgart",co:"DE",imgs:mkImgs("https://images.unsplash.com/photo-1614200179396-2bdb77ebf81b?w=400&h=260&fit=crop",2),bg:"Premium"},
-  {id:3,mk:"BMW",md:"iX",vr:"xDrive50",yr:2024,km:8900,pr:68500,rng:630,dc:195,ct:"Amsterdam",co:"NL",imgs:mkImgs("https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=400&h=260&fit=crop",3),bg:"Sponsored"},
-  {id:4,mk:"Hyundai",md:"Ioniq 5",vr:"AWD 77kWh",yr:2025,km:800,pr:48200,rng:507,dc:350,ct:"Brussels",co:"BE",imgs:mkImgs("https://images.unsplash.com/photo-1675255998683-a2247c4de89c?w=400&h=260&fit=crop",4),bg:"Top Deal"},
-];
-const REC=[
-  {id:5,mk:"Skoda",md:"Elroq",vr:"85",yr:2025,km:3200,pr:37500,rng:560,dc:175,ct:"Prague",co:"CZ",imgs:mkImgs("https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=400&h=260&fit=crop",5)},
-  {id:6,mk:"Renault",md:"Renault 5",vr:"Iconic",yr:2025,km:1200,pr:27990,rng:400,dc:100,ct:"Lyon",co:"FR",imgs:mkImgs("https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400&h=260&fit=crop",6)},
-  {id:7,mk:"Volvo",md:"EX30",vr:"Extended",yr:2025,km:4500,pr:36200,rng:476,dc:153,ct:"Gothenburg",co:"SE",imgs:mkImgs("https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?w=400&h=260&fit=crop",7)},
-  {id:8,mk:"Cupra",md:"Born",vr:"V3 77kWh",yr:2024,km:11000,pr:34800,rng:548,dc:185,ct:"Barcelona",co:"ES",imgs:mkImgs("https://images.unsplash.com/photo-1571987502227-9231b837d92a?w=400&h=260&fit=crop",8)},
-  {id:9,mk:"Mercedes",md:"EQA",vr:"250+",yr:2024,km:21000,pr:39800,rng:528,dc:100,ct:"Vienna",co:"AT",imgs:mkImgs("https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=400&h=260&fit=crop",9)},
-];
-const SLS=[
-  {id:1,mk:"Tesla",md:"Model 3",vr:"Long Range",yr:2024,km:18500,pr:38900,bat:75,rng:602,dc:250,dr:"RWD",cn:"Used",co:"DE",ct:"Munich",hp:97,ft:true,dy:2,imgs:mkImgs("https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=480&h=300&fit=crop",1)},
-  {id:2,mk:"BMW",md:"iX3",vr:"Inspiring",yr:2023,km:32000,pr:41500,bat:80,rng:461,dc:150,dr:"RWD",cn:"Used",co:"DE",ct:"Berlin",hp:95,ft:false,dy:5,imgs:mkImgs("https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=480&h=300&fit=crop",2)},
-  {id:3,mk:"Volkswagen",md:"ID.4",vr:"Pro",yr:2025,km:5200,pr:43900,bat:77,rng:520,dc:175,dr:"RWD",cn:"Certified",co:"NL",ct:"Amsterdam",hp:99,ft:true,dy:1,imgs:mkImgs("https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=480&h=300&fit=crop",3)},
-  {id:4,mk:"Hyundai",md:"Ioniq 5",vr:"AWD LR",yr:2024,km:12000,pr:46200,bat:77,rng:507,dc:350,dr:"AWD",cn:"Used",co:"BE",ct:"Brussels",hp:98,ft:false,dy:3,imgs:mkImgs("https://images.unsplash.com/photo-1675255998683-a2247c4de89c?w=480&h=300&fit=crop",4)},
-  {id:5,mk:"BYD",md:"Seal",vr:"Design AWD",yr:2025,km:800,pr:44990,bat:82,rng:520,dc:150,dr:"AWD",cn:"New",co:"FR",ct:"Paris",hp:100,ft:true,dy:0,imgs:mkImgs("https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=480&h=300&fit=crop",5)},
-  {id:6,mk:"Porsche",md:"Taycan",vr:"4S",yr:2023,km:35000,pr:72500,bat:93,rng:464,dc:270,dr:"AWD",cn:"Used",co:"DE",ct:"Stuttgart",hp:93,ft:false,dy:14,imgs:mkImgs("https://images.unsplash.com/photo-1614200179396-2bdb77ebf81b?w=480&h=300&fit=crop",6)},
-  {id:7,mk:"Renault",md:"Renault 5",vr:"Iconic",yr:2025,km:1200,pr:27990,bat:52,rng:400,dc:100,dr:"FWD",cn:"New",co:"FR",ct:"Lyon",hp:100,ft:true,dy:1,imgs:mkImgs("https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=480&h=300&fit=crop",7)},
-  {id:8,mk:"Tesla",md:"Model Y",vr:"Performance",yr:2024,km:8200,pr:52900,bat:75,rng:514,dc:250,dr:"AWD",cn:"Used",co:"DE",ct:"Hamburg",hp:99,ft:true,dy:1,imgs:mkImgs("https://images.unsplash.com/photo-1619317190803-58529786b291?w=480&h=300&fit=crop",8)},
-  {id:9,mk:"Volvo",md:"EX30",vr:"Extended",yr:2025,km:4500,pr:36200,bat:69,rng:476,dc:153,dr:"RWD",cn:"New",co:"SE",ct:"Gothenburg",hp:100,ft:true,dy:2,imgs:mkImgs("https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?w=480&h=300&fit=crop",9)},
-];
 
 /* ── Helpers ── */
 const gf=c=>CO.find(x=>x.c===c)?.f||"";
@@ -327,32 +292,6 @@ function RCard({c,t,onPress}){
     </div>
   );
 }
-/* ── EV Finder data ── */
-const RECS=[
-  // City cars
-  {make:"Dacia",model:"Spring",price:"from €22,000",pn:22000,range:230,battery:27,dc:30,use:"city",seats:4,img:"https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=400&h=260&fit=crop",tags:["City","Affordable"]},
-  {make:"Fiat",model:"500e",price:"from €24,500",pn:24500,range:320,battery:42,dc:85,use:"city",seats:4,img:"https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400&h=260&fit=crop",tags:["City","Stylish"]},
-  // Compact / short commute
-  {make:"Renault",model:"Renault 5",price:"from €27,990",pn:27990,range:400,battery:52,dc:100,use:"commute",seats:5,img:"https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400&h=260&fit=crop",tags:["Compact","Value"]},
-  {make:"MG",model:"MG4",price:"from €28,500",pn:28500,range:520,battery:77,dc:144,use:"commute",seats:5,img:"https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=400&h=260&fit=crop",tags:["Best value","Long range"]},
-  // Medium trips (daily + weekend 500km)
-  {make:"Cupra",model:"Born",price:"from €34,800",pn:34800,range:548,battery:77,dc:185,use:"medium",seats:5,img:"https://images.unsplash.com/photo-1571987502227-9231b837d92a?w=400&h=260&fit=crop",tags:["Sporty","Fast charge"]},
-  {make:"Tesla",model:"Model 3",price:"from €38,900",pn:38900,range:602,battery:75,dc:250,use:"medium",seats:5,img:"https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=400&h=260&fit=crop",tags:["Long range","Supercharger"]},
-  {make:"Hyundai",model:"Ioniq 5",price:"from €46,200",pn:46200,range:507,battery:77.4,dc:350,use:"medium",seats:5,img:"https://images.unsplash.com/photo-1675255998683-a2247c4de89c?w=400&h=260&fit=crop",tags:["Ultra-fast charge","Road trip"]},
-  {make:"Tesla",model:"Model Y",price:"from €52,900",pn:52900,range:533,battery:75,dc:250,use:"medium",seats:5,img:"https://images.unsplash.com/photo-1619317190803-58529786b291?w=400&h=260&fit=crop",tags:["Family SUV","Supercharger"]},
-  {make:"Volkswagen",model:"ID.7",price:"from €53,000",pn:53000,range:621,battery:86,dc:175,use:"medium",seats:5,img:"https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=400&h=260&fit=crop",tags:["Saloon","Ultra range"]},
-  {make:"Kia",model:"EV6",price:"from €47,500",pn:47500,range:528,battery:77.4,dc:350,use:"medium",seats:5,img:"https://images.unsplash.com/photo-1571987502227-9231b837d92a?w=400&h=260&fit=crop",tags:["Ultra-fast charge","Versatile"]},
-  // Long trips (1000km+)
-  {make:"Tesla",model:"Model S",price:"from €89,900",pn:89900,range:634,battery:100,dc:250,use:"long",seats:5,img:"https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=400&h=260&fit=crop",tags:["Flagship","Long range"]},
-  {make:"Tesla",model:"Model X",price:"from €99,900",pn:99900,range:576,battery:100,dc:250,use:"long",seats:7,img:"https://images.unsplash.com/photo-1619317190803-58529786b291?w=400&h=260&fit=crop",tags:["7-seater","Long range"]},
-  {make:"Porsche",model:"Taycan",price:"from €89,000",pn:89000,range:630,battery:105,dc:270,use:"long",seats:4,img:"https://images.unsplash.com/photo-1614200179396-2bdb77ebf81b?w=400&h=260&fit=crop",tags:["Performance","GT touring"]},
-  {make:"Porsche",model:"Macan Electric",price:"from €78,000",pn:78000,range:590,battery:100,dc:270,use:"long",seats:5,img:"https://images.unsplash.com/photo-1614200179396-2bdb77ebf81b?w=400&h=260&fit=crop",tags:["Sport SUV","Fast charge"]},
-  {make:"BMW",model:"iX",price:"from €68,500",pn:68500,range:630,battery:111.5,dc:195,use:"long",seats:5,img:"https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=400&h=260&fit=crop",tags:["Premium","Longest range"]},
-  {make:"Mercedes",model:"EQE",price:"from €62,000",pn:62000,range:620,battery:90.6,dc:170,use:"long",seats:5,img:"https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=400&h=260&fit=crop",tags:["Luxury","Ultra range"]},
-  {make:"Mercedes",model:"EQS",price:"from €109,000",pn:109000,range:770,battery:120,dc:200,use:"long",seats:5,img:"https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=400&h=260&fit=crop",tags:["Flagship","Record range"]},
-  {make:"NIO",model:"ET7",price:"from €69,900",pn:69900,range:580,battery:100,dc:240,use:"long",seats:5,img:"https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=400&h=260&fit=crop",tags:["Battery swap","Premium"]},
-];
-
 /* ── EV Finder ── */
 function EVFinder({goSearch,t}){
   const[step,setStep]=useState(1);const[kmMode,setKmMode]=useState("yearly");const[kmVal,setKmVal]=useState("");
@@ -362,51 +301,41 @@ function EVFinder({goSearch,t}){
   const yk=kmMode==="weekly"?Number(kmVal||0)*52:kmMode==="monthly"?Number(kmVal||0)*12:Number(kmVal||0);
   const bm=budgetVal>=100000?999999:budgetVal;const bl=budgetVal>=100000?"No limit":`Up to €${budgetVal.toLocaleString()}`;
 
-  const gr=()=>RECS.map(r=>{let s=0;const wk=yk/52;
+  const gr=()=>EV_DB.map(r=>{let s=0;const wk=yk/52;const rng=r.range_summer||r.wltp||300;const dc=r.dc_peak||0;
 
     // ── Use-case matching based on driving pattern ──
-    // City: <10k km/yr, never long trips
-    // Commute: 10-20k km/yr, rarely long trips
-    // Medium: 15-35k km/yr, sometimes long trips (500km)
-    // Long: 25k+ km/yr, often long trips (1000km)
-
-    // Determine ideal use-case from inputs
     const isCity = yk<10000 && (longTrips==="never"||longTrips==="rarely");
     const isCommute = yk>=10000 && yk<20000 && (longTrips==="never"||longTrips==="rarely");
     const isMedium = (longTrips==="sometimes") || (yk>=15000 && yk<35000 && longTrips!=="often");
     const isLong = longTrips==="often" || yk>=35000;
 
-    // Strong bonus for matching use-case
-    if(isCity && r.use==="city") s+=40;
-    if(isCity && r.use==="commute") s+=20;
-    if(isCommute && r.use==="commute") s+=35;
-    if(isCommute && r.use==="medium") s+=15;
-    if(isCommute && r.use==="city") s+=10;
-    if(isMedium && r.use==="medium") s+=40;
-    if(isMedium && r.use==="commute") s+=10;
-    if(isMedium && r.use==="long") s+=15;
-    if(isLong && r.use==="long") s+=45;
-    if(isLong && r.use==="medium") s+=10;
+    // Use the rich scores from EV_DB
+    if(isCity) s += (r.city_score||5) * 4;
+    else if(isCommute) s += (r.city_score||5) * 2 + (r.trip_score||5) * 1;
+    else if(isMedium) s += (r.trip_score||5) * 3 + (r.city_score||5) * 1;
+    else if(isLong) s += (r.trip_score||5) * 5;
+
+    // Value score always matters
+    s += (r.value_score||5) * 2;
 
     // Penalize mismatches
-    if(isCity && r.use==="long") s-=30;
+    if(isCity && r.use==="flagship") s-=30;
+    if(isCity && r.use==="cruiser") s-=20;
     if(isLong && r.use==="city") s-=40;
     if(isLong && r.use==="commute") s-=25;
 
     // ── Charging power rules ──
-    // 500km trips need >=150 kW DC
     if(longTrips==="sometimes"||longTrips==="often"){
-      if(r.dc>=150) s+=10; else s-=15;
+      if(dc>=150) s+=10; else s-=15;
     }
-    // 1000km trips need >=220 kW DC
     if(longTrips==="often"){
-      if(r.dc>=220) s+=20; else if(r.dc>=150) s+=5; else s-=20;
+      if(dc>=270) s+=20; else if(dc>=200) s+=10; else if(dc>=150) s+=5; else s-=20;
     }
 
     // ── Range adequacy ──
-    if(r.range >= wk*1.3) s+=15; else if(r.range >= wk) s+=5; else s-=10;
-    if(longTrips==="often" && r.range>=550) s+=10;
-    if(longTrips==="sometimes" && r.range>=450) s+=8;
+    if(rng >= wk*1.3) s+=15; else if(rng >= wk) s+=5; else s-=10;
+    if(longTrips==="often" && rng>=500) s+=10;
+    if(longTrips==="sometimes" && rng>=400) s+=8;
 
     // ── Budget ──
     if(r.pn>bm) s-=50;
@@ -419,10 +348,7 @@ function EVFinder({goSearch,t}){
     else if(passengers==="5+" && r.seats<5) s-=15;
     if(passengers==="3-4" && r.seats>=5) s+=5;
 
-    // ── Value: km range per €1k ──
-    s+=Math.min(10,Math.round((r.range/(r.pn/1000))*0.5));
-
-    return{...r,score:s}}).sort((a,b)=>b.score-a.score).slice(0,3);
+    return{...r,score:s,_rng:rng,_dc:dc}}).sort((a,b)=>b.score-a.score).slice(0,3);
 
   const res=step===3?gr():[];const sav=yk>0?((yk/100)*consumption*gasPrice)-((yk/100)*16*elPrice):0;const fmt=v=>Math.round(v).toLocaleString();
 
@@ -532,15 +458,19 @@ function EVFinder({goSearch,t}){
                       <div style={{fontSize:11,color:t.tx2,marginTop:1}}>{r.price}</div>
                       <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:8}}>{r.tags.map((x,ti)=><span key={ti} style={tg(t)}>{x}</span>)}</div>
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:4,marginTop:10}}>
-                        {[{l:"Range",v:`${r.range}km`},{l:"Battery",v:`${r.battery}kWh`},{l:"DC",v:`${r.dc}kW`}].map((s,si)=>(
+                        {[{l:"Range",v:`${r._rng}km`},{l:"Battery",v:`${r.battery}kWh`},{l:"DC",v:`${r._dc}kW`}].map((s,si)=>(
                           <div key={si} style={{textAlign:"center",background:t.sec,borderRadius:6,padding:"5px 2px"}}>
                             <div style={{fontSize:9,color:t.tx3}}>{s.l}</div>
                             <div style={{fontSize:12,fontWeight:700,color:t.tx}}>{s.v}</div>
                           </div>
                         ))}
                       </div>
+                      {r.charge_10_80_min&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,marginTop:4}}>
+                        <div style={{textAlign:"center",background:t.sec,borderRadius:6,padding:"5px 2px"}}><div style={{fontSize:9,color:t.tx3}}>10→80%</div><div style={{fontSize:12,fontWeight:700,color:t.tx}}>{r.charge_10_80_min}min</div></div>
+                        <div style={{textAlign:"center",background:t.sec,borderRadius:6,padding:"5px 2px"}}><div style={{fontSize:9,color:t.tx3}}>Boot</div><div style={{fontSize:12,fontWeight:700,color:t.tx}}>{r.cargo_liters}L</div></div>
+                      </div>}
                       <div style={{marginTop:8,fontSize:10,color:t.tx2,lineHeight:1.5,background:t.sec,borderRadius:6,padding:"6px 8px"}}>
-                        {(()=>{const p=[];const cw=Math.ceil((yk/52)/r.range);if(cw<=1)p.push(`${r.range}km covers your full week.`);else p.push(`~${cw}x charges/week.`);if(longTrips==="often"){const st=Math.ceil(1000/r.range),ct=Math.round((r.battery*0.7)/r.dc*60);p.push(`1000km trip: ~${st} stop${st>1?"s":""}, ~${ct}min each.`);if(r.dc>=220)p.push("DC power ideal for long trips.");else if(r.dc>=150)p.push("DC OK for 500km, slow for 1000km.");else p.push("DC too slow for long trips.");}else if(longTrips==="sometimes"){const st=Math.ceil(500/r.range);if(st<=1)p.push("500km in one charge.");else{const ct=Math.round((r.battery*0.6)/r.dc*60);p.push(`500km: ${st>1?`~${st} stops, ~${ct}min each`:"1 quick stop"}.`);}if(r.dc>=150)p.push("Charging power suits weekend trips.");} if(r.use==="city")p.push("Best for urban driving.");p.push(`${(r.range/(r.pn/1000)).toFixed(1)}km/€1k value.`);return p.join(" ")})()}
+                        {getRecommendationText(r, yk, longTrips)}
                       </div>
                       <button onClick={goSearch} style={{width:"100%",height:34,borderRadius:8,border:"none",background:i===0?BG:t.sec,color:i===0?"#fff":BC,fontSize:11,fontWeight:600,cursor:"pointer",marginTop:8}}>{i===0?"View listings":"See available"}</button>
                     </div>
