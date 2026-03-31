@@ -293,7 +293,7 @@ function RCard({c,t,onPress}){
   );
 }
 /* ── EV Finder ── */
-function EVFinder({goSearch,t}){
+function EVFinder({goSearch,navigate,t,favIds,toggleFav}){
   const[step,setStep]=useState(1);const[kmMode,setKmMode]=useState("yearly");const[kmVal,setKmVal]=useState("");
   const[longTrips,setLongTrips]=useState("never");const[budgetVal,setBudgetVal]=useState(100000);
   const[passengers,setPassengers]=useState("1-2");const[gasPrice,setGasPrice]=useState(1.65);
@@ -452,7 +452,10 @@ function EVFinder({goSearch,t}){
                 {res.map((r,i)=>(
                   <div key={i} style={{minWidth:250,flex:"0 0 250px",...cs(t),borderRadius:14,overflow:"hidden",border:i===0?`2px solid ${BC}`:`1px solid ${t.bd}`,position:"relative"}}>
                     {i===0&&<div style={{position:"absolute",top:8,left:8,background:BG,color:"#fff",fontSize:9,fontWeight:700,padding:"3px 8px",borderRadius:5,zIndex:1}}>BEST MATCH</div>}
-                    <div style={{height:140,background:"#16213e",overflow:"hidden"}}><img src={r.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.target.style.display="none"}}/></div>
+                    <div style={{position:"relative",height:140,background:"#16213e",overflow:"hidden"}}>
+                      <img src={r.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.target.style.display="none"}}/>
+                      <button onClick={e=>{e.stopPropagation();if(toggleFav)toggleFav(`evdb_${r.make}_${r.model}`)}} style={{position:"absolute",top:8,right:8,width:30,height:30,borderRadius:"50%",border:"none",background:"rgba(0,0,0,0.35)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><Hrt size={14} filled={favIds?.includes(`evdb_${r.make}_${r.model}`)} color={favIds?.includes(`evdb_${r.make}_${r.model}`)?"#f43f5e":"#fff"}/></button>
+                    </div>
                     <div style={{padding:"12px 14px"}}>
                       <div style={{fontSize:14,fontWeight:600,color:t.tx}}>{r.make} {r.model}</div>
                       <div style={{fontSize:11,color:t.tx2,marginTop:1}}>{r.price}</div>
@@ -472,7 +475,7 @@ function EVFinder({goSearch,t}){
                       <div style={{marginTop:8,fontSize:10,color:t.tx2,lineHeight:1.5,background:t.sec,borderRadius:6,padding:"6px 8px"}}>
                         {getRecommendationText(r, yk, longTrips)}
                       </div>
-                      <button onClick={goSearch} style={{width:"100%",height:34,borderRadius:8,border:"none",background:i===0?BG:t.sec,color:i===0?"#fff":BC,fontSize:11,fontWeight:600,cursor:"pointer",marginTop:8}}>{i===0?"View listings":"See available"}</button>
+                      <button onClick={()=>{if(navigate)navigate(`/search?make=${encodeURIComponent(r.make)}&model=${encodeURIComponent(r.model)}`);else goSearch()}} style={{width:"100%",height:34,borderRadius:8,border:"none",background:i===0?BG:t.sec,color:i===0?"#fff":BC,fontSize:11,fontWeight:600,cursor:"pointer",marginTop:8}}>{i===0?"View listings":"See available"}</button>
                     </div>
                   </div>
                 ))}
@@ -519,7 +522,7 @@ export default function HomePage() {
     if (!auth.token) return;
     (async () => {
       const favs = await sb.query("favourites", `user_id=eq.${auth.user?.id}&select=listing_id`, auth.token);
-      if (favs.length > 0) setFavIds(favs.map(f => f.listing_id));
+      setFavIds(favs.length > 0 ? favs.map(f => f.listing_id) : []);
     })();
   }, [auth.token, auth.user?.id]);
 
@@ -594,7 +597,7 @@ export default function HomePage() {
       </div>
 
       {/* EV FINDER */}
-      <EVFinder goSearch={()=>navigate("/search")} t={t}/>
+      <EVFinder goSearch={()=>navigate("/search")} navigate={navigate} t={t} favIds={favIds} toggleFav={toggleFav}/>
       <div style={{borderTop:`1px solid ${t.bd}`,padding:"20px 0",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
         <div style={{display:"flex",alignItems:"center",gap:6}}>
           <div style={{width:22,height:22,borderRadius:6,background:BG,display:"flex",alignItems:"center",justifyContent:"center"}}><Bolt size={11} color="#fff"/></div>
