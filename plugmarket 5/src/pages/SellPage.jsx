@@ -279,7 +279,7 @@ function PhotoLightbox({ photos, startIndex, onClose, t }) {
 
 export default function SellPage(){
   const { t, dark: d } = useOutletContext();
-  const { user, session } = useAuth();
+  const { user, session, profile: authProfile } = useAuth();
   const nav = useNavigate();
   const [sp] = useSearchParams();
   const editId = sp.get("edit");
@@ -346,6 +346,19 @@ export default function SellPage(){
   // Auth redirect
   useEffect(() => { if (!user) nav("/login"); }, [user, nav]);
   if (!user) return null;
+
+  // Auto-fill contact details from profile (only for new listings)
+  useEffect(() => {
+    if (editId) return; // don't override when editing
+    if (authProfile) {
+      if (authProfile.full_name && !sellerName) setSellerName(authProfile.full_name);
+      if (authProfile.seller_type) setSellerType(authProfile.seller_type);
+      if (authProfile.phone && !phone) setPhone(authProfile.phone);
+      if (authProfile.city && !city) setCity(authProfile.city);
+      if (authProfile.country && !country) setCountry(authProfile.country);
+    }
+    if (user?.email && !email) setEmail(user.email);
+  }, [authProfile, user, editId]);
 
   // Load existing listing for editing
   useEffect(() => {
