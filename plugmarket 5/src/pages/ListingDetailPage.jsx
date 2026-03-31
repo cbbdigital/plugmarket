@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useOutletContext, useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 
@@ -110,6 +110,19 @@ export default function ListingDetailPage() {
   const [copied, setCopied] = useState(false);
   const [imgErr, setImgErr] = useState({});
   const [winW, setWinW] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
+  const touchRef = useRef({ x: 0, t: 0 });
+
+  // Keyboard arrows for fullscreen gallery
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (e) => {
+      if (e.key === "ArrowLeft") setPhotoIdx(i => i === 0 ? (photos.length || 1) - 1 : i - 1);
+      else if (e.key === "ArrowRight") setPhotoIdx(i => i >= (photos.length || 1) - 1 ? 0 : i + 1);
+      else if (e.key === "Escape") setFullscreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullscreen, photos.length]);
 
   useEffect(() => {
     const h = () => setWinW(window.innerWidth);
@@ -185,7 +198,9 @@ export default function ListingDetailPage() {
   const leftContent = (
     <>
       {/* Photo gallery */}
-      <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", marginBottom: 16 }}>
+      <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", marginBottom: 16, touchAction: "pan-y" }}
+        onTouchStart={e => { touchRef.current = { x: e.touches[0].clientX, t: Date.now() }; }}
+        onTouchEnd={e => { const dx = e.changedTouches[0].clientX - touchRef.current.x; const dt = Date.now() - touchRef.current.t; if (Math.abs(dx) > 40 && dt < 500) { dx < 0 ? nextPhoto() : prevPhoto(); } }}>
         <img
           src={allPhotos[photoIdx]}
           alt=""
@@ -413,7 +428,9 @@ export default function ListingDetailPage() {
             <button onClick={() => setFullscreen(false)} style={{ width: 36, height: 36, borderRadius: 8, border: "none", background: "rgba(255,255,255,0.1)", cursor: "pointer", color: "#fff", fontSize: 18 }}>×</button>
           </div>
           {galleryMode === "single" ? (
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", padding: "0 60px" }} onClick={e => e.stopPropagation()}>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", padding: "0 60px", touchAction: "pan-y" }} onClick={e => e.stopPropagation()}
+              onTouchStart={e => { touchRef.current = { x: e.touches[0].clientX, t: Date.now() }; }}
+              onTouchEnd={e => { const dx = e.changedTouches[0].clientX - touchRef.current.x; const dt = Date.now() - touchRef.current.t; if (Math.abs(dx) > 40 && dt < 500) { dx < 0 ? nextPhoto() : prevPhoto(); } }}>
               <button onClick={prevPhoto} style={{ position: "absolute", left: 16, width: 44, height: 44, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.1)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><ChevL size={22} color="#fff"/></button>
               <img src={allPhotos[photoIdx]} alt="" style={{ maxWidth: "100%", maxHeight: "calc(100vh - 120px)", objectFit: "contain", borderRadius: 8 }}/>
               <button onClick={nextPhoto} style={{ position: "absolute", right: 16, width: 44, height: 44, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.1)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><ChevR size={22} color="#fff"/></button>
