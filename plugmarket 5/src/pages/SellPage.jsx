@@ -888,9 +888,68 @@ export default function SellPage(){
                 <InfoIcon size={16} color={BC} style={{flexShrink:0,marginTop:1}}/>
                 <span style={{fontSize:12,color:t.tx2,lineHeight:1.5}}>Listings with 6+ photos get 3x more views. Include exterior (front, rear, sides), interior, dashboard, boot, and any damage.</span>
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(110px,1fr))",gap:10}}>
-                <input ref={fileInputRef} type="file" accept="image/*,.heic,.heif" multiple onChange={handleFileSelect} style={{display:"none"}}/>
-                {photos.map((ph,i)=>{
+              {/* Cover photo — full width */}
+              <input ref={fileInputRef} type="file" accept="image/*,.heic,.heif" multiple onChange={handleFileSelect} style={{display:"none"}}/>
+              {photos.length === 0 && (
+                <div onClick={addPhoto} style={{width:"100%",aspectRatio:"16/9",borderRadius:14,border:`2px dashed ${d?"rgba(255,255,255,0.12)":"rgba(0,0,0,0.1)"}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",gap:8,background:t.sec,opacity:uploading?0.5:1}}>
+                  <CameraIcon size={32} color={t.tx3}/>
+                  <span style={{fontSize:14,fontWeight:600,color:t.tx2}}>{uploading?`Processing ${uploadProg}...`:"Add photos"}</span>
+                  <span style={{fontSize:11,color:t.tx3}}>JPG, PNG, HEIC · Up to 20 photos</span>
+                </div>
+              )}
+              {photos.length > 0 && (()=>{
+                const ph = photos[0];
+                const isPlaceholder = typeof ph === "object" && ph._uploading;
+                const prog = isPlaceholder ? photoProgress[ph._id] : null;
+                return (
+                  <div
+                    style={{position:"relative",width:"100%",aspectRatio:"16/9",borderRadius:14,overflow:"hidden",boxShadow:`inset 0 0 0 1px ${t.bd}`,cursor:isPlaceholder?"default":"grab"}}
+                    draggable={!isPlaceholder}
+                    onDragStart={()=>{dragItem.current=0}}
+                    onDragEnter={()=>{dragOver.current=0}}
+                    onDragEnd={()=>{
+                      if(dragItem.current!==null&&dragOver.current!==null&&dragItem.current!==dragOver.current){
+                        const arr=[...photos];const[m]=arr.splice(dragItem.current,1);arr.splice(dragOver.current,0,m);setPhotos(arr);
+                      }
+                      dragItem.current=null;dragOver.current=null;
+                    }}
+                    onDragOver={e=>e.preventDefault()}
+                  >
+                    {isPlaceholder ? (
+                      <div style={{width:"100%",height:"100%",background:t.sec,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6}}>
+                        {ph._error ? (
+                          <span style={{fontSize:11,color:"#ef4444",fontWeight:500}}>{ph._error}</span>
+                        ) : (
+                          <>
+                            <div style={{width:24,height:24,border:`2px solid ${BC}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+                            <span style={{fontSize:12,color:t.tx3}}>{prog?.status==="converting HEIC"?"Converting HEIC...":prog?.status==="compressing"?"Compressing...":"Processing..."}</span>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <img src={ph} alt="" style={{width:"100%",height:"100%",objectFit:"cover",cursor:"pointer"}}
+                        onClick={()=>{const readyPhotos=photos.filter(p=>typeof p==="string");const ri=readyPhotos.indexOf(ph);if(ri>=0)setLightboxIdx(ri)}}
+                        onError={e=>{e.target.style.display="none"}}/>
+                    )}
+                    {isPlaceholder && prog && prog.status !== "done" && (
+                      <div style={{position:"absolute",bottom:0,left:0,right:0,height:4,background:"rgba(0,0,0,0.3)"}}>
+                        <div style={{height:"100%",width:`${Math.min(prog.progress||0,100)}%`,background:`linear-gradient(90deg,${BC},#FF9533)`,borderRadius:2,transition:"width 0.2s ease"}}/>
+                      </div>
+                    )}
+                    {!isPlaceholder && (
+                      <div style={{position:"absolute",top:6,right:6}}>
+                        <button onClick={()=>removePhoto(0)} style={{width:28,height:28,borderRadius:7,border:"none",background:"rgba(0,0,0,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><TrashIcon size={13} color="#fff"/></button>
+                      </div>
+                    )}
+                    <div style={{position:"absolute",bottom:6,left:6,fontSize:10,fontWeight:700,background:BC,color:"#fff",padding:"3px 8px",borderRadius:5,textTransform:"uppercase"}}>Cover photo</div>
+                  </div>
+                );
+              })()}
+
+              {/* Rest of photos — larger grid */}
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:10}}>
+                {photos.slice(1).map((ph,idx)=>{
+                  const i = idx + 1;
                   const isPlaceholder = typeof ph === "object" && ph._uploading;
                   const prog = isPlaceholder ? photoProgress[ph._id] : null;
                   return (
@@ -913,7 +972,7 @@ export default function SellPage(){
                         ) : (
                           <>
                             <div style={{width:20,height:20,border:`2px solid ${BC}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
-                            <span style={{fontSize:10,color:t.tx3}}>{prog?.status==="compressing"?"Compressing...":"Processing..."}</span>
+                            <span style={{fontSize:10,color:t.tx3}}>{prog?.status==="converting HEIC"?"Converting HEIC...":prog?.status==="compressing"?"Compressing...":"Processing..."}</span>
                           </>
                         )}
                       </div>
@@ -922,7 +981,6 @@ export default function SellPage(){
                         onClick={()=>{const readyPhotos=photos.filter(p=>typeof p==="string");const ri=readyPhotos.indexOf(ph);if(ri>=0)setLightboxIdx(ri)}}
                         onError={e=>{e.target.style.display="none"}}/>
                     )}
-                    {/* Progress bar */}
                     {isPlaceholder && prog && prog.status !== "done" && (
                       <div style={{position:"absolute",bottom:0,left:0,right:0,height:4,background:"rgba(0,0,0,0.3)"}}>
                         <div style={{height:"100%",width:`${Math.min(prog.progress||0,100)}%`,background:`linear-gradient(90deg,${BC},#FF9533)`,borderRadius:2,transition:"width 0.2s ease"}}/>
@@ -930,17 +988,17 @@ export default function SellPage(){
                     )}
                     {!isPlaceholder && (
                     <div style={{position:"absolute",top:4,right:4,display:"flex",gap:3}}>
-                      {i>0&&<button onClick={()=>movePhoto(i,i-1)} style={{width:22,height:22,borderRadius:5,border:"none",background:"rgba(0,0,0,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff"}}>‹</button>}
+                      {i>1&&<button onClick={()=>movePhoto(i,i-1)} style={{width:22,height:22,borderRadius:5,border:"none",background:"rgba(0,0,0,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff"}}>‹</button>}
                       {i<photos.length-1&&<button onClick={()=>movePhoto(i,i+1)} style={{width:22,height:22,borderRadius:5,border:"none",background:"rgba(0,0,0,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff"}}>›</button>}
                       <button onClick={()=>removePhoto(i)} style={{width:22,height:22,borderRadius:5,border:"none",background:"rgba(0,0,0,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><TrashIcon size={11} color="#fff"/></button>
                     </div>
                     )}
-                    {i===0&&!isPlaceholder&&<div style={{position:"absolute",bottom:4,left:4,fontSize:9,fontWeight:700,background:BC,color:"#fff",padding:"2px 6px",borderRadius:4,textTransform:"uppercase"}}>Cover</div>}
+                    <div style={{position:"absolute",bottom:4,left:4,fontSize:9,color:"rgba(255,255,255,0.7)",fontWeight:500}}>{i+1}</div>
                   </div>
                   );
                 })}
                 {photos.length<20&&(
-                  <div onClick={addPhoto} style={{aspectRatio:"4/3",borderRadius:10,border:`2px dashed ${d?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.1)"}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",gap:6,background:t.sec,opacity:uploading?0.5:1}}>
+                  <div onClick={addPhoto} style={{aspectRatio:"4/3",borderRadius:12,border:`2px dashed ${d?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.1)"}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",gap:6,background:t.sec,opacity:uploading?0.5:1}}>
                     <PlusIcon size={22} color={t.tx3}/>
                     <span style={{fontSize:11,color:t.tx3,fontWeight:500}}>{uploading?`Processing ${uploadProg}...`:"Add photos"}</span>
                   </div>
