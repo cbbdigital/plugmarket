@@ -213,10 +213,12 @@ function Toggle({label,value,onChange,t}){
   );
 }
 
-/* ─── Photo Lightbox (keyboard arrows + touch swipe + thumbnails) ─── */
+/* ─── Photo Lightbox (keyboard arrows + smooth swipe + thumbnails) ─── */
 function PhotoLightbox({ photos, startIndex, onClose, t }) {
   const [idx, setIdx] = useState(startIndex);
-  const touchRef = useRef({ x: 0, t: 0 });
+  const [dragOff, setDragOff] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const dRef = useRef(null);
 
   const go = useCallback((dir) => {
     setIdx(prev => {
@@ -237,13 +239,6 @@ function PhotoLightbox({ photos, startIndex, onClose, t }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [go, onClose]);
 
-  const onTouchStart = (e) => { touchRef.current = { x: e.touches[0].clientX, t: Date.now() }; };
-  const onTouchEnd = (e) => {
-    const dx = e.changedTouches[0].clientX - touchRef.current.x;
-    const dt = Date.now() - touchRef.current.t;
-    if (Math.abs(dx) > 40 && dt < 500) go(dx < 0 ? 1 : -1);
-  };
-
   const arrowStyle = (side) => ({
     position: "absolute", top: "50%", transform: "translateY(-50%)",
     [side]: 12, width: 40, height: 40, borderRadius: 20,
@@ -253,19 +248,41 @@ function PhotoLightbox({ photos, startIndex, onClose, t }) {
   });
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center" }}
-      onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.92)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}
+      onClick={onClose}>
       <button onClick={onClose} style={{ position: "absolute", top: 16, right: 16, zIndex: 10, width: 36, height: 36, borderRadius: 18, background: "rgba(255,255,255,0.1)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
         <XIcon size={18} color="#fff" />
       </button>
-      {photos.length > 1 && <button onClick={() => go(-1)} style={arrowStyle("left")}><ChevL size={20} color="#fff" /></button>}
-      {photos.length > 1 && <button onClick={() => go(1)} style={arrowStyle("right")}><ChevR size={20} color="#fff" /></button>}
-      <img src={photos[idx]} alt="" style={{ maxWidth: "90vw", maxHeight: "80vh", objectFit: "contain", borderRadius: 8 }} />
+      {photos.length > 1 && <button onClick={e => { e.stopPropagation(); go(-1); }} style={arrowStyle("left")}><ChevL size={20} color="#fff" /></button>}
+      {photos.length > 1 && <button onClick={e => { e.stopPropagation(); go(1); }} style={arrowStyle("right")}><ChevR size={20} color="#fff" /></button>}
+      <div style={{ width: "90vw", maxHeight: "80vh", overflow: "hidden", position: "relative" }} onClick={e => e.stopPropagation()}>
+        <div
+          style={{ display: "flex", width: `${photos.length * 100}%`, alignItems: "center", transform: `translateX(calc(-${idx * (100 / photos.length)}% + ${dragOff}px))`, transition: isDragging ? "none" : "transform 0.35s cubic-bezier(0.25,0.1,0.25,1)" }}
+          onTouchStart={e => { setIsDragging(true); dRef.current = { x: e.touches[0].clientX, t: Date.now() }; }}
+          onTouchMove={e => { if (!dRef.current) return; setDragOff(e.touches[0].clientX - dRef.current.x); }}
+          onTouchEnd={() => {
+            setIsDragging(false);
+            if (!dRef.current) { setDragOff(0); return; }
+            const dx = dragOff; const dt = Date.now() - dRef.current.t;
+            const velocity = Math.abs(dx) / dt;
+            const threshold = velocity > 0.3 ? 30 : 80;
+            if (dx < -threshold && idx < photos.length - 1) setIdx(idx + 1);
+            else if (dx > threshold && idx > 0) setIdx(idx - 1);
+            setDragOff(0); dRef.current = null;
+          }}
+        >
+          {photos.map((src, i) => (
+            <div key={i} style={{ width: `${100 / photos.length}%`, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <img src={src} alt="" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain", borderRadius: 8, userSelect: "none" }} draggable={false}/>
+            </div>
+          ))}
+        </div>
+      </div>
       <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", background: "rgba(0,0,0,0.6)", borderRadius: 12, padding: "4px 14px", fontSize: 13, color: "#fff", fontWeight: 500 }}>
         {idx + 1} / {photos.length}
       </div>
       {photos.length > 1 && (
-        <div style={{ position: "absolute", bottom: 52, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6, maxWidth: "80vw", overflowX: "auto", padding: "4px 0" }}>
+        <div style={{ position: "absolute", bottom: 52, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6, maxWidth: "80vw", overflowX: "auto", padding: "4px 0" }} onClick={e => e.stopPropagation()}>
           {photos.map((p, i) => (
             <div key={i} onClick={() => setIdx(i)} style={{ width: 48, height: 34, borderRadius: 6, overflow: "hidden", cursor: "pointer", border: i === idx ? `2px solid ${BC}` : "2px solid transparent", opacity: i === idx ? 1 : 0.5, transition: "all 0.2s", flexShrink: 0 }}>
               <img src={p} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />

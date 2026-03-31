@@ -112,6 +112,11 @@ export default function ListingDetailPage() {
   const [imgErr, setImgErr] = useState({});
   const [winW, setWinW] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
   const touchRef = useRef({ x: 0, t: 0 });
+  // Smooth swipe state
+  const [dragOffset, setDragOffset] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const dragRef = useRef(null);
+  const containerWidth = typeof window !== "undefined" ? Math.min(winW, 1200) : 600;
 
   // Keyboard arrows for fullscreen gallery
   useEffect(() => {
@@ -198,19 +203,53 @@ export default function ListingDetailPage() {
   // ── LEFT CONTENT ──
   const leftContent = (
     <>
-      {/* Photo gallery */}
-      <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", marginBottom: 16, touchAction: "pan-y" }}
-        onTouchStart={e => { touchRef.current = { x: e.touches[0].clientX, t: Date.now() }; }}
-        onTouchEnd={e => { const dx = e.changedTouches[0].clientX - touchRef.current.x; const dt = Date.now() - touchRef.current.t; if (Math.abs(dx) > 40 && dt < 500) { dx < 0 ? nextPhoto() : prevPhoto(); } }}>
-        <img
-          src={allPhotos[photoIdx]}
-          alt=""
-          style={{ width: "100%", height: isDesk ? 420 : 260, objectFit: "cover", display: "block", cursor: "pointer" }}
-          onClick={() => setFullscreen(true)}
-        />
+      {/* Photo gallery — smooth swipe */}
+      <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", marginBottom: 16 }}>
+        <div
+          style={{ display: "flex", width: `${allPhotos.length * 100}%`, transform: `translateX(calc(-${photoIdx * (100 / allPhotos.length)}% + ${dragOffset}px))`, transition: dragging ? "none" : "transform 0.35s cubic-bezier(0.25,0.1,0.25,1)", willChange: "transform" }}
+          onTouchStart={e => { setDragging(true); dragRef.current = { x: e.touches[0].clientX, t: Date.now(), moved: false }; }}
+          onTouchMove={e => { if (!dragRef.current) return; const dx = e.touches[0].clientX - dragRef.current.x; setDragOffset(dx); if (Math.abs(dx) > 5) dragRef.current.moved = true; }}
+          onTouchEnd={e => {
+            setDragging(false);
+            if (!dragRef.current) return;
+            const dx = dragOffset;
+            const dt = Date.now() - dragRef.current.t;
+            const velocity = Math.abs(dx) / dt;
+            const threshold = velocity > 0.3 ? 30 : containerWidth * 0.2;
+            if (dx < -threshold && photoIdx < allPhotos.length - 1) setPhotoIdx(photoIdx + 1);
+            else if (dx > threshold && photoIdx > 0) setPhotoIdx(photoIdx - 1);
+            setDragOffset(0);
+            dragRef.current = null;
+          }}
+          onMouseDown={e => { setDragging(true); dragRef.current = { x: e.clientX, t: Date.now(), moved: false }; }}
+          onMouseMove={e => { if (!dragging || !dragRef.current) return; const dx = e.clientX - dragRef.current.x; setDragOffset(dx); if (Math.abs(dx) > 5) dragRef.current.moved = true; }}
+          onMouseUp={() => {
+            setDragging(false);
+            if (!dragRef.current) return;
+            const dx = dragOffset;
+            const dt = Date.now() - dragRef.current.t;
+            const velocity = Math.abs(dx) / dt;
+            const threshold = velocity > 0.3 ? 30 : containerWidth * 0.2;
+            if (dx < -threshold && photoIdx < allPhotos.length - 1) setPhotoIdx(photoIdx + 1);
+            else if (dx > threshold && photoIdx > 0) setPhotoIdx(photoIdx - 1);
+            setDragOffset(0);
+            dragRef.current = null;
+          }}
+          onMouseLeave={() => { if (dragging) { setDragging(false); setDragOffset(0); dragRef.current = null; } }}
+        >
+          {allPhotos.map((src, i) => (
+            <img key={i} src={src} alt="" style={{ width: `${100 / allPhotos.length}%`, height: isDesk ? 420 : 260, objectFit: "cover", flexShrink: 0, userSelect: "none", pointerEvents: dragging ? "none" : "auto", cursor: "pointer" }}
+              onClick={() => { if (!dragRef.current?.moved) setFullscreen(true); }}
+              draggable={false}
+            />
+          ))}
+        </div>
         {allPhotos.length > 1 && <>
           <button onClick={prevPhoto} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", width: 36, height: 36, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.5)", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><ChevL size={16} color="#fff"/></button>
           <button onClick={nextPhoto} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", width: 36, height: 36, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.5)", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><ChevR size={16} color="#fff"/></button>
+          <div style={{ position: "absolute", bottom: 10, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 5 }}>
+            {allPhotos.map((_, i) => <div key={i} style={{ width: i === photoIdx ? 16 : 6, height: 6, borderRadius: 3, background: i === photoIdx ? "#fff" : "rgba(255,255,255,0.5)", transition: "all 0.2s", cursor: "pointer" }} onClick={() => setPhotoIdx(i)}/>)}
+          </div>
           <div style={{ position: "absolute", bottom: 10, right: 14, background: "rgba(0,0,0,0.5)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6 }}>{photoIdx + 1}/{allPhotos.length}</div>
         </>}
         <button onClick={() => setFullscreen(true)} style={{ position: "absolute", top: 10, right: 14, width: 32, height: 32, borderRadius: 8, border: "none", background: "rgba(0,0,0,0.5)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><MaxIcon size={14} color="#fff"/></button>
@@ -433,11 +472,28 @@ export default function ListingDetailPage() {
             <button onClick={() => setFullscreen(false)} style={{ width: 36, height: 36, borderRadius: 8, border: "none", background: "rgba(255,255,255,0.1)", cursor: "pointer", color: "#fff", fontSize: 18 }}>×</button>
           </div>
           {galleryMode === "single" ? (
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", padding: "0 60px", touchAction: "pan-y" }} onClick={e => e.stopPropagation()}
-              onTouchStart={e => { touchRef.current = { x: e.touches[0].clientX, t: Date.now() }; }}
-              onTouchEnd={e => { const dx = e.changedTouches[0].clientX - touchRef.current.x; const dt = Date.now() - touchRef.current.t; if (Math.abs(dx) > 40 && dt < 500) { dx < 0 ? nextPhoto() : prevPhoto(); } }}>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", padding: "0 60px", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+              <div style={{ display: "flex", width: `${allPhotos.length * 100}%`, alignItems: "center", transform: `translateX(calc(-${photoIdx * (100 / allPhotos.length)}% + ${dragOffset}px))`, transition: dragging ? "none" : "transform 0.35s cubic-bezier(0.25,0.1,0.25,1)" }}
+                onTouchStart={e => { setDragging(true); dragRef.current = { x: e.touches[0].clientX, t: Date.now(), moved: false }; }}
+                onTouchMove={e => { if (!dragRef.current) return; const dx = e.touches[0].clientX - dragRef.current.x; setDragOffset(dx); if (Math.abs(dx) > 5) dragRef.current.moved = true; }}
+                onTouchEnd={() => {
+                  setDragging(false);
+                  if (!dragRef.current) return;
+                  const dx = dragOffset; const dt = Date.now() - dragRef.current.t;
+                  const velocity = Math.abs(dx) / dt;
+                  const threshold = velocity > 0.3 ? 30 : 80;
+                  if (dx < -threshold && photoIdx < allPhotos.length - 1) setPhotoIdx(photoIdx + 1);
+                  else if (dx > threshold && photoIdx > 0) setPhotoIdx(photoIdx - 1);
+                  setDragOffset(0); dragRef.current = null;
+                }}
+              >
+                {allPhotos.map((src, i) => (
+                  <div key={i} style={{ width: `${100 / allPhotos.length}%`, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <img src={src} alt="" style={{ maxWidth: "90%", maxHeight: "calc(100vh - 120px)", objectFit: "contain", borderRadius: 8, userSelect: "none" }} draggable={false}/>
+                  </div>
+                ))}
+              </div>
               <button onClick={prevPhoto} style={{ position: "absolute", left: 16, width: 44, height: 44, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.1)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><ChevL size={22} color="#fff"/></button>
-              <img src={allPhotos[photoIdx]} alt="" style={{ maxWidth: "100%", maxHeight: "calc(100vh - 120px)", objectFit: "contain", borderRadius: 8 }}/>
               <button onClick={nextPhoto} style={{ position: "absolute", right: 16, width: 44, height: 44, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.1)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><ChevR size={22} color="#fff"/></button>
             </div>
           ) : (
