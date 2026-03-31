@@ -254,6 +254,9 @@ export default function SearchPage() {
         <button onClick={updateUrl} style={{height:42,padding:"0 20px",borderRadius:10,border:"none",background:BG,color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
           <Srch size={14} color="#fff"/> Search
         </button>
+        {activeCount>0&&<button onClick={()=>{clear();updateUrl()}} style={{height:42,padding:"0 14px",borderRadius:10,border:`1px solid ${t.bd}`,background:t.inp,color:"#ef4444",fontSize:12,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",gap:5,whiteSpace:"nowrap"}}>
+          ✕ Clear all
+        </button>}
       </div>
 
       {/* Filter panel */}
