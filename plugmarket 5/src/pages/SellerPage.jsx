@@ -49,23 +49,17 @@ export default function SellerPage() {
   var [myId, setMyId] = useState(null);
   useEffect(function() {
     try {
-      // Check pm_session first (PlugMarket auth)
+      // Check pm_session (PlugMarket auth)
       var pmRaw = localStorage.getItem("pm_session");
       if (pmRaw) {
-        var pmParsed = JSON.parse(pmRaw);
-        var pmUid = pmParsed && pmParsed.user && pmParsed.user.id;
-        if (pmUid) { setLoggedIn(true); setMyId(pmUid); return; }
+        var p = JSON.parse(pmRaw);
+        // Handle both shapes: { user: { id } } and { user: { user: { id } } }
+        var uid = (p && p.user && p.user.id) || (p && p.user && p.user.user && p.user.user.id);
+        if (uid) { setLoggedIn(true); setMyId(uid); return; }
+        // Also check if access_token exists (means logged in even if user shape is weird)
+        if (p && p.access_token) { setLoggedIn(true); }
       }
-      // Fallback: check supabase auth key
-      var keys = Object.keys(localStorage);
-      var authKey = keys.find(function(k) { return k.indexOf("supabase") >= 0 && k.indexOf("auth") >= 0; });
-      if (authKey) {
-        var raw = localStorage.getItem(authKey);
-        var parsed = JSON.parse(raw);
-        var uid = parsed && parsed.user && parsed.user.id;
-        if (uid) { setLoggedIn(true); setMyId(uid); }
-      }
-    } catch(e) { setLoggedIn(false); }
+    } catch(e) { console.warn("Auth check error:", e); }
   }, []);
 
   var isOwn = loggedIn && myId === id;
@@ -160,18 +154,12 @@ export default function SellerPage() {
   // Get auth token from localStorage
   var getToken = function() {
     try {
-      // Check pm_session first
       var pmRaw = localStorage.getItem("pm_session");
       if (pmRaw) {
-        var pmParsed = JSON.parse(pmRaw);
-        if (pmParsed && pmParsed.access_token) return pmParsed.access_token;
+        var p = JSON.parse(pmRaw);
+        if (p && p.access_token) return p.access_token;
       }
-      // Fallback
-      var keys = Object.keys(localStorage);
-      var authKey = keys.find(function(k) { return k.indexOf("supabase") >= 0 && k.indexOf("auth") >= 0; });
-      if (!authKey) return null;
-      var parsed = JSON.parse(localStorage.getItem(authKey));
-      return parsed && parsed.access_token;
+      return null;
     } catch(e) { return null; }
   };
 

@@ -15,6 +15,23 @@ async function sbGet(table, params) {
     return await r.json();
   } catch { return []; }
 }
+async function sbPost(table, data, token) {
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
+      method: "POST", headers: { "apikey": SB_KEY, "Authorization": `Bearer ${token || SB_KEY}`, "Content-Type": "application/json", "Prefer": "return=representation" }, body: JSON.stringify(data),
+    });
+    if (!r.ok) return null;
+    const res = await r.json();
+    return res?.[0] || res;
+  } catch { return null; }
+}
+async function sbDelete(table, match, token) {
+  try {
+    await fetch(`${SB_URL}/rest/v1/${table}?${match}`, {
+      method: "DELETE", headers: { "apikey": SB_KEY, "Authorization": `Bearer ${token || SB_KEY}` },
+    });
+  } catch {}
+}
 
 // ── Brand ──
 const BC = "#FF7500";
@@ -103,7 +120,26 @@ export default function ListingDetailPage() {
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [photoIdx, setPhotoIdx] = useState(0);
-  const [fav, setFav] = useState(false);
+  const [fav, setFav] = useState(() => {
+    try { const favs = JSON.parse(localStorage.getItem("pm_favs") || "[]"); return favs.includes(id); } catch { return false; }
+  });
+
+  const toggleFav = async () => {
+    const newFav = !fav;
+    setFav(newFav);
+    // Update localStorage
+    try {
+      const favs = JSON.parse(localStorage.getItem("pm_favs") || "[]");
+      const updated = newFav ? [...favs.filter(x => x !== id), id] : favs.filter(x => x !== id);
+      localStorage.setItem("pm_favs", JSON.stringify(updated));
+    } catch {}
+    // Update Supabase
+    const session = (() => { try { return JSON.parse(localStorage.getItem("pm_session") || "null"); } catch { return null; } })();
+    if (session?.access_token && session?.user?.id) {
+      if (newFav) await sbPost("favourites", { user_id: session.user.id, listing_id: id }, session.access_token);
+      else await sbDelete("favourites", `user_id=eq.${session.user.id}&listing_id=eq.${id}`, session.access_token);
+    }
+  };
   const [showPhone, setShowPhone] = useState(false);
   const [tab, setTab] = useState("overview");
   const [fullscreen, setFullscreen] = useState(false);
@@ -266,8 +302,8 @@ export default function ListingDetailPage() {
 
       {/* Action bar */}
       <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        <button onClick={() => setFav(!fav)} style={{ flex: 1, height: 40, borderRadius: 10, border: `1px solid ${th.bd}`, background: th.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, color: fav ? "#ef4444" : th.tx2, fontSize: 13 }}>
-          <HeartIcon size={16} filled={fav} color={fav ? "#ef4444" : th.tx2}/> {fav ? "Saved" : "Save"}
+        <button onClick={toggleFav} style={{ flex: 1, height: 40, borderRadius: 10, border: `1px solid ${th.bd}`, background: th.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, color: fav ? "#ef4444" : th.tx2, fontSize: 13 }}>
+          <HeartIcon size={16} filled={fav} color={fav ? "#ef4444" : th.tx2}/> {fav ? "In favourites" : "Add to favourites"}
         </button>
         <button onClick={()=>{navigator.clipboard.writeText(window.location.href);setCopied(true);setTimeout(()=>setCopied(false),2000)}} style={{ flex: 1, height: 40, borderRadius: 10, border: `1px solid ${th.bd}`, background: th.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, color: copied ? "#10b981" : th.tx2, fontSize: 13 }}>
           {copied ? <><CheckIcon size={16} color="#10b981"/> Link copied!</> : <><ShareIcon size={16} color={th.tx2}/> Share</>}
@@ -472,29 +508,31 @@ export default function ListingDetailPage() {
             <button onClick={() => setFullscreen(false)} style={{ width: 36, height: 36, borderRadius: 8, border: "none", background: "rgba(255,255,255,0.1)", cursor: "pointer", color: "#fff", fontSize: 18 }}>×</button>
           </div>
           {galleryMode === "single" ? (
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", padding: "0 60px", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
-              <div style={{ display: "flex", width: `${allPhotos.length * 100}%`, alignItems: "center", transform: `translateX(calc(-${photoIdx * (100 / allPhotos.length)}% + ${dragOffset}px))`, transition: dragging ? "none" : "transform 0.35s cubic-bezier(0.25,0.1,0.25,1)" }}
-                onTouchStart={e => { setDragging(true); dragRef.current = { x: e.touches[0].clientX, t: Date.now(), moved: false }; }}
-                onTouchMove={e => { if (!dragRef.current) return; const dx = e.touches[0].clientX - dragRef.current.x; setDragOffset(dx); if (Math.abs(dx) > 5) dragRef.current.moved = true; }}
-                onTouchEnd={() => {
-                  setDragging(false);
-                  if (!dragRef.current) return;
-                  const dx = dragOffset; const dt = Date.now() - dragRef.current.t;
-                  const velocity = Math.abs(dx) / dt;
-                  const threshold = velocity > 0.3 ? 30 : 80;
-                  if (dx < -threshold && photoIdx < allPhotos.length - 1) setPhotoIdx(photoIdx + 1);
-                  else if (dx > threshold && photoIdx > 0) setPhotoIdx(photoIdx - 1);
-                  setDragOffset(0); dragRef.current = null;
-                }}
-              >
-                {allPhotos.map((src, i) => (
-                  <div key={i} style={{ width: `${100 / allPhotos.length}%`, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <img src={src} alt="" style={{ maxWidth: "90%", maxHeight: "calc(100vh - 120px)", objectFit: "contain", borderRadius: 8, userSelect: "none" }} draggable={false}/>
-                  </div>
-                ))}
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+              <div style={{ width: "100vw", height: "100%", display: "flex", alignItems: "center", position: "relative" }}>
+                <div style={{ display: "flex", width: `${allPhotos.length * 100}vw`, transform: `translateX(calc(-${photoIdx * 100}vw + ${dragOffset}px))`, transition: dragging ? "none" : "transform 0.35s cubic-bezier(0.25,0.1,0.25,1)" }}
+                  onTouchStart={e => { setDragging(true); dragRef.current = { x: e.touches[0].clientX, t: Date.now(), moved: false }; }}
+                  onTouchMove={e => { if (!dragRef.current) return; const dx = e.touches[0].clientX - dragRef.current.x; setDragOffset(dx); if (Math.abs(dx) > 5) dragRef.current.moved = true; }}
+                  onTouchEnd={() => {
+                    setDragging(false);
+                    if (!dragRef.current) return;
+                    const dx = dragOffset; const dt = Date.now() - dragRef.current.t;
+                    const velocity = Math.abs(dx) / dt;
+                    const threshold = velocity > 0.3 ? 30 : 80;
+                    if (dx < -threshold && photoIdx < allPhotos.length - 1) setPhotoIdx(photoIdx + 1);
+                    else if (dx > threshold && photoIdx > 0) setPhotoIdx(photoIdx - 1);
+                    setDragOffset(0); dragRef.current = null;
+                  }}
+                >
+                  {allPhotos.map((src, i) => (
+                    <div key={i} style={{ width: "100vw", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 60px", boxSizing: "border-box" }}>
+                      <img src={src} alt="" style={{ maxWidth: "100%", maxHeight: "calc(100vh - 140px)", objectFit: "contain", borderRadius: 8, userSelect: "none" }} draggable={false}/>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <button onClick={prevPhoto} style={{ position: "absolute", left: 16, width: 44, height: 44, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.1)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><ChevL size={22} color="#fff"/></button>
-              <button onClick={nextPhoto} style={{ position: "absolute", right: 16, width: 44, height: 44, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.1)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><ChevR size={22} color="#fff"/></button>
+              <button onClick={prevPhoto} style={{ position: "absolute", left: 16, width: 44, height: 44, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.1)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}><ChevL size={22} color="#fff"/></button>
+              <button onClick={nextPhoto} style={{ position: "absolute", right: 16, width: 44, height: 44, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.1)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}><ChevR size={22} color="#fff"/></button>
             </div>
           ) : (
             <div style={{ flex: 1, overflowY: "auto", padding: "10px 20px 20px" }} onClick={e => e.stopPropagation()}>
