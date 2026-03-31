@@ -8,10 +8,11 @@ const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsIn
 async function sbGet(table, params) {
   try {
     const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {
-      headers: { "apikey": SB_KEY, "Authorization": `Bearer ${SB_KEY}` }
+      headers: { "apikey": SB_KEY, "Authorization": `Bearer ${SB_KEY}`, "Accept": "application/json" }
     });
     if (!r.ok) return [];
-    return await r.json();
+    const data = await r.json();
+    return Array.isArray(data) ? data : [data];
   } catch { return []; }
 }
 
