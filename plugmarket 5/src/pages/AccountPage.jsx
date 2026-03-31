@@ -433,9 +433,11 @@ export default function AccountPage(){
         <div style={{display:"flex",gap:1,marginTop:16,background:t.bd,borderRadius:12,overflow:"hidden"}}>
           {[{n:stats.listings,l:"Listings"},{n:stats.saved,l:"Saved"},{n:stats.messages,l:"Messages"},{n:stats.rating,l:"Rating"}].map((s,i)=><div key={i} style={{flex:1,background:t.sec,padding:"12px 0",textAlign:"center"}}><div style={{fontSize:17,fontWeight:700,color:t.tx}}>{s.n}</div><div style={{fontSize:10,color:t.tx3,marginTop:2}}>{s.l}</div></div>)}
         </div>
-        <div style={{display:"flex",gap:8,marginTop:12}}>
+        <div style={{display:"flex",gap:8,marginTop:12,alignItems:"center",flexWrap:"wrap"}}>
           {profile?.is_verified&&<div style={{fontSize:11,color:t.tx3,display:"flex",alignItems:"center",gap:4}}><Chk size={12} color="#10b981"/> Verified seller</div>}
           <div style={{fontSize:11,color:t.tx3}}>Member since {new Date(user?.created_at||Date.now()).toLocaleDateString("en-US",{month:"short",year:"numeric"})}</div>
+          <span style={{color:t.tx3}}>·</span>
+          <button onClick={()=>nav(`/seller/${user.id}`)} style={{fontSize:11,color:BC,background:"none",border:"none",cursor:"pointer",fontWeight:600,padding:0}}>View public profile</button>
         </div>
       </div>
 
