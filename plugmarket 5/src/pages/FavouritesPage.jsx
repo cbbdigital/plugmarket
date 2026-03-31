@@ -137,45 +137,7 @@ const BG="linear-gradient(135deg,#FF7500,#FF9533)";
 const BL="#FFF3EB";
 const BD="#4D2300";
 
-const MK={Tesla:["Model 3","Model Y","Model S","Model X"],BMW:["iX3","iX1","i4","i5","i7","iX"],Volkswagen:["ID.3","ID.4","ID.5","ID.7"],Mercedes:["EQA","EQB","EQE","EQS"],Audi:["Q4 e-tron","Q6 e-tron","e-tron GT"],Hyundai:["Ioniq 5","Ioniq 6"],Kia:["EV6","EV9"],BYD:["Dolphin","Seal","Seal U"],Porsche:["Taycan"],Renault:["Megane E-Tech","Renault 5"],Skoda:["Enyaq","Elroq"],Volvo:["EX30","EX40","EX90"],MG:["MG4","ZS EV"],Cupra:["Born","Tavascan"],Ford:["Mustang Mach-E"],NIO:["ET5","ET7"],Fiat:["500e"]};
 const CO=[{c:"DE",n:"Germany",f:"🇩🇪"},{c:"FR",n:"France",f:"🇫🇷"},{c:"NL",n:"Netherlands",f:"🇳🇱"},{c:"BE",n:"Belgium",f:"🇧🇪"},{c:"AT",n:"Austria",f:"🇦🇹"},{c:"IT",n:"Italy",f:"🇮🇹"},{c:"ES",n:"Spain",f:"🇪🇸"},{c:"PL",n:"Poland",f:"🇵🇱"},{c:"RO",n:"Romania",f:"🇷🇴"},{c:"SE",n:"Sweden",f:"🇸🇪"},{c:"NO",n:"Norway",f:"🇳🇴"},{c:"CZ",n:"Czech Rep.",f:"🇨🇿"}];
-/* ── Extra photo pool (simulates multi-photo listings) ── */
-const XP=[
-  "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=480&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=480&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=480&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1542362567-b07e54358753?w=480&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=480&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=480&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=480&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=480&h=300&fit=crop",
-];
-const mkImgs=(main,id)=>[main,XP[(id*3)%XP.length],XP[(id*3+1)%XP.length],XP[(id*3+2)%XP.length]];
-
-const PRO=[
-  {id:1,mk:"Tesla",md:"Model Y",vr:"Long Range AWD",yr:2025,km:2100,pr:52900,rng:533,dc:250,ct:"Munich",co:"DE",imgs:mkImgs("https://images.unsplash.com/photo-1619317190803-58529786b291?w=400&h=260&fit=crop",1),bg:"Sponsored"},
-  {id:2,mk:"Porsche",md:"Taycan",vr:"4S",yr:2024,km:12400,pr:79900,rng:464,dc:270,ct:"Stuttgart",co:"DE",imgs:mkImgs("https://images.unsplash.com/photo-1614200179396-2bdb77ebf81b?w=400&h=260&fit=crop",2),bg:"Premium"},
-  {id:3,mk:"BMW",md:"iX",vr:"xDrive50",yr:2024,km:8900,pr:68500,rng:630,dc:195,ct:"Amsterdam",co:"NL",imgs:mkImgs("https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=400&h=260&fit=crop",3),bg:"Sponsored"},
-  {id:4,mk:"Hyundai",md:"Ioniq 5",vr:"AWD 77kWh",yr:2025,km:800,pr:48200,rng:507,dc:350,ct:"Brussels",co:"BE",imgs:mkImgs("https://images.unsplash.com/photo-1675255998683-a2247c4de89c?w=400&h=260&fit=crop",4),bg:"Top Deal"},
-];
-const REC=[
-  {id:5,mk:"Skoda",md:"Elroq",vr:"85",yr:2025,km:3200,pr:37500,rng:560,dc:175,ct:"Prague",co:"CZ",imgs:mkImgs("https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=400&h=260&fit=crop",5)},
-  {id:6,mk:"Renault",md:"Renault 5",vr:"Iconic",yr:2025,km:1200,pr:27990,rng:400,dc:100,ct:"Lyon",co:"FR",imgs:mkImgs("https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400&h=260&fit=crop",6)},
-  {id:7,mk:"Volvo",md:"EX30",vr:"Extended",yr:2025,km:4500,pr:36200,rng:476,dc:153,ct:"Gothenburg",co:"SE",imgs:mkImgs("https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?w=400&h=260&fit=crop",7)},
-  {id:8,mk:"Cupra",md:"Born",vr:"V3 77kWh",yr:2024,km:11000,pr:34800,rng:548,dc:185,ct:"Barcelona",co:"ES",imgs:mkImgs("https://images.unsplash.com/photo-1571987502227-9231b837d92a?w=400&h=260&fit=crop",8)},
-  {id:9,mk:"Mercedes",md:"EQA",vr:"250+",yr:2024,km:21000,pr:39800,rng:528,dc:100,ct:"Vienna",co:"AT",imgs:mkImgs("https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=400&h=260&fit=crop",9)},
-];
-const SLS=[
-  {id:1,mk:"Tesla",md:"Model 3",vr:"Long Range",yr:2024,km:18500,pr:38900,bat:75,rng:602,dc:250,dr:"RWD",cn:"Used",co:"DE",ct:"Munich",hp:97,ft:true,dy:2,imgs:mkImgs("https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=480&h=300&fit=crop",1)},
-  {id:2,mk:"BMW",md:"iX3",vr:"Inspiring",yr:2023,km:32000,pr:41500,bat:80,rng:461,dc:150,dr:"RWD",cn:"Used",co:"DE",ct:"Berlin",hp:95,ft:false,dy:5,imgs:mkImgs("https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=480&h=300&fit=crop",2)},
-  {id:3,mk:"Volkswagen",md:"ID.4",vr:"Pro",yr:2025,km:5200,pr:43900,bat:77,rng:520,dc:175,dr:"RWD",cn:"Certified",co:"NL",ct:"Amsterdam",hp:99,ft:true,dy:1,imgs:mkImgs("https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=480&h=300&fit=crop",3)},
-  {id:4,mk:"Hyundai",md:"Ioniq 5",vr:"AWD LR",yr:2024,km:12000,pr:46200,bat:77,rng:507,dc:350,dr:"AWD",cn:"Used",co:"BE",ct:"Brussels",hp:98,ft:false,dy:3,imgs:mkImgs("https://images.unsplash.com/photo-1675255998683-a2247c4de89c?w=480&h=300&fit=crop",4)},
-  {id:5,mk:"BYD",md:"Seal",vr:"Design AWD",yr:2025,km:800,pr:44990,bat:82,rng:520,dc:150,dr:"AWD",cn:"New",co:"FR",ct:"Paris",hp:100,ft:true,dy:0,imgs:mkImgs("https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=480&h=300&fit=crop",5)},
-  {id:6,mk:"Porsche",md:"Taycan",vr:"4S",yr:2023,km:35000,pr:72500,bat:93,rng:464,dc:270,dr:"AWD",cn:"Used",co:"DE",ct:"Stuttgart",hp:93,ft:false,dy:14,imgs:mkImgs("https://images.unsplash.com/photo-1614200179396-2bdb77ebf81b?w=480&h=300&fit=crop",6)},
-  {id:7,mk:"Renault",md:"Renault 5",vr:"Iconic",yr:2025,km:1200,pr:27990,bat:52,rng:400,dc:100,dr:"FWD",cn:"New",co:"FR",ct:"Lyon",hp:100,ft:true,dy:1,imgs:mkImgs("https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=480&h=300&fit=crop",7)},
-  {id:8,mk:"Tesla",md:"Model Y",vr:"Performance",yr:2024,km:8200,pr:52900,bat:75,rng:514,dc:250,dr:"AWD",cn:"Used",co:"DE",ct:"Hamburg",hp:99,ft:true,dy:1,imgs:mkImgs("https://images.unsplash.com/photo-1619317190803-58529786b291?w=480&h=300&fit=crop",8)},
-  {id:9,mk:"Volvo",md:"EX30",vr:"Extended",yr:2025,km:4500,pr:36200,bat:69,rng:476,dc:153,dr:"RWD",cn:"New",co:"SE",ct:"Gothenburg",hp:100,ft:true,dy:2,imgs:mkImgs("https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?w=480&h=300&fit=crop",9)},
-];
 /* ── Helpers ── */
 const gf=c=>CO.find(x=>x.c===c)?.f||"";
 const gn=c=>CO.find(x=>x.c===c)?.n||c;
@@ -244,7 +206,7 @@ export default function FavouritesPage() {
     if (!auth.token) return;
     (async () => {
       const favs = await sb.query("favourites", `user_id=eq.${auth.user?.id}&select=listing_id`, auth.token);
-      if (favs.length > 0) setFavIds(favs.map(f => f.listing_id));
+      setFavIds(favs.length > 0 ? favs.map(f => f.listing_id) : []);
     })();
   }, [auth.token, auth.user?.id]);
 
@@ -257,10 +219,54 @@ export default function FavouritesPage() {
     }
   };
 
-  const all=[...PRO,...REC,...SLS];
-  const seen=new Set();
-  const deduped=all.filter(l=>{if(seen.has(l.id))return false;seen.add(l.id);return true;});
-  const favs=deduped.filter(l=>favIds.includes(l.id));
+  const [favListings, setFavListings] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch actual listing data for fav IDs
+  useEffect(() => {
+    if (favIds.length === 0) { setFavListings([]); setLoading(false); return; }
+    // Filter out non-UUID ids (like evdb_ prefixed ones)
+    const realIds = favIds.filter(id => typeof id === "string" && id.length > 10 && !id.startsWith("evdb_"));
+    if (realIds.length === 0) { setFavListings([]); setLoading(false); return; }
+    (async () => {
+      setLoading(true);
+      const rows = await sb.query("listings", `id=in.(${realIds.join(",")})&status=eq.active`);
+      if (rows.length > 0) {
+        // Fetch photos
+        const ids = rows.map(r => r.id);
+        const photos = await sb.query("listing_photos", `listing_id=in.(${ids.join(",")})&order=position.asc`);
+        const photoMap = {};
+        photos.forEach(p => {
+          if (!photoMap[p.listing_id]) photoMap[p.listing_id] = [];
+          photoMap[p.listing_id].push(p.url);
+        });
+        const mapped = rows.map(r => ({
+          id: r.id,
+          mk: r.make,
+          md: r.model,
+          vr: r.variant || "",
+          yr: r.year,
+          km: r.mileage_km,
+          pr: r.price_eur,
+          bat: r.battery_capacity_kwh || 0,
+          rng: r.range_real_km || 0,
+          dc: r.dc_charge_max_kw || 0,
+          dr: r.drivetrain || "",
+          cn: r.condition === "certified_pre_owned" ? "Certified" : r.condition === "new" ? "New" : "Used",
+          co: r.country || "",
+          ct: r.city || "",
+          hp: r.state_of_health_pct || 100,
+          imgs: photoMap[r.id] || [],
+        }));
+        setFavListings(mapped);
+      } else {
+        setFavListings([]);
+      }
+      setLoading(false);
+    })();
+  }, [favIds]);
+
+  const favs = favListings;
 
   return(
     <>
@@ -269,7 +275,9 @@ export default function FavouritesPage() {
         <h2 style={{fontSize:20,fontWeight:700,margin:0}}>Favourites</h2>
         {favIds.length>0&&<span style={{minWidth:22,height:22,borderRadius:11,background:"#f43f5e",color:"#fff",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{favIds.length}</span>}
       </div>
-      {favs.length===0?(
+      {loading?(
+        <div style={{textAlign:"center",padding:"50px 0",fontSize:13,color:t.tx3}}>Loading favourites...</div>
+      ):favs.length===0?(
         <div style={{textAlign:"center",padding:"50px 0"}}>
           <Hrt size={40} color={t.tx3}/>
           <div style={{fontSize:15,fontWeight:600,color:t.tx2,marginTop:12}}>No favourites yet</div>
