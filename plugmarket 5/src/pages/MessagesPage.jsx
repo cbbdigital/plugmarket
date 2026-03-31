@@ -266,6 +266,11 @@ export default function MessagesPage(){
 
   const activeConvo=conversations.find(c=>c.id===activeChat);
   const totalUnread=conversations.reduce((s,c)=>s+c.unread,0);
+
+  // Persist unread count to localStorage so BNav can show badge
+  useEffect(() => {
+    try { localStorage.setItem("pm_unread_msgs", String(totalUnread)); } catch {}
+  }, [totalUnread]);
   const groups=groupByCar(conversations);
 
   const filtered=conversations.filter(c=>{
