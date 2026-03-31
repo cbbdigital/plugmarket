@@ -11,7 +11,7 @@ export default function Header({ t, dark, setDark }) {
       <div style={{ position: "absolute", inset: 0, background: t.nav }} />
       <div style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto", padding: "10px 8%", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {!isHome && <button onClick={() => nav(-1)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}><Bak size={20} color={t.tx} /></button>}
+          {!isHome && <button onClick={() => { if (window.history.length > 2) nav(-1); else nav("/"); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}><Bak size={20} color={t.tx} /></button>}
           <div onClick={() => nav("/")} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
             <div style={{ width: 28, height: 28, borderRadius: 7, background: GR, display: "flex", alignItems: "center", justifyContent: "center" }}><Bolt size={14} color="#fff" /></div>
             <span style={{ fontSize: 16, fontWeight: 700, color: t.tx }}>PlugMarket<span style={{ color: BC }}>.eu</span></span>
