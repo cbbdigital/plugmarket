@@ -122,6 +122,10 @@ function ListingsPage({t,onBack,nav,user,session}){
     if(ok){setToast(`${car.year} ${car.make} ${car.model} is now featured!`);setTimeout(()=>setToast(null),3000);}
   };
 
+  // Responsive
+  const[wide,setWide]=useState(typeof window!=="undefined"?window.innerWidth>=700:false);
+  useEffect(()=>{const h=()=>setWide(window.innerWidth>=700);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h)},[]);
+
   const items=filter==="all"?listings:listings.filter(l=>l.status===filter);
   const tv=listings.reduce((a,l)=>a+l.views,0);
   const ti=listings.reduce((a,l)=>a+l.inquiries,0);
@@ -167,43 +171,60 @@ function ListingsPage({t,onBack,nav,user,session}){
       {[{v:"all",l:"All"},{v:"active",l:"Active"},{v:"paused",l:"Paused"}].map(f=><button key={f.v} onClick={()=>setFilter(f.v)} style={{padding:"6px 14px",borderRadius:8,border:filter===f.v?"none":`1px solid ${t.bd}`,background:filter===f.v?GR:t.card,color:filter===f.v?"#fff":t.tx2,fontSize:12,fontWeight:500,cursor:"pointer"}}>{f.l}</button>)}
     </div>
 
-    {/* Listings */}
+    {/* Listings grid */}
     {items.length===0?(
-      <div style={{textAlign:"center",padding:"40px 0"}}><Car size={36} color={t.tx3}/><div style={{fontSize:14,fontWeight:600,color:t.tx2,marginTop:10}}>{loading?"Loading...":"No listings yet"}</div><div style={{fontSize:12,color:t.tx3,marginTop:4}}>Create your first listing to start selling</div></div>
+      <div style={{textAlign:"center",padding:"40px 0"}}><Car size={36} color={t.tx3}/><div style={{fontSize:14,fontWeight:600,color:t.tx2,marginTop:10}}>No listings yet</div><div style={{fontSize:12,color:t.tx3,marginTop:4}}>Create your first listing to start selling</div></div>
     ):(
-      items.map(car=><div key={car.id} style={{...cs(t),marginBottom:12,overflow:"hidden"}}>
-        <div onClick={()=>nav(`/listing/${car.id}`)} style={{display:"flex",cursor:"pointer"}}>
-          {/* Fixed size image container */}
-          <div style={{width:140,height:130,flexShrink:0,position:"relative",overflow:"hidden",background:d?"#1a1a22":"#f0f0f0"}}>
-            <img src={car.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
-            <div style={{position:"absolute",top:8,left:8}}><SBadge status={car.status}/></div>
-            {car.boosted&&<div style={{position:"absolute",top:8,right:8,background:GR,color:"#fff",fontSize:8,fontWeight:700,padding:"2px 6px",borderRadius:4}}>BOOSTED</div>}
-          </div>
-          <div style={{flex:1,padding:"12px 14px",display:"flex",flexDirection:"column",justifyContent:"space-between",minWidth:0}}>
-            <div>
-              <div style={{fontSize:14,fontWeight:700,color:t.tx,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{car.year} {car.make} {car.model}</div>
-              <div style={{fontSize:12,color:t.tx2,marginTop:3}}>{car.km.toLocaleString()} km · {car.battery} · {car.soh}% SoH</div>
-              <div style={{fontSize:17,fontWeight:800,color:BC,marginTop:6}}>€{car.price.toLocaleString()}</div>
+      <div style={{display:"grid",gridTemplateColumns:wide?"1fr 1fr":"1fr",gap:12,paddingBottom:12}}>
+        {items.map(car=>(
+          <div key={car.id} style={{...cs(t),overflow:"hidden",display:"flex",flexDirection:"column"}}>
+            {/* Image — full width, fixed height */}
+            <div onClick={()=>nav(`/listing/${car.id}`)} style={{position:"relative",height:wide?170:160,overflow:"hidden",cursor:"pointer",background:d?"#1a1a22":"#f0f0f0"}}>
+              <img src={car.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+              <div style={{position:"absolute",top:8,left:8}}><SBadge status={car.status}/></div>
+              {car.boosted&&<div style={{position:"absolute",top:8,right:8,background:GR,color:"#fff",fontSize:8,fontWeight:700,padding:"2px 6px",borderRadius:4}}>BOOSTED</div>}
+              {/* Stats overlay bottom-right */}
+              <div style={{position:"absolute",bottom:8,right:8,display:"flex",gap:6}}>
+                {[{n:car.views,ic:<Eye size={10} color="#fff"/>},{n:car.inquiries,ic:<Chat size={10} color="#fff"/>},{n:car.saved,ic:<Hrt size={10} color="#fff"/>}].map((s,i)=>(
+                  <span key={i} style={{display:"flex",alignItems:"center",gap:3,background:"rgba(0,0,0,0.5)",padding:"2px 6px",borderRadius:4,fontSize:10,color:"#fff",fontWeight:500}}>{s.ic}{s.n}</span>
+                ))}
+              </div>
             </div>
-            <div style={{display:"flex",gap:12,fontSize:11,color:t.tx3,marginTop:8}}>
-              <span style={{display:"flex",alignItems:"center",gap:3}}><Eye size={11} color={t.tx3}/>{car.views}</span>
-              <span style={{display:"flex",alignItems:"center",gap:3}}><Chat size={11} color={t.tx3}/>{car.inquiries}</span>
-              <span style={{display:"flex",alignItems:"center",gap:3}}><Hrt size={11} color={t.tx3}/>{car.saved}</span>
-              <span style={{display:"flex",alignItems:"center",gap:3}}><Clk size={11} color={t.tx3}/>{car.days}d</span>
+
+            {/* Info */}
+            <div onClick={()=>nav(`/listing/${car.id}`)} style={{padding:"12px 14px",cursor:"pointer",flex:1}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                <div style={{minWidth:0,flex:1}}>
+                  <div style={{fontSize:15,fontWeight:700,color:t.tx,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{car.year} {car.make} {car.model}</div>
+                  <div style={{fontSize:12,color:t.tx2,marginTop:3}}>{car.km.toLocaleString()} km · {car.battery} · {car.soh}% SoH</div>
+                </div>
+                <div style={{fontSize:18,fontWeight:800,color:BC,flexShrink:0}}>€{car.price.toLocaleString()}</div>
+              </div>
+              <div style={{fontSize:11,color:t.tx3,marginTop:6,display:"flex",alignItems:"center",gap:4}}>
+                <Clk size={11} color={t.tx3}/> Listed {car.days}d ago
+              </div>
+            </div>
+
+            {/* Action buttons — 2x2 grid */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",borderTop:`1px solid ${t.bd}`}}>
+              {[
+                {l:"Edit",ic:<Edit size={13}/>,clr:t.tx2,action:()=>nav(`/sell?edit=${car.id}`)},
+                {l:car.status==="paused"?"Activate":"Pause",ic:car.status==="paused"?<Chk size={13} color="#10b981"/>:<Clk size={13} color="#f59e0b"/>,clr:car.status==="paused"?"#10b981":"#f59e0b",action:()=>togglePause(car)},
+                {l:"Boost",ic:<TUp size={13}/>,clr:car.boosted?"#10b981":BC,action:()=>boostListing(car)},
+                {l:"Delete",ic:<Trash size={13}/>,clr:"#ef4444",action:()=>setDeleteTarget(car)},
+              ].map((a,i)=>(
+                <button key={i} onClick={a.action} style={{
+                  padding:"10px 0",background:"none",border:"none",cursor:"pointer",
+                  display:"flex",alignItems:"center",justifyContent:"center",gap:5,
+                  fontSize:11,fontWeight:500,color:a.clr,
+                  borderRight:i%2===0?`1px solid ${t.bd}`:"none",
+                  borderTop:i>=2?`1px solid ${t.bd}`:"none",
+                }}>{a.ic}{a.l}</button>
+              ))}
             </div>
           </div>
-        </div>
-        {/* Action bar */}
-        <div style={{display:"flex",borderTop:`1px solid ${t.bd}`}}>
-          {[
-            {l:"Edit",ic:<Edit size={13} color={t.tx2}/>,action:()=>nav(`/sell?edit=${car.id}`)},
-            {l:"Messages",ic:<Chat size={13} color={BC}/>,action:()=>nav("/messages")},
-            {l:car.status==="paused"?"Activate":"Pause",ic:car.status==="paused"?<Chk size={13} color="#10b981"/>:<Clk size={13} color="#f59e0b"/>,action:()=>togglePause(car)},
-            {l:"Boost",ic:<TUp size={13} color={car.boosted?"#10b981":BC}/>,action:()=>boostListing(car)},
-            {l:"Delete",ic:<Trash size={13} color="#ef4444"/>,action:()=>setDeleteTarget(car)},
-          ].map((a,i)=><button key={i} onClick={a.action||undefined} style={{flex:1,padding:"10px 0",background:"none",border:"none",borderRight:i<4?`1px solid ${t.bd}`:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:500,color:a.l==="Messages"||a.l==="Boost"?BC:a.l==="Delete"?"#ef4444":t.tx2}}>{a.ic}{a.l}</button>)}
-        </div>
-      </div>)
+        ))}
+      </div>
     )}
   </>;
 }
