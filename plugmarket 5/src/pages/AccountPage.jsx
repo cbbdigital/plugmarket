@@ -492,8 +492,9 @@ export default function AccountPage(){
     if(page==="terms") return <TermsPage t={t}/>;
 
     // Home
+    const isWide = typeof window !== "undefined" && window.innerWidth >= 700;
     return <>
-      {/* Profile card */}
+      {/* Profile card — always full width */}
       <div style={{...cs(t),padding:20,marginTop:10,marginBottom:14}}>
         <div style={{display:"flex",alignItems:"center",gap:16}}>
           <div style={{width:64,height:64,borderRadius:"50%",background:GR,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:700,color:"#fff",flexShrink:0}}>{(profile?.full_name||user?.email||"?").split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2)}</div>
@@ -515,36 +516,41 @@ export default function AccountPage(){
         </div>
       </div>
 
-      <Sect t={t} title="My vehicles">
-        <Row t={t} icon={<Car size={18} color={BC}/>} label="My listings" desc={`${stats.listings} active listing${stats.listings!==1?"s":""}`} onClick={()=>setPage("listings")}/>
-        <Row t={t} icon={<Chat size={18} color={BC}/>} label="Messages" desc={`${stats.messages} conversation${stats.messages!==1?"s":""}`} onClick={()=>nav("/messages")}/>
-        <Row t={t} icon={<Tag size={18} color={t.tx2}/>} label="Sold vehicles" desc={`${stats.sold} vehicle${stats.sold!==1?"s":""} sold`} onClick={()=>setPage("sold")}/>
-        <Row t={t} icon={<Star size={18} color="#f59e0b" filled/>} label="Reviews" desc={stats.reviews>0?`${stats.rating} avg from ${stats.reviews} review${stats.reviews!==1?"s":""}`:"No reviews yet"} onClick={()=>setPage("reviews")}/>
-      </Sect>
-      <Sect t={t} title="Account">
-        <Row t={t} icon={<Usr size={18} color={t.tx2}/>} label="Edit profile" desc="Name, photo, location" onClick={()=>setPage("edit")}/>
-        <Row t={t} icon={<Shld size={18} color={t.tx2}/>} label="Security" desc="Password, 2FA, sessions" onClick={()=>setPage("security")}/>
-        <Row t={t} icon={<CC size={18} color={t.tx2}/>} label="Payment methods" desc="Coming soon" onClick={()=>setPage("payment")}/>
-        <Row t={t} icon={<Globe size={18} color={t.tx2}/>} label="Language & region" desc="English · EUR · Romania" onClick={()=>setPage("language")}/>
-      </Sect>
-      <Sect t={t} title="Notifications">
-        <Row t={t} icon={<Mail size={18} color={t.tx2}/>} label="Email notifications" right={<Toggle value={notifEmail} onChange={setNotifEmail}/>}/>
-        <Row t={t} icon={<Bell size={18} color={t.tx2}/>} label="Push notifications" right={<Toggle value={notifPush} onChange={setNotifPush}/>}/>
-        <Row t={t} icon={<Chat size={18} color={t.tx2}/>} label="New message alerts" right={<Toggle value={notifNewMsg} onChange={setNotifNewMsg}/>}/>
-        <Row t={t} icon={<Tag size={18} color={t.tx2}/>} label="Price drop alerts" right={<Toggle value={notifPrice} onChange={setNotifPrice}/>}/>
-      </Sect>
-      <Sect t={t} title="Appearance">
-        <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px 0",borderBottom:`1px solid ${t.bd}`}}>
-          <div style={{width:36,height:36,borderRadius:10,background:t.sec,display:"flex",alignItems:"center",justifyContent:"center"}}>{dark?<Moon size={18} color={BC}/>:<Sun size={18} color="#f59e0b"/>}</div>
-          <div style={{flex:1}}><div style={{fontSize:13,fontWeight:500,color:t.tx}}>Dark mode</div><div style={{fontSize:11,color:t.tx3,marginTop:1}}>{dark?"Dark theme active":"Light theme active"}</div></div>
-          <Toggle value={dark} onChange={setDark}/>
+      {/* Sections — 2-col grid on wide, stacked on narrow */}
+      <div style={{display:"grid",gridTemplateColumns:isWide?"1fr 1fr":"1fr",gap:14}}>
+        <Sect t={t} title="My vehicles">
+          <Row t={t} icon={<Car size={18} color={BC}/>} label="My listings" desc={`${stats.listings} active listing${stats.listings!==1?"s":""}`} onClick={()=>setPage("listings")}/>
+          <Row t={t} icon={<Chat size={18} color={BC}/>} label="Messages" desc={`${stats.messages} conversation${stats.messages!==1?"s":""}`} onClick={()=>nav("/messages")}/>
+          <Row t={t} icon={<Tag size={18} color={t.tx2}/>} label="Sold vehicles" desc={`${stats.sold} vehicle${stats.sold!==1?"s":""} sold`} onClick={()=>setPage("sold")}/>
+          <Row t={t} icon={<Star size={18} color="#f59e0b" filled/>} label="Reviews" desc={stats.reviews>0?`${stats.rating} avg from ${stats.reviews} review${stats.reviews!==1?"s":""}`:"No reviews yet"} onClick={()=>setPage("reviews")}/>
+        </Sect>
+        <Sect t={t} title="Account">
+          <Row t={t} icon={<Usr size={18} color={t.tx2}/>} label="Edit profile" desc="Name, photo, location" onClick={()=>setPage("edit")}/>
+          <Row t={t} icon={<Shld size={18} color={t.tx2}/>} label="Security" desc="Password, 2FA, sessions" onClick={()=>setPage("security")}/>
+          <Row t={t} icon={<CC size={18} color={t.tx2}/>} label="Payment methods" desc="Coming soon" onClick={()=>setPage("payment")}/>
+          <Row t={t} icon={<Globe size={18} color={t.tx2}/>} label="Language & region" desc="English · EUR · Romania" onClick={()=>setPage("language")}/>
+        </Sect>
+        <Sect t={t} title="Notifications">
+          <Row t={t} icon={<Mail size={18} color={t.tx2}/>} label="Email notifications" right={<Toggle value={notifEmail} onChange={setNotifEmail}/>}/>
+          <Row t={t} icon={<Bell size={18} color={t.tx2}/>} label="Push notifications" right={<Toggle value={notifPush} onChange={setNotifPush}/>}/>
+          <Row t={t} icon={<Chat size={18} color={t.tx2}/>} label="New message alerts" right={<Toggle value={notifNewMsg} onChange={setNotifNewMsg}/>}/>
+          <Row t={t} icon={<Tag size={18} color={t.tx2}/>} label="Price drop alerts" right={<Toggle value={notifPrice} onChange={setNotifPrice}/>}/>
+        </Sect>
+        <div>
+          <Sect t={t} title="Appearance">
+            <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px 0",borderBottom:`1px solid ${t.bd}`}}>
+              <div style={{width:36,height:36,borderRadius:10,background:t.sec,display:"flex",alignItems:"center",justifyContent:"center"}}>{dark?<Moon size={18} color={BC}/>:<Sun size={18} color="#f59e0b"/>}</div>
+              <div style={{flex:1}}><div style={{fontSize:13,fontWeight:500,color:t.tx}}>Dark mode</div><div style={{fontSize:11,color:t.tx3,marginTop:1}}>{dark?"Dark theme active":"Light theme active"}</div></div>
+              <Toggle value={dark} onChange={setDark}/>
+            </div>
+          </Sect>
+          <Sect t={t} title="Support">
+            <Row t={t} icon={<Help size={18} color={t.tx2}/>} label="Help centre" desc="FAQs and guides" onClick={()=>setPage("help")}/>
+            <Row t={t} icon={<Chat size={18} color={t.tx2}/>} label="Contact support" desc="Get help from our team" onClick={()=>setPage("contact")}/>
+            <Row t={t} icon={<File size={18} color={t.tx2}/>} label="Terms & Privacy" onClick={()=>setPage("terms")}/>
+          </Sect>
         </div>
-      </Sect>
-      <Sect t={t} title="Support">
-        <Row t={t} icon={<Help size={18} color={t.tx2}/>} label="Help centre" desc="FAQs and guides" onClick={()=>setPage("help")}/>
-        <Row t={t} icon={<Chat size={18} color={t.tx2}/>} label="Contact support" desc="Get help from our team" onClick={()=>setPage("contact")}/>
-        <Row t={t} icon={<File size={18} color={t.tx2}/>} label="Terms & Privacy" onClick={()=>setPage("terms")}/>
-      </Sect>
+      </div>
       <Sect t={t}><Row t={t} icon={<Out size={18} color="#ef4444"/>} label="Log out" danger onClick={()=>{signOut();nav("/login")}}/></Sect>
       <div style={{textAlign:"center",padding:"16px 0 8px"}}><div style={{fontSize:11,color:t.tx3}}>PlugMarket.eu · v1.0.2</div></div>
     </>;
