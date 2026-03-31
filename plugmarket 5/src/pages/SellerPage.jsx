@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useOutletContext, useParams, useNavigate } from "react-router-dom";
-import { useAuth } from "../lib/auth";
 
 // ── Supabase REST ──
 const SB_URL = import.meta.env.VITE_SUPABASE_URL || "https://tmftxqwqwceuiydleuag.supabase.co";
@@ -77,7 +76,15 @@ export default function SellerPage() {
   const { t, dark } = useOutletContext();
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  useEffect(() => {
+    try {
+      const keys = Object.keys(localStorage);
+      const hasSession = keys.some(k => k.includes("supabase") && k.includes("auth"));
+      setLoggedIn(hasSession);
+    } catch { setLoggedIn(false); }
+  }, []);
   const [seller, setSeller] = useState(null);
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -218,11 +225,11 @@ export default function SellerPage() {
 
             {/* Action buttons */}
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => user ? navigate(`/messages?seller=${id}`) : navigate("/login")} style={{ padding: "8px 18px", borderRadius: 10, border: "none", background: GR, color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-                <MailIcon size={14} color="#fff"/> {user ? "Message" : "Log in to message"}
+              <button onClick={() => loggedIn ? navigate(`/messages?seller=${id}`) : navigate("/login")} style={{ padding: "8px 18px", borderRadius: 10, border: "none", background: GR, color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                <MailIcon size={14} color="#fff"/> {loggedIn ? "Message" : "Log in to message"}
               </button>
-              <button onClick={() => user ? setShowPhone(!showPhone) : navigate("/login")} style={{ padding: "8px 18px", borderRadius: 10, border: `1px solid ${t.bd}`, background: t.card, color: t.tx, fontSize: 12, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-                <PhoneIcon size={14} color={t.tx2}/> {!user ? "Log in to see phone" : showPhone && seller.phone ? seller.phone : "Show phone"}
+              <button onClick={() => loggedIn ? setShowPhone(!showPhone) : navigate("/login")} style={{ padding: "8px 18px", borderRadius: 10, border: `1px solid ${t.bd}`, background: t.card, color: t.tx, fontSize: 12, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                <PhoneIcon size={14} color={t.tx2}/> {!loggedIn ? "Log in to see phone" : showPhone && seller.phone ? seller.phone : "Show phone"}
               </button>
             </div>
 
