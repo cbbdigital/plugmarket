@@ -11,6 +11,7 @@ import FavouritesPage from "./pages/FavouritesPage";
 import MessagesPage from "./pages/MessagesPage";
 import AccountPage from "./pages/AccountPage";
 import ListingDetailPage from "./pages/ListingDetailPage";
+import SellerPage from "./pages/SellerPage";
 import AuthPage from "./pages/AuthPage";
 import "./index.css";
 
@@ -41,6 +42,7 @@ function App() {
             <Route path="/messages" element={<MessagesPage />} />
             <Route path="/account/*" element={<AccountPage />} />
             <Route path="/listing/:id" element={<ListingDetailPage />} />
+            <Route path="/seller/:id" element={<SellerPage />} />
             <Route path="/login" element={<AuthPage />} />
             <Route path="/signup" element={<AuthPage />} />
           </Route>
