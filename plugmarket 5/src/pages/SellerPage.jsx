@@ -44,14 +44,31 @@ export default function SellerPage() {
     return function() { window.removeEventListener("resize", h); };
   }, []);
 
-  // Check if logged in
+  // Check if logged in and get current user ID
   var [loggedIn, setLoggedIn] = useState(false);
+  var [myId, setMyId] = useState(null);
   useEffect(function() {
     try {
       var keys = Object.keys(localStorage);
-      setLoggedIn(keys.some(function(k) { return k.indexOf("supabase") >= 0 && k.indexOf("auth") >= 0; }));
+      var authKey = keys.find(function(k) { return k.indexOf("supabase") >= 0 && k.indexOf("auth") >= 0; });
+      if (authKey) {
+        var raw = localStorage.getItem(authKey);
+        var parsed = JSON.parse(raw);
+        var uid = parsed && parsed.user && parsed.user.id;
+        if (uid) { setLoggedIn(true); setMyId(uid); }
+      }
     } catch(e) { setLoggedIn(false); }
   }, []);
+
+  var isOwn = loggedIn && myId === id;
+
+  // Editing states
+  var [editing, setEditing] = useState(false);
+  var [editBio, setEditBio] = useState("");
+  var [editWebsite, setEditWebsite] = useState("");
+  var [saving, setSaving] = useState(false);
+  var coverInputRef = useRef(null);
+  var avatarInputRef = useRef(null);
 
   useEffect(function() {
     if (!id) return;
@@ -132,6 +149,85 @@ export default function SellerPage() {
     })();
   }, [id]);
 
+  // Get auth token from localStorage
+  var getToken = function() {
+    try {
+      var keys = Object.keys(localStorage);
+      var authKey = keys.find(function(k) { return k.indexOf("supabase") >= 0 && k.indexOf("auth") >= 0; });
+      if (!authKey) return null;
+      var parsed = JSON.parse(localStorage.getItem(authKey));
+      return parsed && parsed.access_token;
+    } catch(e) { return null; }
+  };
+
+  var startEditing = function() {
+    setEditBio(seller.bio || "");
+    setEditWebsite(seller.website || "");
+    setEditing(true);
+  };
+
+  var saveProfile = async function() {
+    var token = getToken();
+    if (!token) return;
+    setSaving(true);
+    try {
+      await fetch(SB_URL + "/rest/v1/profiles?id=eq." + id, {
+        method: "PATCH",
+        headers: { "apikey": SB_KEY, "Authorization": "Bearer " + token, "Content-Type": "application/json", "Prefer": "return=representation" },
+        body: JSON.stringify({ bio: editBio || null, website: editWebsite || null }),
+      });
+      setSeller(Object.assign({}, seller, { bio: editBio, website: editWebsite }));
+      setEditing(false);
+    } catch(e) { console.error("Save failed:", e); }
+    setSaving(false);
+  };
+
+  var uploadImage = async function(file, field) {
+    var token = getToken();
+    if (!token || !file) return;
+    // Compress
+    var dataUrl = await new Promise(function(resolve) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var img = new Image();
+        img.onload = function() {
+          var canvas = document.createElement("canvas");
+          var maxW = field === "cover" ? 1400 : 400;
+          var maxH = field === "cover" ? 400 : 400;
+          var w = img.width, h = img.height;
+          if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+          if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/jpeg", 0.85));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+    // Upload to storage
+    var blob = await (await fetch(dataUrl)).blob();
+    var path = id + "/" + field + ".jpg";
+    await fetch(SB_URL + "/storage/v1/object/listing-photos/" + path, {
+      method: "POST",
+      headers: { "apikey": SB_KEY, "Authorization": "Bearer " + token, "Content-Type": "image/jpeg", "x-upsert": "true" },
+      body: blob,
+    });
+    var url = SB_URL + "/storage/v1/object/public/listing-photos/" + path + "?t=" + Date.now();
+    // Update profile
+    var update = {};
+    update[field === "cover" ? "cover_url" : "avatar_url"] = url;
+    await fetch(SB_URL + "/rest/v1/profiles?id=eq." + id, {
+      method: "PATCH",
+      headers: { "apikey": SB_KEY, "Authorization": "Bearer " + token, "Content-Type": "application/json" },
+      body: JSON.stringify(update),
+    });
+    var newSeller = Object.assign({}, seller);
+    if (field === "cover") newSeller.cover_url = url;
+    else newSeller.avatar_url = url;
+    setSeller(newSeller);
+  };
+
   if (loading) return (
     <div style={{ padding: "80px 0", textAlign: "center" }}>
       <div style={{ width: 32, height: 32, border: "3px solid " + BC, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto" }}/>
@@ -166,15 +262,25 @@ export default function SellerPage() {
     <div style={{ marginTop: -20 }}>
       {/* ─── COVER + AVATAR ─── */}
       <div style={{ position: "relative", marginBottom: 60 }}>
+        {/* Hidden file inputs */}
+        <input ref={coverInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={function(e) { if (e.target.files[0]) uploadImage(e.target.files[0], "cover"); }}/>
+        <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={function(e) { if (e.target.files[0]) uploadImage(e.target.files[0], "avatar"); }}/>
+
         {/* Cover photo */}
-        <div style={{
+        <div onClick={isOwn ? function() { coverInputRef.current.click(); } : undefined} style={{
           width: "100%", height: narrow ? 160 : 220, borderRadius: "0 0 20px 20px", overflow: "hidden",
           background: seller.cover_url ? "none" : (d ? "linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)" : "linear-gradient(135deg,#FFF3EB 0%,#FFE0CC 50%,#FF7500 100%)"),
+          cursor: isOwn ? "pointer" : "default",
         }}>
           {seller.cover_url && <img src={seller.cover_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }}/>}
           {!seller.cover_url && (
             <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.15 }}>
               <Car size={80} color={d ? "#fff" : BC}/>
+            </div>
+          )}
+          {isOwn && (
+            <div style={{ position: "absolute", bottom: 60, right: 12, background: "rgba(0,0,0,0.5)", color: "#fff", fontSize: 10, fontWeight: 600, padding: "4px 10px", borderRadius: 6, cursor: "pointer", backdropFilter: "blur(4px)" }}>
+              {seller.cover_url ? "Change cover" : "Add cover photo"}
             </div>
           )}
         </div>
@@ -193,12 +299,13 @@ export default function SellerPage() {
         <div style={{
           position: "absolute", bottom: -50, left: "50%", transform: "translateX(-50%)",
         }}>
-          <div style={{
+          <div onClick={isOwn ? function() { avatarInputRef.current.click(); } : undefined} style={{
             width: 100, height: 100, borderRadius: "50%",
             border: "4px solid " + t.card,
             boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
             overflow: "hidden", background: GR,
             display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: isOwn ? "pointer" : "default",
           }}>
             {seller.avatar_url ? (
               <img src={seller.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }}/>
@@ -273,22 +380,87 @@ export default function SellerPage() {
 
       {/* ─── ACTION BUTTONS ─── */}
       <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 20, padding: "0 16px" }}>
-        <button onClick={function() { loggedIn ? navigate("/messages?seller=" + id) : navigate("/login"); }} style={{
-          flex: 1, maxWidth: 170, height: 40, borderRadius: 12, border: "none",
-          background: GR, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-        }}>
-          <Mail size={15} color="#fff"/> {loggedIn ? "Message" : "Log in to message"}
-        </button>
-        <button onClick={function() { loggedIn ? setShowPhone(!showPhone) : navigate("/login"); }} style={{
-          flex: 1, maxWidth: 170, height: 40, borderRadius: 12,
-          border: "1px solid " + t.bd, background: t.card, color: t.tx,
-          fontSize: 13, fontWeight: 500, cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-        }}>
-          <Phone size={15} color={t.tx2}/> {!loggedIn ? "Log in for phone" : (showPhone && seller.phone ? seller.phone : "Show phone")}
-        </button>
+        {isOwn ? (
+          <>
+            {!editing ? (
+              <button onClick={startEditing} style={{
+                flex: 1, maxWidth: 220, height: 40, borderRadius: 12,
+                border: "1px solid " + t.bd, background: t.card, color: t.tx,
+                fontSize: 13, fontWeight: 600, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              }}>
+                Edit profile
+              </button>
+            ) : (
+              <>
+                <button onClick={saveProfile} disabled={saving} style={{
+                  flex: 1, maxWidth: 160, height: 40, borderRadius: 12, border: "none",
+                  background: GR, color: "#fff", fontSize: 13, fontWeight: 600,
+                  cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  {saving ? "Saving..." : "Save changes"}
+                </button>
+                <button onClick={function() { setEditing(false); }} style={{
+                  flex: 1, maxWidth: 120, height: 40, borderRadius: 12,
+                  border: "1px solid " + t.bd, background: t.card, color: t.tx2,
+                  fontSize: 13, fontWeight: 500, cursor: "pointer",
+                }}>
+                  Cancel
+                </button>
+              </>
+            )}
+            <button onClick={function() { navigate("/search?seller=" + id); }} style={{
+              flex: 1, maxWidth: 160, height: 40, borderRadius: 12,
+              border: "1px solid " + t.bd, background: t.card, color: t.tx,
+              fontSize: 13, fontWeight: 500, cursor: "pointer",
+            }}>
+              View all listings
+            </button>
+          </>
+        ) : (
+          <>
+            <button onClick={function() { loggedIn ? navigate("/messages?seller=" + id) : navigate("/login"); }} style={{
+              flex: 1, maxWidth: 170, height: 40, borderRadius: 12, border: "none",
+              background: GR, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            }}>
+              <Mail size={15} color="#fff"/> {loggedIn ? "Message" : "Log in to message"}
+            </button>
+            <button onClick={function() { loggedIn ? setShowPhone(!showPhone) : navigate("/login"); }} style={{
+              flex: 1, maxWidth: 170, height: 40, borderRadius: 12,
+              border: "1px solid " + t.bd, background: t.card, color: t.tx,
+              fontSize: 13, fontWeight: 500, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            }}>
+              <Phone size={15} color={t.tx2}/> {!loggedIn ? "Log in for phone" : (showPhone && seller.phone ? seller.phone : "Show phone")}
+            </button>
+          </>
+        )}
       </div>
+
+      {/* ─── EDIT FORM (inline) ─── */}
+      {editing && (
+        <div style={{ padding: "0 16px", marginBottom: 20 }}>
+          <div style={{ background: t.card, borderRadius: 14, border: "1px solid " + t.bd, padding: 16 }}>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: t.tx2, display: "block", marginBottom: 4 }}>Bio / Description</label>
+              <textarea value={editBio} onChange={function(e) { setEditBio(e.target.value); }} placeholder="Tell buyers about yourself or your dealership..." rows={4} style={{
+                width: "100%", borderRadius: 10, border: "1px solid " + t.bd, background: t.inp || t.sec,
+                color: t.tx, padding: "10px 14px", fontSize: 13, boxSizing: "border-box",
+                resize: "vertical", fontFamily: "inherit", lineHeight: 1.6,
+              }}/>
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: t.tx2, display: "block", marginBottom: 4 }}>Website / Dealer page link</label>
+              <input value={editWebsite} onChange={function(e) { setEditWebsite(e.target.value); }} placeholder="https://your-dealership.com" style={{
+                width: "100%", height: 40, borderRadius: 10, border: "1px solid " + t.bd,
+                background: t.inp || t.sec, color: t.tx, padding: "0 14px", fontSize: 13, boxSizing: "border-box",
+              }}/>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── Member since + location ─── */}
       <div style={{ display: "flex", justifyContent: "center", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
