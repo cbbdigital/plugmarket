@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useOutletContext, useParams, useNavigate } from "react-router-dom";
+import { useAuth } from "../lib/auth";
 
 // ── Supabase REST ──
 const SB_URL = import.meta.env.VITE_SUPABASE_URL || "https://tmftxqwqwceuiydleuag.supabase.co";
@@ -96,6 +97,7 @@ export default function ListingDetailPage() {
   const { t, dark } = useOutletContext();
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [car, setCar] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -375,8 +377,8 @@ export default function ListingDetailPage() {
             <div style={{ fontSize: 12, color: th.tx2 }}>{car.seller_type === "dealer" ? "Dealer" : "Private seller"} · {car.city}</div>
           </div>
         </div>
-        <button onClick={() => navigate(`/messages?listing=${id}&seller=${car.seller_id}`)} style={{ width: "100%", height: 44, borderRadius: 12, border: "none", background: GR, color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          <MailIcon size={16} color="#fff"/> Message seller
+        <button onClick={() => user ? navigate(`/messages?listing=${id}&seller=${car.seller_id}`) : navigate("/login")} style={{ width: "100%", height: 44, borderRadius: 12, border: "none", background: GR, color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          <MailIcon size={16} color="#fff"/> {user ? "Message seller" : "Log in to message"}
         </button>
         <button onClick={() => setShowPhone(!showPhone)} style={{ width: "100%", height: 42, borderRadius: 12, border: `1px solid ${th.bd}`, background: th.card, color: th.tx, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
           <PhoneIcon size={14} color={th.tx2}/> {showPhone && car.contact_phone ? car.contact_phone : "Show phone number"}
