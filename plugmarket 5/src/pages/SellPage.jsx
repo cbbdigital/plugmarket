@@ -31,8 +31,8 @@ async function sbUploadPhoto(userId, listingId, file, position, token) {
   // Convert base64/data-url to blob
   const res = await fetch(file);
   const blob = await res.blob();
-  // Use the blob's actual type, fallback to jpeg
-  const contentType = blob.type && blob.type.startsWith("image/") ? blob.type : "image/jpeg";
+  // Always upload as JPEG since we compress to JPEG
+  const contentType = "image/jpeg";
   const uploadRes = await fetch(`${SB_URL}/storage/v1/object/listing-photos/${path}`, {
     method: "POST",
     headers: {
@@ -560,8 +560,14 @@ export default function SellPage(){
     if (heic2anyRef.current) return resolve(heic2anyRef.current);
     if (window.heic2any) { heic2anyRef.current = window.heic2any; return resolve(window.heic2any); }
     const s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/heic2any@0.0.5/dist/heic2any.min.js";
-    s.onload = () => { heic2anyRef.current = window.heic2any; resolve(window.heic2any); };
+    s.src = "https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
+    s.onload = () => {
+      // Give it a moment to register
+      setTimeout(() => {
+        heic2anyRef.current = window.heic2any;
+        resolve(window.heic2any);
+      }, 100);
+    };
     s.onerror = () => resolve(null);
     document.head.appendChild(s);
   });
@@ -602,9 +608,13 @@ export default function SellPage(){
       let heicFailed = false;
       if (isHeic(file)) {
         try {
+          setPhotoProgress(prev => ({ ...prev, [photoId]: { ...prev[photoId], status: "converting HEIC" } }));
           const heic2any = await getHeic2any();
           if (heic2any) {
-            const result = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.85 });
+            // Read file as ArrayBuffer for more reliable conversion
+            const arrayBuffer = await file.arrayBuffer();
+            const heicBlob = new Blob([arrayBuffer], { type: "image/heic" });
+            const result = await heic2any({ blob: heicBlob, toType: "image/jpeg", quality: 0.85 });
             const blob = Array.isArray(result) ? result[0] : result;
             fileToCompress = new File([blob], file.name.replace(/\.heic|\.heif/i, ".jpg"), { type: "image/jpeg" });
           } else {

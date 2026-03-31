@@ -49,6 +49,14 @@ export default function SellerPage() {
   var [myId, setMyId] = useState(null);
   useEffect(function() {
     try {
+      // Check pm_session first (PlugMarket auth)
+      var pmRaw = localStorage.getItem("pm_session");
+      if (pmRaw) {
+        var pmParsed = JSON.parse(pmRaw);
+        var pmUid = pmParsed && pmParsed.user && pmParsed.user.id;
+        if (pmUid) { setLoggedIn(true); setMyId(pmUid); return; }
+      }
+      // Fallback: check supabase auth key
       var keys = Object.keys(localStorage);
       var authKey = keys.find(function(k) { return k.indexOf("supabase") >= 0 && k.indexOf("auth") >= 0; });
       if (authKey) {
@@ -152,6 +160,13 @@ export default function SellerPage() {
   // Get auth token from localStorage
   var getToken = function() {
     try {
+      // Check pm_session first
+      var pmRaw = localStorage.getItem("pm_session");
+      if (pmRaw) {
+        var pmParsed = JSON.parse(pmRaw);
+        if (pmParsed && pmParsed.access_token) return pmParsed.access_token;
+      }
+      // Fallback
       var keys = Object.keys(localStorage);
       var authKey = keys.find(function(k) { return k.indexOf("supabase") >= 0 && k.indexOf("auth") >= 0; });
       if (!authKey) return null;
