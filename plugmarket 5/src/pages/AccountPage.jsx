@@ -75,8 +75,10 @@ function ListingsPage({t,onBack,nav,user,session}){
   const[filter,setFilter]=useState("all");
   const[listings,setListings]=useState([]);
   const[loading,setLoading]=useState(true);
+  const[deleteTarget,setDeleteTarget]=useState(null);
   const token=session?.access_token;
   const uid=user?.id;
+  const d=t.bg==="#131319";
 
   const loadListings=async()=>{
     if(!token||!uid)return;
@@ -106,10 +108,11 @@ function ListingsPage({t,onBack,nav,user,session}){
     if(ok) setListings(prev=>prev.map(l=>l.id===car.id?{...l,status:newStatus}:l));
   };
 
-  const deleteListing=async(car)=>{
-    if(!confirm(`Delete "${car.year} ${car.make} ${car.model}"? This cannot be undone.`))return;
-    const ok=await sbUpdate("listings",`id=eq.${car.id}`,{status:"deleted"},token);
-    if(ok) setListings(prev=>prev.filter(l=>l.id!==car.id));
+  const confirmDelete=async()=>{
+    if(!deleteTarget)return;
+    const ok=await sbUpdate("listings",`id=eq.${deleteTarget.id}`,{status:"deleted"},token);
+    if(ok) setListings(prev=>prev.filter(l=>l.id!==deleteTarget.id));
+    setDeleteTarget(null);
   };
 
   const[toast,setToast]=useState(null);
@@ -126,32 +129,82 @@ function ListingsPage({t,onBack,nav,user,session}){
   if(loading) return <div style={{textAlign:"center",padding:"60px 0",color:t.tx3}}>Loading listings...</div>;
 
   return <>
-    {toast&&<div style={{position:"fixed",top:80,left:"50%",transform:"translateX(-50%)",zIndex:99999,background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",padding:"12px 24px",borderRadius:12,fontSize:13,fontWeight:600,boxShadow:"0 8px 24px rgba(0,0,0,0.25)",display:"flex",alignItems:"center",gap:8,animation:"fadeIn 0.3s ease"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{toast}</div>}
+    {/* Toast */}
+    {toast&&<div style={{position:"fixed",top:80,left:"50%",transform:"translateX(-50%)",zIndex:99999,background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",padding:"12px 24px",borderRadius:12,fontSize:13,fontWeight:600,boxShadow:"0 8px 24px rgba(0,0,0,0.25)",display:"flex",alignItems:"center",gap:8,animation:"fadeIn 0.3s ease"}}><Chk size={16} color="#fff"/>{toast}</div>}
     <style>{`@keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(-10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}`}</style>
+
+    {/* Delete confirmation modal */}
+    {deleteTarget&&(
+      <div style={{position:"fixed",inset:0,zIndex:99999,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setDeleteTarget(null)}>
+        <div onClick={e=>e.stopPropagation()} style={{background:t.card,borderRadius:20,padding:28,maxWidth:380,width:"100%",boxShadow:"0 20px 60px rgba(0,0,0,0.3)",textAlign:"center"}}>
+          <div style={{width:56,height:56,borderRadius:"50%",background:"rgba(239,68,68,0.1)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}>
+            <Trash size={24} color="#ef4444"/>
+          </div>
+          <div style={{fontSize:18,fontWeight:700,color:t.tx,marginBottom:6}}>Delete listing?</div>
+          <div style={{fontSize:13,color:t.tx2,lineHeight:1.6,marginBottom:20}}>
+            <strong>{deleteTarget.year} {deleteTarget.make} {deleteTarget.model}</strong> will be permanently removed. This action cannot be undone.
+          </div>
+          <div style={{display:"flex",gap:10}}>
+            <button onClick={()=>setDeleteTarget(null)} style={{flex:1,height:42,borderRadius:12,border:`1px solid ${t.bd}`,background:t.card,color:t.tx,fontSize:13,fontWeight:500,cursor:"pointer"}}>Cancel</button>
+            <button onClick={confirmDelete} style={{flex:1,height:42,borderRadius:12,border:"none",background:"linear-gradient(135deg,#ef4444,#dc2626)",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:"0 4px 12px rgba(239,68,68,0.3)"}}>Delete</button>
+          </div>
+        </div>
+      </div>
+    )}
+
     <SubH title="My listings" t={t} onBack={onBack}/>
-    <div style={{display:"flex",gap:8,padding:"16px 0"}}>
-      {[{n:listings.filter(l=>l.status==="active").length,l:"Active",ic:<Car size={14} color={BC}/>},{n:tv,l:"Total views",ic:<Eye size={14} color="#6366f1"/>},{n:ti,l:"Inquiries",ic:<Chat size={14} color="#10b981"/>}].map((s,i)=><div key={i} style={{flex:1,...cs(t),padding:"14px 12px",display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>{s.ic}<span style={{fontSize:18,fontWeight:700,color:t.tx}}>{s.n}</span><span style={{fontSize:10,color:t.tx3}}>{s.l}</span></div>)}
+
+    {/* Sell another EV — top */}
+    <button onClick={()=>nav("/sell")} style={{width:"100%",height:48,borderRadius:12,border:"none",background:GR,color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:16,boxShadow:"0 4px 14px rgba(255,117,0,0.25)"}}><PlusLn size={18} color="#fff"/> Sell another EV</button>
+
+    {/* Stats */}
+    <div style={{display:"flex",gap:8,marginBottom:14}}>
+      {[{n:listings.filter(l=>l.status==="active").length,l:"Active",ic:<Car size={14} color={BC}/>},{n:tv,l:"Views",ic:<Eye size={14} color="#6366f1"/>},{n:ti,l:"Inquiries",ic:<Chat size={14} color="#10b981"/>}].map((s,i)=><div key={i} style={{flex:1,...cs(t),padding:"12px 10px",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>{s.ic}<span style={{fontSize:17,fontWeight:700,color:t.tx}}>{s.n}</span><span style={{fontSize:10,color:t.tx3}}>{s.l}</span></div>)}
     </div>
+
+    {/* Filters */}
     <div style={{display:"flex",gap:6,marginBottom:14}}>
       {[{v:"all",l:"All"},{v:"active",l:"Active"},{v:"paused",l:"Paused"}].map(f=><button key={f.v} onClick={()=>setFilter(f.v)} style={{padding:"6px 14px",borderRadius:8,border:filter===f.v?"none":`1px solid ${t.bd}`,background:filter===f.v?GR:t.card,color:filter===f.v?"#fff":t.tx2,fontSize:12,fontWeight:500,cursor:"pointer"}}>{f.l}</button>)}
     </div>
+
+    {/* Listings */}
     {items.length===0?(
       <div style={{textAlign:"center",padding:"40px 0"}}><Car size={36} color={t.tx3}/><div style={{fontSize:14,fontWeight:600,color:t.tx2,marginTop:10}}>{loading?"Loading...":"No listings yet"}</div><div style={{fontSize:12,color:t.tx3,marginTop:4}}>Create your first listing to start selling</div></div>
     ):(
-      items.map(car=><div key={car.id} style={{...cs(t),marginBottom:12,overflow:"hidden",cursor:"pointer"}}>
-        <div onClick={()=>nav(`/listing/${car.id}`)} style={{display:"flex"}}>
-          <div style={{width:130,minHeight:120,flexShrink:0,position:"relative"}}><img src={car.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/><div style={{position:"absolute",top:8,left:8}}><SBadge status={car.status}/></div></div>
-          <div style={{flex:1,padding:"12px 14px",display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
-            <div><div style={{fontSize:14,fontWeight:600,color:t.tx}}>{car.year} {car.make} {car.model}</div><div style={{fontSize:12,color:t.tx2,marginTop:2}}>{car.km.toLocaleString()} km · {car.battery} · {car.soh}% SoH</div><div style={{fontSize:16,fontWeight:700,color:BC,marginTop:4}}>€{car.price.toLocaleString()}</div></div>
-            <div style={{display:"flex",gap:12,fontSize:11,color:t.tx3,marginTop:6}}><span style={{display:"flex",alignItems:"center",gap:3}}><Eye size={12} color={t.tx3}/>{car.views}</span><span style={{display:"flex",alignItems:"center",gap:3}}><Chat size={12} color={t.tx3}/>{car.inquiries}</span><span style={{display:"flex",alignItems:"center",gap:3}}><Hrt size={12} color={t.tx3}/>{car.saved}</span><span style={{display:"flex",alignItems:"center",gap:3}}><Clk size={12} color={t.tx3}/>{car.days}d</span></div>
+      items.map(car=><div key={car.id} style={{...cs(t),marginBottom:12,overflow:"hidden"}}>
+        <div onClick={()=>nav(`/listing/${car.id}`)} style={{display:"flex",cursor:"pointer"}}>
+          {/* Fixed size image container */}
+          <div style={{width:140,height:130,flexShrink:0,position:"relative",overflow:"hidden",background:d?"#1a1a22":"#f0f0f0"}}>
+            <img src={car.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+            <div style={{position:"absolute",top:8,left:8}}><SBadge status={car.status}/></div>
+            {car.boosted&&<div style={{position:"absolute",top:8,right:8,background:GR,color:"#fff",fontSize:8,fontWeight:700,padding:"2px 6px",borderRadius:4}}>BOOSTED</div>}
+          </div>
+          <div style={{flex:1,padding:"12px 14px",display:"flex",flexDirection:"column",justifyContent:"space-between",minWidth:0}}>
+            <div>
+              <div style={{fontSize:14,fontWeight:700,color:t.tx,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{car.year} {car.make} {car.model}</div>
+              <div style={{fontSize:12,color:t.tx2,marginTop:3}}>{car.km.toLocaleString()} km · {car.battery} · {car.soh}% SoH</div>
+              <div style={{fontSize:17,fontWeight:800,color:BC,marginTop:6}}>€{car.price.toLocaleString()}</div>
+            </div>
+            <div style={{display:"flex",gap:12,fontSize:11,color:t.tx3,marginTop:8}}>
+              <span style={{display:"flex",alignItems:"center",gap:3}}><Eye size={11} color={t.tx3}/>{car.views}</span>
+              <span style={{display:"flex",alignItems:"center",gap:3}}><Chat size={11} color={t.tx3}/>{car.inquiries}</span>
+              <span style={{display:"flex",alignItems:"center",gap:3}}><Hrt size={11} color={t.tx3}/>{car.saved}</span>
+              <span style={{display:"flex",alignItems:"center",gap:3}}><Clk size={11} color={t.tx3}/>{car.days}d</span>
+            </div>
           </div>
         </div>
+        {/* Action bar */}
         <div style={{display:"flex",borderTop:`1px solid ${t.bd}`}}>
-          {[{l:"Edit",ic:<Edit size={13} color={t.tx2}/>,action:()=>nav(`/sell?edit=${car.id}`)},{l:"Messages",ic:<Chat size={13} color={BC}/>,action:()=>nav("/messages")},{l:car.status==="paused"?"Activate":"Pause",ic:car.status==="paused"?<Chk size={13} color="#10b981"/>:<Clk size={13} color="#f59e0b"/>,action:()=>togglePause(car)},{l:"Boost",ic:<TUp size={13} color={car.boosted?"#10b981":BC}/>,action:()=>boostListing(car)},{l:"Delete",ic:<Trash size={13} color="#ef4444"/>,action:()=>deleteListing(car)}].map((a,i)=><button key={i} onClick={a.action||undefined} style={{flex:1,padding:"10px 0",background:"none",border:"none",borderRight:i<4?`1px solid ${t.bd}`:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:500,color:a.l==="Messages"||a.l==="Boost"?BC:a.l==="Delete"?"#ef4444":t.tx2}}>{a.ic}{a.l}</button>)}
+          {[
+            {l:"Edit",ic:<Edit size={13} color={t.tx2}/>,action:()=>nav(`/sell?edit=${car.id}`)},
+            {l:"Messages",ic:<Chat size={13} color={BC}/>,action:()=>nav("/messages")},
+            {l:car.status==="paused"?"Activate":"Pause",ic:car.status==="paused"?<Chk size={13} color="#10b981"/>:<Clk size={13} color="#f59e0b"/>,action:()=>togglePause(car)},
+            {l:"Boost",ic:<TUp size={13} color={car.boosted?"#10b981":BC}/>,action:()=>boostListing(car)},
+            {l:"Delete",ic:<Trash size={13} color="#ef4444"/>,action:()=>setDeleteTarget(car)},
+          ].map((a,i)=><button key={i} onClick={a.action||undefined} style={{flex:1,padding:"10px 0",background:"none",border:"none",borderRight:i<4?`1px solid ${t.bd}`:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:500,color:a.l==="Messages"||a.l==="Boost"?BC:a.l==="Delete"?"#ef4444":t.tx2}}>{a.ic}{a.l}</button>)}
         </div>
       </div>)
     )}
-    <button onClick={()=>nav("/sell")} style={{width:"100%",height:48,borderRadius:12,border:`2px dashed ${t.bd}`,background:"none",color:BC,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:8}}><PlusLn size={18} color={BC}/> Sell another EV</button>
   </>;
 }
 
