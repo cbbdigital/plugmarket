@@ -441,6 +441,7 @@ export default function AccountPage(){
 
       <Sect t={t} title="My vehicles">
         <Row t={t} icon={<Car size={18} color={BC}/>} label="My listings" desc={`${stats.listings} active listing${stats.listings!==1?"s":""}`} onClick={()=>setPage("listings")}/>
+        <Row t={t} icon={<Chat size={18} color={BC}/>} label="Messages" desc={`${stats.messages} conversation${stats.messages!==1?"s":""}`} onClick={()=>nav("/messages")}/>
         <Row t={t} icon={<Tag size={18} color={t.tx2}/>} label="Sold vehicles" desc={`${stats.sold} vehicle${stats.sold!==1?"s":""} sold`} onClick={()=>setPage("sold")}/>
         <Row t={t} icon={<Star size={18} color="#f59e0b" filled/>} label="Reviews" desc={stats.reviews>0?`${stats.rating} avg from ${stats.reviews} review${stats.reviews!==1?"s":""}`:"No reviews yet"} onClick={()=>setPage("reviews")}/>
       </Sect>
