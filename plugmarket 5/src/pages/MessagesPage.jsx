@@ -205,14 +205,37 @@ export default function MessagesPage(){
   // Auto-open or create conversation when coming from listing page
   useEffect(()=>{
     if(!incomingListing||!incomingSeller||!user||!session?.access_token||loading)return;
-    if(incomingSeller===user.id)return; // can't message yourself
+    if(incomingSeller===user.id){setSp({});return;} // can't message yourself
     const token=session.access_token;
     const uid=user.id;
     (async()=>{
       // Check if conversation already exists for this listing between these users
-      const existing=await sbGet("conversations",`listing_id=eq.${incomingListing}&or=(and(buyer_id.eq.${uid},seller_id.eq.${incomingSeller}),and(buyer_id.eq.${incomingSeller},seller_id.eq.${uid}))`,token);
+      // Try both directions: user is buyer OR user is seller
+      let existing=await sbGet("conversations",`listing_id=eq.${incomingListing}&buyer_id=eq.${uid}&seller_id=eq.${incomingSeller}`,token);
+      if(existing.length===0){
+        existing=await sbGet("conversations",`listing_id=eq.${incomingListing}&buyer_id=eq.${incomingSeller}&seller_id=eq.${uid}`,token);
+      }
       if(existing.length>0){
-        setActiveChat(existing[0].id);
+        // Found existing — make sure it's in our local state
+        const existingId=existing[0].id;
+        const alreadyInState=conversations.find(c=>c.id===existingId);
+        if(!alreadyInState){
+          // Fetch details and add to state
+          const otherId=existing[0].buyer_id===uid?existing[0].seller_id:existing[0].buyer_id;
+          const otherProfile=await sbGet("profiles",`id=eq.${otherId}&select=full_name`,token);
+          const listing=await sbGet("listings",`id=eq.${incomingListing}&select=make,model`,token);
+          const otherName=otherProfile?.[0]?.full_name||"Seller";
+          const carName=listing?.[0]?`${listing[0].make} ${listing[0].model}`:"Vehicle";
+          const msgs=await sbGet("messages",`conversation_id=eq.${existingId}&order=created_at.asc`,token);
+          setConversations(prev=>[{
+            id:existingId,name:otherName,
+            initials:otherName.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2),
+            online:false,unread:0,car:carName,
+            lastMsg:existing[0].last_message_text||"",time:timeAgo(existing[0].updated_at),
+            messages:msgs.map(m=>({id:m.id,from:m.sender_id===uid?"me":"them",text:m.content,time:new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})})),
+          },...prev]);
+        }
+        setActiveChat(existingId);
       } else {
         // Create new conversation
         const newConvo=await sbPost("conversations",{
@@ -222,7 +245,6 @@ export default function MessagesPage(){
           last_message_text:"",
         },token);
         if(newConvo?.id){
-          // Fetch listing info for display
           const listing=await sbGet("listings",`id=eq.${incomingListing}&select=make,model`,token);
           const sellerProfile=await sbGet("profiles",`id=eq.${incomingSeller}&select=full_name`,token);
           const carName=listing?.[0]?`${listing[0].make} ${listing[0].model}`:"Vehicle";
