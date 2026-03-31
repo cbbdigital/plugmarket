@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { BC } from "../styles/theme";
 import { Home, Srch, Plus, Hrt, Chat, Usr } from "./Icons";
 
-export default function BNav({ t, favCount }) {
+export default function BNav({ t, favCount, msgCount }) {
   const loc = useLocation();
   const nav = useNavigate();
   const items = [
@@ -10,7 +10,7 @@ export default function BNav({ t, favCount }) {
     { id: "/search", l: "Search", ic: a => <Srch size={20} color={a ? BC : t.tx3} /> },
     { id: "/sell", l: "Sell", ic: a => <Plus size={22} color={a ? BC : t.tx3} /> },
     { id: "/favourites", l: "Favs", ic: a => <Hrt size={20} color={a ? BC : t.tx3} />, badge: favCount },
-    { id: "/messages", l: "Messages", ic: a => <Chat size={20} color={a ? BC : t.tx3} /> },
+    { id: "/messages", l: "Messages", ic: a => <Chat size={20} color={a ? BC : t.tx3} />, badge: msgCount },
     { id: "/account", l: "Account", ic: a => <Usr size={20} color={a ? BC : t.tx3} /> },
   ];
   const active = (id) => {
