@@ -65,6 +65,7 @@ export default function SellerPage() {
   var [editing, setEditing] = useState(false);
   var [editBio, setEditBio] = useState("");
   var [editWebsite, setEditWebsite] = useState("");
+  var [editMapsUrl, setEditMapsUrl] = useState("");
   var [saving, setSaving] = useState(false);
   var coverInputRef = useRef(null);
   var avatarInputRef = useRef(null);
@@ -114,6 +115,7 @@ export default function SellerPage() {
           avatar_url: (profile && profile.avatar_url) || "",
           cover_url: (profile && profile.cover_url) || "",
           website: (profile && profile.website) || "",
+          maps_url: (profile && profile.maps_url) || "",
           verified: (profile && profile.is_verified) || false,
           memberSince: (profile && profile.created_at) || "",
           listingCount: rows.length,
@@ -163,6 +165,7 @@ export default function SellerPage() {
   var startEditing = function() {
     setEditBio(seller.bio || "");
     setEditWebsite(seller.website || "");
+    setEditMapsUrl(seller.maps_url || "");
     setEditing(true);
   };
 
@@ -174,9 +177,9 @@ export default function SellerPage() {
       await fetch(SB_URL + "/rest/v1/profiles?id=eq." + id, {
         method: "PATCH",
         headers: { "apikey": SB_KEY, "Authorization": "Bearer " + token, "Content-Type": "application/json", "Prefer": "return=representation" },
-        body: JSON.stringify({ bio: editBio || null, website: editWebsite || null }),
+        body: JSON.stringify({ bio: editBio || null, website: editWebsite || null, maps_url: editMapsUrl || null }),
       });
-      setSeller(Object.assign({}, seller, { bio: editBio, website: editWebsite }));
+      setSeller(Object.assign({}, seller, { bio: editBio, website: editWebsite, maps_url: editMapsUrl }));
       setEditing(false);
     } catch(e) { console.error("Save failed:", e); }
     setSaving(false);
@@ -285,16 +288,6 @@ export default function SellerPage() {
           )}
         </div>
 
-        {/* Back button overlaid on cover */}
-        <button onClick={function() { if (window.history.length > 2) navigate(-1); else navigate("/"); }} style={{
-          position: "absolute", top: 12, left: 12, width: 36, height: 36, borderRadius: 10,
-          background: "rgba(0,0,0,0.4)", border: "none", cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
-        }}>
-          <ChevL size={18} color="#fff"/>
-        </button>
-
         {/* Avatar — centered, overlapping cover bottom */}
         <div style={{
           position: "absolute", bottom: -50, left: "50%", transform: "translateX(-50%)",
@@ -378,6 +371,18 @@ export default function SellerPage() {
         })}
       </div>
 
+      {/* ─── Bio / Description (always visible, 2-3 lines) ─── */}
+      {seller.bio && (
+        <div style={{ padding: "0 16px", marginBottom: 16, textAlign: "center" }}>
+          <p style={{ fontSize: 13, color: t.tx2, lineHeight: 1.6, margin: 0, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{seller.bio}</p>
+        </div>
+      )}
+      {isOwn && !seller.bio && !editing && (
+        <div style={{ padding: "0 16px", marginBottom: 16, textAlign: "center" }}>
+          <button onClick={startEditing} style={{ fontSize: 12, color: BC, background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>+ Add a description</button>
+        </div>
+      )}
+
       {/* ─── ACTION BUTTONS ─── */}
       <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 20, padding: "0 16px" }}>
         {isOwn ? (
@@ -445,11 +450,20 @@ export default function SellerPage() {
           <div style={{ background: t.card, borderRadius: 14, border: "1px solid " + t.bd, padding: 16 }}>
             <div style={{ marginBottom: 12 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: t.tx2, display: "block", marginBottom: 4 }}>Bio / Description</label>
-              <textarea value={editBio} onChange={function(e) { setEditBio(e.target.value); }} placeholder="Tell buyers about yourself or your dealership..." rows={4} style={{
+              <textarea value={editBio} onChange={function(e) { setEditBio(e.target.value); }} placeholder="Tell buyers about yourself or your dealership..." rows={3} style={{
                 width: "100%", borderRadius: 10, border: "1px solid " + t.bd, background: t.inp || t.sec,
                 color: t.tx, padding: "10px 14px", fontSize: 13, boxSizing: "border-box",
                 resize: "vertical", fontFamily: "inherit", lineHeight: 1.6,
               }}/>
+              <div style={{ fontSize: 10, color: t.tx3, marginTop: 3 }}>Keep it short — 2-3 sentences work best</div>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: t.tx2, display: "block", marginBottom: 4 }}>Google Maps location</label>
+              <input value={editMapsUrl} onChange={function(e) { setEditMapsUrl(e.target.value); }} placeholder="Paste your Google Maps link here" style={{
+                width: "100%", height: 40, borderRadius: 10, border: "1px solid " + t.bd,
+                background: t.inp || t.sec, color: t.tx, padding: "0 14px", fontSize: 13, boxSizing: "border-box",
+              }}/>
+              <div style={{ fontSize: 10, color: t.tx3, marginTop: 3 }}>Go to Google Maps → find your location → Share → Copy link</div>
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: t.tx2, display: "block", marginBottom: 4 }}>Website / Dealer page link</label>
@@ -592,7 +606,7 @@ export default function SellerPage() {
 
           {/* Google Maps link */}
           {seller.city && (
-            <a href={"https://www.google.com/maps/search/" + encodeURIComponent(seller.city + " " + seller.country)} target="_blank" rel="noopener noreferrer" style={{
+            <a href={seller.maps_url || ("https://www.google.com/maps/search/" + encodeURIComponent(seller.city + " " + seller.country))} target="_blank" rel="noopener noreferrer" style={{
               display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
               marginTop: 16, padding: "12px 0",
               background: t.card, borderRadius: 12, border: "1px solid " + t.bd,
