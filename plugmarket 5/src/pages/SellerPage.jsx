@@ -45,20 +45,19 @@ export default function SellerPage() {
   }, []);
 
   // Check if logged in and get current user ID
-  var [loggedIn, setLoggedIn] = useState(function() {
+  function _getSession() {
     try {
-      var s = localStorage.getItem("pm_session");
-      return !!(s && JSON.parse(s) && JSON.parse(s).access_token);
-    } catch(e) { return false; }
-  });
-  var [myId, setMyId] = useState(function() {
-    try {
-      var s = localStorage.getItem("pm_session");
-      if (!s) return null;
-      var p = JSON.parse(s);
-      return (p && p.user && p.user.id) || null;
-    } catch(e) { return null; }
-  });
+      var pm = localStorage.getItem("pm_session");
+      if (pm) { var p = JSON.parse(pm); if (p && p.access_token) return p; }
+      var keys = Object.keys(localStorage);
+      var sbKey = keys.find(function(k) { return k.startsWith("sb-") && k.endsWith("-auth-token"); });
+      if (sbKey) { var raw = localStorage.getItem(sbKey); var p2 = JSON.parse(raw); if (p2 && p2.access_token) return p2; }
+    } catch(e) {}
+    return null;
+  }
+  var _sess = _getSession();
+  var [loggedIn, setLoggedIn] = useState(!!_sess);
+  var [myId, setMyId] = useState(_sess && _sess.user ? _sess.user.id : null);
   var isOwn = loggedIn && myId === id;
 
   // Editing states
@@ -152,14 +151,8 @@ export default function SellerPage() {
 
   // Get auth token from localStorage
   var getToken = function() {
-    try {
-      var pmRaw = localStorage.getItem("pm_session");
-      if (pmRaw) {
-        var p = JSON.parse(pmRaw);
-        if (p && p.access_token) return p.access_token;
-      }
-      return null;
-    } catch(e) { return null; }
+    var s = _getSession();
+    return s ? s.access_token : null;
   };
 
   var startEditing = function() {

@@ -134,7 +134,16 @@ export default function ListingDetailPage() {
       localStorage.setItem("pm_favs", JSON.stringify(updated));
     } catch {}
     // Update Supabase
-    const session = (() => { try { return JSON.parse(localStorage.getItem("pm_session") || "null"); } catch { return null; } })();
+    const session = (() => {
+      try {
+        const pm = localStorage.getItem("pm_session");
+        if (pm) { const p = JSON.parse(pm); if (p && p.access_token) return p; }
+        const keys = Object.keys(localStorage);
+        const sbKey = keys.find(k => k.startsWith("sb-") && k.endsWith("-auth-token"));
+        if (sbKey) { const p = JSON.parse(localStorage.getItem(sbKey)); if (p && p.access_token) return p; }
+      } catch {}
+      return null;
+    })();
     if (session?.access_token && session?.user?.id) {
       if (newFav) await sbPost("favourites", { user_id: session.user.id, listing_id: id }, session.access_token);
       else await sbDelete("favourites", `user_id=eq.${session.user.id}&listing_id=eq.${id}`, session.access_token);
