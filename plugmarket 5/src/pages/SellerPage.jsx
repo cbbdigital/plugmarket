@@ -45,23 +45,20 @@ export default function SellerPage() {
   }, []);
 
   // Check if logged in and get current user ID
-  var [loggedIn, setLoggedIn] = useState(false);
-  var [myId, setMyId] = useState(null);
-  useEffect(function() {
+  var [loggedIn, setLoggedIn] = useState(function() {
     try {
-      // Check pm_session (PlugMarket auth)
-      var pmRaw = localStorage.getItem("pm_session");
-      if (pmRaw) {
-        var p = JSON.parse(pmRaw);
-        // Handle both shapes: { user: { id } } and { user: { user: { id } } }
-        var uid = (p && p.user && p.user.id) || (p && p.user && p.user.user && p.user.user.id);
-        if (uid) { setLoggedIn(true); setMyId(uid); return; }
-        // Also check if access_token exists (means logged in even if user shape is weird)
-        if (p && p.access_token) { setLoggedIn(true); }
-      }
-    } catch(e) { console.warn("Auth check error:", e); }
-  }, []);
-
+      var s = localStorage.getItem("pm_session");
+      return !!(s && JSON.parse(s) && JSON.parse(s).access_token);
+    } catch(e) { return false; }
+  });
+  var [myId, setMyId] = useState(function() {
+    try {
+      var s = localStorage.getItem("pm_session");
+      if (!s) return null;
+      var p = JSON.parse(s);
+      return (p && p.user && p.user.id) || null;
+    } catch(e) { return null; }
+  });
   var isOwn = loggedIn && myId === id;
 
   // Editing states
