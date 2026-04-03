@@ -502,6 +502,45 @@ export default function HomePage() {
   const [pMax, setPMax] = useState("");
   const [rngMin, setRngMin] = useState("");
   const [yMin, setYMin] = useState("");
+  const [smartQuery, setSmartQuery] = useState("");
+
+  // Smart search — parse natural language into filters
+  const doSmartSearch = () => {
+    const q = smartQuery.trim().toLowerCase();
+    if (!q) return;
+    const p = new URLSearchParams();
+    // Parse make
+    const makes = Object.keys(MK);
+    const foundMake = makes.find(m => q.includes(m.toLowerCase()));
+    if (foundMake) p.set("make", foundMake);
+    // Parse model
+    if (foundMake) {
+      const models = MK[foundMake] || [];
+      const foundModel = models.find(m => q.includes(m.toLowerCase()));
+      if (foundModel) p.set("model", foundModel);
+    }
+    // Parse year (4-digit number between 2015-2026)
+    const yearMatch = q.match(/\b(20[1-2][0-9])\b/);
+    if (yearMatch) p.set("yMin", yearMatch[1]);
+    // Parse "under X" or "below X" or "max X" for price
+    const underMatch = q.match(/(?:under|below|max|up to|sub)\s*€?\s*(\d[\d,. ]*)/i);
+    if (underMatch) { const price = underMatch[1].replace(/[,. ]/g, ""); if (+price > 100) p.set("pMax", price); }
+    // Parse "from X" or "min X" or "above X" for price
+    const fromMatch = q.match(/(?:from|min|above|over)\s*€?\s*(\d[\d,. ]*)/i);
+    if (fromMatch) { const price = fromMatch[1].replace(/[,. ]/g, ""); if (+price > 100) p.set("pMin", price); }
+    // Parse drivetrain
+    if (q.includes("rwd")) p.set("dr", "RWD");
+    else if (q.includes("awd") || q.includes("all wheel") || q.includes("4wd") || q.includes("quattro")) p.set("dr", "AWD");
+    else if (q.includes("fwd") || q.includes("front wheel")) p.set("dr", "FWD");
+    // Parse country
+    const countryMap = {"germany":"DE","france":"FR","netherlands":"NL","belgium":"BE","austria":"AT","italy":"IT","spain":"ES","poland":"PL","romania":"RO","sweden":"SE","norway":"NO","czech":"CZ"};
+    for (const [name, code] of Object.entries(countryMap)) { if (q.includes(name)) { p.set("co", code); break; } }
+    // Also carry over dropdown filters if set
+    if (!p.get("make") && make) p.set("make", make);
+    if (!p.get("model") && model) p.set("model", model);
+    if (!p.get("co") && co) p.set("co", co);
+    navigate(`/search?${p.toString()}`);
+  };
   const auth = useAuth();
   const { listings: dbListings, loading: dbLoading } = useListings();
   const allListings = dbListings;
@@ -544,6 +583,27 @@ export default function HomePage() {
           <h1 style={{fontSize:26,fontWeight:800,lineHeight:1.2,margin:"0 0 4px",color:t.tx}}>Find your perfect<br/><span style={{background:"linear-gradient(135deg,#FF7500,#FF9533)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>electric vehicle</span></h1>
           <p style={{fontSize:13,color:t.tx2,margin:"0 0 16px"}}>{new Set(allListings.map(l=>l.co)).size} countries. {allListings.length} EVs listed.</p>
           <div style={{...cs(t),borderRadius:16,padding:18,display:"flex",flexDirection:"column",gap:10}}>
+            {/* ── Smart search bar ── */}
+            <div style={{position:"relative"}}>
+              <input
+                type="text"
+                value={smartQuery}
+                onChange={e=>setSmartQuery(e.target.value)}
+                onKeyDown={e=>{if(e.key==="Enter")doSmartSearch()}}
+                placeholder='"2022 Porsche Taycan RWD" or "Tesla under 40000"'
+                style={{...is(t),height:46,paddingLeft:38,paddingRight:14,fontSize:13}}
+              />
+              <div style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}}><Srch size={16} color={t.tx3}/></div>
+            </div>
+            {smartQuery.trim()&&<button onClick={doSmartSearch} style={{width:"100%",height:44,borderRadius:12,border:"none",background:BG,color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+              <Srch size={17} color="#fff"/>Search
+            </button>}
+            {/* ── "or" divider ── */}
+            <div style={{display:"flex",alignItems:"center",gap:12}}>
+              <div style={{flex:1,height:1,background:t.bd}}/>
+              <span style={{fontSize:11,fontWeight:500,color:t.tx3}}>or filter by</span>
+              <div style={{flex:1,height:1,background:t.bd}}/>
+            </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
               <Sel v={make} onChange={v=>{setMake(v);setModel("")}} opts={Object.keys(MK).sort()} ph="Make" t={t}/>
               <Sel v={model} onChange={setModel} opts={models} ph="Any" t={t}/>
