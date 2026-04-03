@@ -7,15 +7,16 @@ export default function BNav({ t, favCount, msgCount }) {
   const loc = useLocation();
   const nav = useNavigate();
 
-  // Check if logged in
-  const [loggedIn, setLoggedIn] = useState(false);
-  useEffect(() => {
+  // Check if logged in — sync init + poll on route change
+  const checkAuth = () => {
     try {
       const s = localStorage.getItem("pm_session");
-      if (s) { const p = JSON.parse(s); if (p && p.access_token) setLoggedIn(true); else setLoggedIn(false); }
-      else setLoggedIn(false);
-    } catch { setLoggedIn(false); }
-  }, [loc.pathname]);
+      if (s) { const p = JSON.parse(s); return !!(p && p.access_token); }
+    } catch {}
+    return false;
+  };
+  const [loggedIn, setLoggedIn] = useState(checkAuth);
+  useEffect(() => { setLoggedIn(checkAuth()); }, [loc.pathname]);
 
   const allItems = [
     { id: "/", l: "Home", ic: (a, c) => <Home size={20} color={c} /> },
