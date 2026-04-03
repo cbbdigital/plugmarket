@@ -7,11 +7,14 @@ export default function BNav({ t, favCount, msgCount }) {
   const loc = useLocation();
   const nav = useNavigate();
 
-  // Check if logged in — sync init + poll on route change
+  // Check if logged in — check both pm_session and Supabase SDK key
   const checkAuth = () => {
     try {
-      const s = localStorage.getItem("pm_session");
-      if (s) { const p = JSON.parse(s); return !!(p && p.access_token); }
+      const pm = localStorage.getItem("pm_session");
+      if (pm) { const p = JSON.parse(pm); if (p && p.access_token) return true; }
+      const keys = Object.keys(localStorage);
+      const sbKey = keys.find(k => k.startsWith("sb-") && k.endsWith("-auth-token"));
+      if (sbKey) { const p = JSON.parse(localStorage.getItem(sbKey)); if (p && p.access_token) return true; }
     } catch {}
     return false;
   };
