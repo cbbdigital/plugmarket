@@ -10,6 +10,19 @@ const sbHeaders = (token) => ({ "apikey": SB_KEY, "Authorization": `Bearer ${tok
 async function sbQuery(table, params = "", token) { try { const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, { headers: sbHeaders(token) }); if (!r.ok) return []; return await r.json(); } catch { return []; } }
 async function sbUpdate(table, match, data, token) { try { const r = await fetch(`${SB_URL}/rest/v1/${table}?${match}`, { method: "PATCH", headers: sbHeaders(token), body: JSON.stringify(data) }); return r.ok; } catch { return false; } }
 async function sbDelete(table, match, token) { try { const r = await fetch(`${SB_URL}/rest/v1/${table}?${match}`, { method: "DELETE", headers: sbHeaders(token) }); return r.ok; } catch { return false; } }
+async function sbUploadVatDoc(uid, file, token) {
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  const path = `${uid}/vat-document.${ext}`;
+  try {
+    const r = await fetch(`${SB_URL}/storage/v1/object/vat-docs/${path}`, {
+      method: "POST",
+      headers: { "apikey": SB_KEY, "Authorization": `Bearer ${token}`, "x-upsert": "true", "Content-Type": file.type || "application/octet-stream" },
+      body: file,
+    });
+    if (!r.ok) { console.error("VAT upload error:", await r.text()); return null; }
+    return `${SB_URL}/storage/v1/object/public/vat-docs/${path}`;
+  } catch (e) { console.error("VAT upload failed:", e); return null; }
+}
 
 // Icons
 const I=({d,size=16,color="currentColor"})=><svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{d}</svg>;
@@ -117,9 +130,7 @@ function ListingsPage({t,onBack,nav,user,session}){
 
   const[toast,setToast]=useState(null);
   const boostListing=async(car)=>{
-    const ok=await sbUpdate("listings",`id=eq.${car.id}`,{is_boosted:true},token);
-    if(ok) setListings(prev=>prev.map(l=>l.id===car.id?{...l,boosted:true}:l));
-    if(ok){setToast(`${car.year} ${car.make} ${car.model} is now featured!`);setTimeout(()=>setToast(null),3000);}
+    nav(`/boost?listing=${car.id}`);
   };
 
   // Responsive
@@ -271,23 +282,156 @@ function ReviewsPage({t,onBack}){
   </>;
 }
 
-function EditPage({t,onBack}){
-  const[name,setName]=useState("Ciprian M.");const[phone,setPhone]=useState("+40 742 000 000");const[city,setCity]=useState("Satu Mare");const[country,setCountry]=useState("RO");const[bio,setBio]=useState("EV enthusiast from Romania. Currently driving a Tesla Model 3 LR.");const[saved,setSaved]=useState(false);
+function EditPage({t,onBack,user,session,profile,updateProfile,fetchProfile}){
+  const isDealer = profile?.seller_type === "dealer";
+  const token = session?.access_token;
+  const uid = user?.id;
+
+  // Common
+  const[name,setName]=useState(profile?.full_name||"");
+  const[phone,setPhone]=useState(profile?.phone||"");
+  const[city,setCity]=useState(profile?.city||"");
+  const[country,setCountry]=useState(profile?.country||"RO");
+  const[address,setAddress]=useState(profile?.address||"");
+  const[bio,setBio]=useState(profile?.bio||"");
+
+  // Dealer business
+  const[firmName,setFirmName]=useState(profile?.firm_name||"");
+  const[vatNumber,setVatNumber]=useState(profile?.vat_number||"");
+  const[mapsUrl,setMapsUrl]=useState(profile?.maps_url||"");
+  const[website,setWebsite]=useState(profile?.website||"");
+
+  // VAT document
+  const[vatDocUrl,setVatDocUrl]=useState(profile?.vat_doc_url||"");
+  const[uploadingDoc,setUploadingDoc]=useState(false);
+  const verified = profile?.dealer_verified === true;
+
+  const[saved,setSaved]=useState(false);
+  const[saving,setSaving]=useState(false);
+
   const inp={width:"100%",height:42,borderRadius:10,border:`1px solid ${t.bd}`,background:t.inp,color:t.tx,padding:"0 14px",fontSize:13,boxSizing:"border-box",outline:"none"};
+  const lbl={fontSize:12,fontWeight:600,color:t.tx2,marginBottom:4,display:"block"};
+  const initials=(name||user?.email||"?").split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);
+
+  const handleVatUpload=async(e)=>{
+    const file=e.target.files?.[0];
+    if(!file||!uid||!token)return;
+    setUploadingDoc(true);
+    const url=await sbUploadVatDoc(uid,file,token);
+    if(url){
+      // cache-bust so the new image shows
+      const display=`${url}?v=${Date.now()}`;
+      setVatDocUrl(display);
+      await sbUpdate("profiles",`id=eq.${uid}`,{vat_doc_url:url},token);
+      if(fetchProfile) fetchProfile(uid);
+    } else {
+      alert("Upload failed. Make sure a 'vat-docs' storage bucket exists in Supabase.");
+    }
+    setUploadingDoc(false);
+    e.target.value="";
+  };
+
+  const handleSave=async()=>{
+    setSaving(true);
+    const updates={
+      full_name:name||null, phone:phone||null, city:city||null,
+      country:country||null, address:address||null, bio:bio||null,
+    };
+    if(isDealer){
+      updates.firm_name=firmName||null;
+      updates.vat_number=vatNumber||null;
+      updates.maps_url=mapsUrl||null;
+      updates.website=website||null;
+    }
+    // seller_type intentionally NOT included — locked at signup
+    let ok=false;
+    if(updateProfile){ const {error}=await updateProfile(updates); ok=!error; }
+    else { ok=await sbUpdate("profiles",`id=eq.${uid}`,updates,token); }
+    setSaving(false);
+    if(ok){ setSaved(true); setTimeout(()=>{setSaved(false);onBack()},800); }
+    else { alert("Could not save changes. Please try again."); }
+  };
+
   return <>
     <SubH title="Edit profile" t={t} onBack={onBack}/>
-    <div style={{display:"flex",justifyContent:"center",padding:"28px 0 20px"}}><div style={{position:"relative"}}><div style={{width:88,height:88,borderRadius:"50%",background:GR,display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,fontWeight:700,color:"#fff"}}>CM</div><div style={{position:"absolute",bottom:0,right:0,width:30,height:30,borderRadius:"50%",background:t.card,border:`2px solid ${t.bg}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",boxShadow:"0 2px 6px rgba(0,0,0,0.15)"}}><Cam size={14} color={t.tx2}/></div></div></div>
-    <div style={{...cs(t),padding:18,marginBottom:14}}><div style={{display:"flex",flexDirection:"column",gap:14}}>
-      <div><label style={{fontSize:12,fontWeight:600,color:t.tx2,marginBottom:4,display:"block"}}>Full name</label><input value={name} onChange={e=>setName(e.target.value)} style={inp}/></div>
-      <div><label style={{fontSize:12,fontWeight:600,color:t.tx2,marginBottom:4,display:"block"}}>Email</label><div style={{...inp,display:"flex",alignItems:"center",color:t.tx3,background:t.sec}}>ciprian@plugmarket.eu <span style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:4}}><Chk size={13} color="#10b981"/><span style={{fontSize:11,color:"#10b981"}}>Verified</span></span></div></div>
-      <div><label style={{fontSize:12,fontWeight:600,color:t.tx2,marginBottom:4,display:"block"}}>Phone</label><input value={phone} onChange={e=>setPhone(e.target.value)} style={inp}/></div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-        <div><label style={{fontSize:12,fontWeight:600,color:t.tx2,marginBottom:4,display:"block"}}>City</label><input value={city} onChange={e=>setCity(e.target.value)} style={inp}/></div>
-        <div><label style={{fontSize:12,fontWeight:600,color:t.tx2,marginBottom:4,display:"block"}}>Country</label><div style={{position:"relative"}}><select value={country} onChange={e=>setCountry(e.target.value)} style={{...inp,appearance:"none",WebkitAppearance:"none",paddingRight:30,cursor:"pointer"}}>{COUNTRIES.map(c=><option key={c.c} value={c.c}>{c.n}</option>)}</select><div style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}}><ChDn size={14} color={t.tx3}/></div></div></div>
+
+    {/* Avatar */}
+    <div style={{display:"flex",justifyContent:"center",padding:"28px 0 20px"}}>
+      <div style={{position:"relative"}}>
+        <div style={{width:88,height:88,borderRadius:"50%",background:GR,display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,fontWeight:700,color:"#fff"}}>{initials}</div>
       </div>
-      <div><label style={{fontSize:12,fontWeight:600,color:t.tx2,marginBottom:4,display:"block"}}>Bio</label><textarea value={bio} onChange={e=>setBio(e.target.value)} rows={3} style={{...inp,height:"auto",padding:"10px 14px",resize:"vertical",fontFamily:"inherit",lineHeight:1.5}}/></div>
+    </div>
+
+    {/* Account type — locked */}
+    <div style={{...cs(t),padding:"14px 18px",marginBottom:14,display:"flex",alignItems:"center",gap:10}}>
+      <div style={{width:36,height:36,borderRadius:10,background:t.sec,display:"flex",alignItems:"center",justifyContent:"center"}}><Usr size={18} color={BC}/></div>
+      <div style={{flex:1}}>
+        <div style={{fontSize:13,fontWeight:600,color:t.tx}}>{isDealer?"Dealer account":"Private account"}</div>
+        <div style={{fontSize:11,color:t.tx3,marginTop:1}}>Account type can't be changed</div>
+      </div>
+      {isDealer&&(verified
+        ? <Badge label="Verified" color="#10b981" bg="rgba(16,185,129,0.1)"/>
+        : <Badge label="Unverified" color="#f59e0b" bg="rgba(245,158,11,0.1)"/>)}
+    </div>
+
+    {/* Common fields */}
+    <div style={{...cs(t),padding:18,marginBottom:14}}><div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div><label style={lbl}>{isDealer?"Contact name":"Full name"}</label><input value={name} onChange={e=>setName(e.target.value)} style={inp}/></div>
+      <div><label style={lbl}>Email</label><div style={{...inp,display:"flex",alignItems:"center",color:t.tx3,background:t.sec}}>{user?.email}<span style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:4}}><Chk size={13} color="#10b981"/><span style={{fontSize:11,color:"#10b981"}}>Verified</span></span></div></div>
+      <div><label style={lbl}>Phone</label><input value={phone} onChange={e=>setPhone(e.target.value)} style={inp} placeholder="+40 ..."/></div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <div><label style={lbl}>City</label><input value={city} onChange={e=>setCity(e.target.value)} style={inp}/></div>
+        <div><label style={lbl}>Country</label><div style={{position:"relative"}}><select value={country} onChange={e=>setCountry(e.target.value)} style={{...inp,appearance:"none",WebkitAppearance:"none",paddingRight:30,cursor:"pointer"}}>{COUNTRIES.map(c=><option key={c.c} value={c.c}>{c.n}</option>)}</select><div style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}}><ChDn size={14} color={t.tx3}/></div></div></div>
+      </div>
+      <div><label style={lbl}>Address</label><input value={address} onChange={e=>setAddress(e.target.value)} style={inp} placeholder="Street, number"/></div>
+      <div><label style={lbl}>Bio</label><textarea value={bio} onChange={e=>setBio(e.target.value)} rows={3} style={{...inp,height:"auto",padding:"10px 14px",resize:"vertical",fontFamily:"inherit",lineHeight:1.5}}/></div>
     </div></div>
-    <button onClick={()=>{setSaved(true);setTimeout(()=>{setSaved(false);onBack()},800)}} style={{width:"100%",height:46,borderRadius:12,border:"none",background:GR,color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 2px 10px rgba(255,117,0,0.3)"}}>{saved?<><Chk size={16} color="#fff"/> Saved!</>:"Save changes"}</button>
+
+    {/* Dealer business details */}
+    {isDealer&&(
+      <div style={{...cs(t),padding:18,marginBottom:14}}>
+        <div style={{fontSize:12,fontWeight:600,color:t.tx3,textTransform:"uppercase",letterSpacing:0.5,marginBottom:14}}>Business details</div>
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <div><label style={lbl}>Firm name</label><input value={firmName} onChange={e=>setFirmName(e.target.value)} style={inp} placeholder="Trading / brand name"/></div>
+          <div><label style={lbl}>VAT number</label><input value={vatNumber} onChange={e=>setVatNumber(e.target.value)} style={inp} placeholder="e.g. RO12345678"/></div>
+          <div><label style={lbl}>Website</label><input value={website} onChange={e=>setWebsite(e.target.value)} style={inp} placeholder="https://..."/></div>
+          <div><label style={lbl}>Google Maps link</label><input value={mapsUrl} onChange={e=>setMapsUrl(e.target.value)} style={inp} placeholder="https://maps.google.com/..."/></div>
+        </div>
+      </div>
+    )}
+
+    {/* VAT document upload — dealers only */}
+    {isDealer&&(
+      <div style={{...cs(t),padding:18,marginBottom:14}}>
+        <div style={{fontSize:12,fontWeight:600,color:t.tx3,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>VAT document</div>
+        {verified ? (
+          <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 0"}}>
+            <Shld size={18} color="#10b981"/>
+            <div style={{fontSize:13,color:t.tx2}}>Your dealer account is verified.</div>
+          </div>
+        ) : (
+          <div style={{fontSize:12,color:t.tx2,lineHeight:1.6,marginBottom:12}}>
+            Upload a clear photo or scan of your VAT registration document. Our team reviews it and verifies your dealer account, usually within 1–2 business days.
+          </div>
+        )}
+
+        {vatDocUrl ? (
+          <div style={{borderRadius:12,overflow:"hidden",border:`1px solid ${t.bd}`,marginBottom:12}}>
+            <img src={vatDocUrl} alt="VAT document" style={{width:"100%",maxHeight:240,objectFit:"contain",background:t.sec,display:"block"}} onError={e=>{e.target.style.display="none"}}/>
+            <div style={{padding:"8px 12px",fontSize:11,color:t.tx3,display:"flex",alignItems:"center",gap:6}}><File size={13} color={t.tx3}/> Document uploaded {verified?"· verified":"· awaiting review"}</div>
+          </div>
+        ) : null}
+
+        {!verified&&(
+          <label style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,height:46,borderRadius:12,border:`2px dashed ${t.bd}`,background:t.sec,color:t.tx2,fontSize:13,fontWeight:600,cursor:uploadingDoc?"default":"pointer"}}>
+            <input type="file" accept="image/*,.pdf" onChange={handleVatUpload} style={{display:"none"}} disabled={uploadingDoc}/>
+            {uploadingDoc ? "Uploading..." : (vatDocUrl?<><Cam size={16} color={t.tx2}/> Replace document</>:<><Cam size={16} color={t.tx2}/> Upload VAT document</>)}
+          </label>
+        )}
+      </div>
+    )}
+
+    <button onClick={handleSave} disabled={saving} style={{width:"100%",height:46,borderRadius:12,border:"none",background:GR,color:"#fff",fontSize:14,fontWeight:600,cursor:saving?"default":"pointer",opacity:saving?0.7:1,display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 2px 10px rgba(255,117,0,0.3)"}}>{saved?<><Chk size={16} color="#fff"/> Saved!</>:saving?"Saving...":"Save changes"}</button>
   </>;
 }
 
@@ -337,7 +481,7 @@ function HelpPage({t}){
   const[open,setOpen]=useState(null);
   const faqs=[
     {q:"How do I list my EV for sale?",a:"Go to the Sell tab in the bottom navigation. You'll be guided through a 6-step process: vehicle details, EV specifications (battery, range, charging), photos, pricing with a description, contact info, and a final review before publishing. The whole process takes about 5–10 minutes."},
-    {q:"Is it free to list a vehicle?",a:"Basic listings are completely free. You can optionally boost your listing for increased visibility at €9.99, which places it higher in search results and in the Featured section on the homepage for 7 days."},
+    {q:"Is it free to list a vehicle?",a:"Your first listing is free for 30 days. After the trial, listings are kept active with a plan (€9.99/month or €49.99 for 6 months). You can also boost any listing for more visibility — €2.99 for 24 hours or €5.99 for 7 days."},
     {q:"How does the battery health (SoH) verification work?",a:"When listing your EV, you can enter the State of Health percentage from your vehicle's diagnostic system or a third-party battery report. Buyers see this prominently on your listing. We recommend getting a certified battery report from your dealership or an independent service — listings with verified SoH data sell on average 40% faster."},
     {q:"How do I communicate with buyers?",a:"When a buyer sends an inquiry through your listing, you'll receive a notification and the conversation appears in the Messages tab. All communication stays within PlugMarket for your safety. You can share additional photos, negotiate pricing, and arrange viewings through the chat."},
     {q:"What payment methods are accepted?",a:"PlugMarket facilitates the connection between buyers and sellers. Payment and vehicle transfer are arranged directly between both parties. We recommend using bank transfers for large transactions and meeting in person to complete the handover. Always verify documents before finalising a sale."},
@@ -409,7 +553,7 @@ function TermsPage({t}){
         </S>
 
         <S title="5. Fees and Payments">
-          Creating an account and browsing listings on PlugMarket is free. Basic vehicle listings are free of charge. Optional premium services, including listing boosts, featured placement, and subscription plans, are available for a fee. All fees are displayed clearly before purchase and are charged in euros. Payments for premium services are processed through secure third-party payment providers. Refunds for premium services are provided in accordance with applicable EU consumer protection laws. PlugMarket does not process payments between buyers and sellers for vehicle transactions.
+          Creating an account and browsing listings on PlugMarket is free. The first listing is free for 30 days; after the trial, listings are maintained with a paid plan. Optional premium services, including listing boosts and featured placement, are available for a fee. All fees are displayed clearly before purchase and are charged in euros. Payments for premium services are processed through secure third-party payment providers. Refunds for premium services are provided in accordance with applicable EU consumer protection laws. PlugMarket does not process payments between buyers and sellers for vehicle transactions.
         </S>
 
         <S title="6. User Conduct">
@@ -447,7 +591,7 @@ function TermsPage({t}){
 // ══ Main ══
 export default function AccountPage(){
   const { t, dark, setDark } = useOutletContext();
-  const { user, session, signOut, profile } = useAuth();
+  const { user, session, signOut, profile, updateProfile, fetchProfile } = useAuth();
   const nav = useNavigate();
   const [sp] = useSearchParams();
   const[page,setPage]=useState(sp.get("page")||"home");
@@ -478,12 +622,15 @@ export default function AccountPage(){
   if (!user) return null;
 
   const goHome=()=>setPage("home");
+  const isDealer = profile?.seller_type === "dealer";
+  const dealerVerified = profile?.dealer_verified === true;
+  const needsVatDoc = isDealer && !dealerVerified && !profile?.vat_doc_url;
 
   const content = ()=>{
     if(page==="listings") return <ListingsPage t={t} onBack={goHome} nav={nav} user={user} session={session}/>;
     if(page==="sold") return <SoldPage t={t} onBack={goHome} user={user} session={session}/>;
     if(page==="reviews") return <ReviewsPage t={t} onBack={goHome}/>;
-    if(page==="edit") return <EditPage t={t} onBack={goHome}/>;
+    if(page==="edit") return <EditPage t={t} onBack={goHome} user={user} session={session} profile={profile} updateProfile={updateProfile} fetchProfile={fetchProfile}/>;
     if(page==="security") return <SecurityPage t={t} onBack={goHome}/>;
     if(page==="payment") return <PaymentPage t={t} onBack={goHome}/>;
     if(page==="language") return <LangPage t={t} onBack={goHome}/>;
@@ -494,13 +641,29 @@ export default function AccountPage(){
     // Home
     const isWide = typeof window !== "undefined" && window.innerWidth >= 700;
     return <>
+      {/* Dealer verification prompt */}
+      {needsVatDoc&&(
+        <div onClick={()=>setPage("edit")} style={{...cs(t),padding:"14px 16px",marginTop:10,marginBottom:14,display:"flex",alignItems:"center",gap:12,cursor:"pointer",border:`1px solid rgba(245,158,11,0.3)`,background:"rgba(245,158,11,0.06)"}}>
+          <div style={{width:36,height:36,borderRadius:10,background:"rgba(245,158,11,0.15)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Shld size={18} color="#f59e0b"/></div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:13,fontWeight:700,color:t.tx}}>Finish dealer verification</div>
+            <div style={{fontSize:11,color:t.tx2,marginTop:1}}>Upload your VAT document to get verified.</div>
+          </div>
+          <ChR size={16} color={t.tx3}/>
+        </div>
+      )}
+
       {/* Profile card — always full width */}
-      <div style={{...cs(t),padding:20,marginTop:10,marginBottom:14}}>
+      <div style={{...cs(t),padding:20,marginTop:needsVatDoc?0:10,marginBottom:14}}>
         <div style={{display:"flex",alignItems:"center",gap:16}}>
           <div style={{width:64,height:64,borderRadius:"50%",background:GR,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:700,color:"#fff",flexShrink:0}}>{(profile?.full_name||user?.email||"?").split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2)}</div>
           <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:18,fontWeight:700,color:t.tx}}>{profile?.full_name||user?.email}</div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <div style={{fontSize:18,fontWeight:700,color:t.tx}}>{profile?.full_name||user?.email}</div>
+              {isDealer&&dealerVerified&&<Chk size={15} color="#10b981"/>}
+            </div>
             <div style={{fontSize:12,color:t.tx2,marginTop:2}}>{user?.email}</div>
+            {isDealer&&<div style={{fontSize:11,color:BC,fontWeight:600,marginTop:3}}>{profile?.firm_name?profile.firm_name+" · ":""}Dealer{dealerVerified?" · Verified":""}</div>}
             {profile?.city&&<div style={{display:"flex",alignItems:"center",gap:4,marginTop:4}}><Map size={12} color={t.tx3}/><span style={{fontSize:11,color:t.tx3}}>{profile.city}{profile.country?`, ${profile.country}`:""}</span></div>}
           </div>
           <button onClick={()=>setPage("edit")} style={{width:36,height:36,borderRadius:10,border:`1px solid ${t.bd}`,background:t.sec,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Edit size={16} color={t.tx2}/></button>
@@ -509,7 +672,6 @@ export default function AccountPage(){
           {[{n:stats.listings,l:"Listings"},{n:stats.saved,l:"Saved"},{n:stats.messages,l:"Messages"},{n:stats.rating,l:"Rating"}].map((s,i)=><div key={i} style={{flex:1,background:t.sec,padding:"12px 0",textAlign:"center"}}><div style={{fontSize:17,fontWeight:700,color:t.tx}}>{s.n}</div><div style={{fontSize:10,color:t.tx3,marginTop:2}}>{s.l}</div></div>)}
         </div>
         <div style={{display:"flex",gap:8,marginTop:12,alignItems:"center",flexWrap:"wrap"}}>
-          {profile?.is_verified&&<div style={{fontSize:11,color:t.tx3,display:"flex",alignItems:"center",gap:4}}><Chk size={12} color="#10b981"/> Verified seller</div>}
           <div style={{fontSize:11,color:t.tx3}}>Member since {new Date(user?.created_at||Date.now()).toLocaleDateString("en-US",{month:"short",year:"numeric"})}</div>
           <span style={{color:t.tx3}}>·</span>
           <button onClick={()=>nav(`/seller/${user.id}`)} style={{fontSize:11,color:BC,background:"none",border:"none",cursor:"pointer",fontWeight:600,padding:0}}>View public profile</button>
@@ -525,7 +687,7 @@ export default function AccountPage(){
           <Row t={t} icon={<Star size={18} color="#f59e0b" filled/>} label="Reviews" desc={stats.reviews>0?`${stats.rating} avg from ${stats.reviews} review${stats.reviews!==1?"s":""}`:"No reviews yet"} onClick={()=>setPage("reviews")}/>
         </Sect>
         <Sect t={t} title="Account">
-          <Row t={t} icon={<Usr size={18} color={t.tx2}/>} label="Edit profile" desc="Name, photo, location" onClick={()=>setPage("edit")}/>
+          <Row t={t} icon={<Usr size={18} color={t.tx2}/>} label="Edit profile" desc={isDealer?"Business details, VAT document":"Name, photo, location"} onClick={()=>setPage("edit")}/>
           <Row t={t} icon={<Shld size={18} color={t.tx2}/>} label="Security" desc="Password, 2FA, sessions" onClick={()=>setPage("security")}/>
           <Row t={t} icon={<CC size={18} color={t.tx2}/>} label="Payment methods" desc="Coming soon" onClick={()=>setPage("payment")}/>
           <Row t={t} icon={<Globe size={18} color={t.tx2}/>} label="Language & region" desc="English · EUR · Romania" onClick={()=>setPage("language")}/>
