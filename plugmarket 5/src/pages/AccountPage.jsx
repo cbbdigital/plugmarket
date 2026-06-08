@@ -450,14 +450,139 @@ function SecurityPage({t,onBack}){return <>
   </div>
 </>}
 
-function PaymentPage({t,onBack}){return <>
-  <SubH title="Payment methods" t={t} onBack={onBack}/>
-  <div style={{textAlign:"center",padding:"60px 0"}}>
-    <CC size={48} color={t.tx3}/>
-    <div style={{fontSize:16,fontWeight:600,color:t.tx,marginTop:16}}>Coming soon</div>
-    <div style={{fontSize:13,color:t.tx2,marginTop:6,lineHeight:1.6}}>Payment methods and billing will be available here once we integrate with Stripe.</div>
-  </div>
-</>}
+function brandColor(b){const m={visa:"#1a1f71",mastercard:"#eb001b",amex:"#2e77bb",discover:"#ff6000"};return m[(b||"").toLowerCase()]||"#555"}
+
+function PaymentPage({t,onBack,user,session}){
+  const token=session?.access_token;
+  const uid=user?.id;
+  const[cards,setCards]=useState([]);
+  const[loading,setLoading]=useState(true);
+  const[removeTarget,setRemoveTarget]=useState(null);
+
+  const load=async()=>{
+    if(!uid||!token){setLoading(false);return;}
+    const rows=await sbQuery("payment_methods",`user_id=eq.${uid}&order=is_main.desc,created_at.asc`,token);
+    setCards(rows);
+    setLoading(false);
+  };
+  useEffect(()=>{load()},[user,session]);
+
+  const setMain=async(card)=>{
+    if(card.is_main)return;
+    // unset all, then set chosen
+    await sbUpdate("payment_methods",`user_id=eq.${uid}`,{is_main:false},token);
+    const ok=await sbUpdate("payment_methods",`id=eq.${card.id}`,{is_main:true},token);
+    if(ok) setCards(prev=>prev.map(c=>({...c,is_main:c.id===card.id})).sort((a,b)=>(b.is_main?1:0)-(a.is_main?1:0)));
+  };
+
+  const confirmRemove=async()=>{
+    if(!removeTarget)return;
+    const wasMain=removeTarget.is_main;
+    const ok=await sbDelete("payment_methods",`id=eq.${removeTarget.id}`,token);
+    if(ok){
+      let next=cards.filter(c=>c.id!==removeTarget.id);
+      // if we removed the main card, promote the first remaining
+      if(wasMain&&next.length>0&&!next.some(c=>c.is_main)){
+        await sbUpdate("payment_methods",`id=eq.${next[0].id}`,{is_main:true},token);
+        next=next.map((c,i)=>({...c,is_main:i===0}));
+      }
+      setCards(next);
+    }
+    setRemoveTarget(null);
+  };
+
+  const addCard=()=>{
+    // Real card entry must go through Stripe (tokenized) — wired to a Netlify
+    // function + Stripe SetupIntent later. Placeholder for now.
+    alert("Adding a card will open secure Stripe checkout once payments are connected.");
+  };
+
+  const main=cards.find(c=>c.is_main);
+  const supp=cards.filter(c=>!c.is_main);
+
+  return <>
+    <SubH title="Payment methods" t={t} onBack={onBack}/>
+
+    {/* Remove confirmation */}
+    {removeTarget&&(
+      <div style={{position:"fixed",inset:0,zIndex:99999,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setRemoveTarget(null)}>
+        <div onClick={e=>e.stopPropagation()} style={{background:t.card,borderRadius:20,padding:28,maxWidth:360,width:"100%",textAlign:"center",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
+          <div style={{width:52,height:52,borderRadius:"50%",background:"rgba(239,68,68,0.1)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}><Trash size={22} color="#ef4444"/></div>
+          <div style={{fontSize:17,fontWeight:700,color:t.tx,marginBottom:6}}>Remove card?</div>
+          <div style={{fontSize:13,color:t.tx2,marginBottom:18}}>{(removeTarget.brand||"Card")} ending {removeTarget.last4} will be removed.</div>
+          <div style={{display:"flex",gap:10}}>
+            <button onClick={()=>setRemoveTarget(null)} style={{flex:1,height:42,borderRadius:12,border:`1px solid ${t.bd}`,background:t.card,color:t.tx,fontSize:13,fontWeight:500,cursor:"pointer"}}>Cancel</button>
+            <button onClick={confirmRemove} style={{flex:1,height:42,borderRadius:12,border:"none",background:"linear-gradient(135deg,#ef4444,#dc2626)",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>Remove</button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {loading?(
+      <div style={{textAlign:"center",padding:"60px 0",color:t.tx3}}>Loading cards...</div>
+    ):(
+      <div style={{padding:"6px 0"}}>
+        {/* Main card */}
+        <div style={{fontSize:12,fontWeight:600,color:t.tx3,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Main card</div>
+        {main?(
+          <div style={{borderRadius:16,padding:18,marginBottom:18,background:`linear-gradient(135deg,${brandColor(main.brand)},#000)`,color:"#fff",boxShadow:"0 8px 24px rgba(0,0,0,0.25)",position:"relative"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+              <CC size={26} color="rgba(255,255,255,0.9)"/>
+              <span style={{fontSize:10,fontWeight:700,background:"rgba(255,255,255,0.2)",padding:"3px 9px",borderRadius:20,letterSpacing:0.5}}>MAIN</span>
+            </div>
+            <div style={{fontSize:19,fontWeight:600,letterSpacing:2,marginTop:24,fontFamily:"monospace"}}>•••• •••• •••• {main.last4}</div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginTop:14}}>
+              <div>
+                <div style={{fontSize:9,opacity:0.7,textTransform:"uppercase"}}>Card holder</div>
+                <div style={{fontSize:13,fontWeight:600}}>{main.holder_name||(user?.email||"")}</div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontSize:9,opacity:0.7,textTransform:"uppercase"}}>Expires</div>
+                <div style={{fontSize:13,fontWeight:600}}>{String(main.exp_month).padStart(2,"0")}/{String(main.exp_year).slice(-2)}</div>
+              </div>
+            </div>
+            <button onClick={()=>setRemoveTarget(main)} style={{position:"absolute",bottom:14,right:14,width:30,height:30,borderRadius:8,border:"none",background:"rgba(255,255,255,0.15)",cursor:"pointer",display:"none"}}/>
+          </div>
+        ):(
+          <div style={{...cs(t),padding:"22px 18px",marginBottom:18,textAlign:"center",border:`1.5px dashed ${t.bd}`,background:"none"}}>
+            <CC size={28} color={t.tx3}/>
+            <div style={{fontSize:13,color:t.tx2,marginTop:8}}>No main card yet</div>
+          </div>
+        )}
+
+        {/* Supplementary cards */}
+        <div style={{fontSize:12,fontWeight:600,color:t.tx3,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Supplementary cards</div>
+        {supp.length===0?(
+          <div style={{fontSize:12,color:t.tx3,padding:"4px 0 14px"}}>No supplementary cards.</div>
+        ):(
+          <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:14}}>
+            {supp.map(c=>(
+              <div key={c.id} style={{...cs(t),padding:"14px 16px",display:"flex",alignItems:"center",gap:12}}>
+                <div style={{width:40,height:28,borderRadius:6,background:brandColor(c.brand),display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><CC size={16} color="#fff"/></div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:13,fontWeight:600,color:t.tx,textTransform:"capitalize"}}>{c.brand||"Card"} •••• {c.last4}</div>
+                  <div style={{fontSize:11,color:t.tx3,marginTop:1}}>Expires {String(c.exp_month).padStart(2,"0")}/{String(c.exp_year).slice(-2)}</div>
+                </div>
+                <button onClick={()=>setMain(c)} style={{fontSize:11,fontWeight:600,color:BC,background:"none",border:`1px solid ${t.bd}`,borderRadius:8,padding:"6px 10px",cursor:"pointer"}}>Set main</button>
+                <button onClick={()=>setRemoveTarget(c)} style={{width:32,height:32,borderRadius:8,border:`1px solid ${t.bd}`,background:t.sec,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Trash size={14} color="#ef4444"/></button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Add card */}
+        <button onClick={addCard} style={{width:"100%",height:48,borderRadius:12,border:`1.5px dashed ${BC}`,background:"rgba(255,117,0,0.04)",color:BC,fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:4}}>
+          <PlusLn size={18} color={BC}/> Add a card
+        </button>
+
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginTop:14}}>
+          <Shld size={13} color={t.tx3}/>
+          <span style={{fontSize:11,color:t.tx3}}>Cards are securely stored by Stripe — never on our servers</span>
+        </div>
+      </div>
+    )}
+  </>;
+}
 
 function LangPage({t,onBack}){
   const[lang,setLang]=useState("en");const[curr,setCurr]=useState("EUR");const[region,setRegion]=useState("RO");const[saved,setSaved]=useState(false);
@@ -632,7 +757,7 @@ export default function AccountPage(){
     if(page==="reviews") return <ReviewsPage t={t} onBack={goHome}/>;
     if(page==="edit") return <EditPage t={t} onBack={goHome} user={user} session={session} profile={profile} updateProfile={updateProfile} fetchProfile={fetchProfile}/>;
     if(page==="security") return <SecurityPage t={t} onBack={goHome}/>;
-    if(page==="payment") return <PaymentPage t={t} onBack={goHome}/>;
+    if(page==="payment") return <PaymentPage t={t} onBack={goHome} user={user} session={session}/>;
     if(page==="language") return <LangPage t={t} onBack={goHome}/>;
     if(page==="help") return <HelpPage t={t}/>;
     if(page==="contact") return <ContactPage t={t}/>;
@@ -689,7 +814,7 @@ export default function AccountPage(){
         <Sect t={t} title="Account">
           <Row t={t} icon={<Usr size={18} color={t.tx2}/>} label="Edit profile" desc={isDealer?"Business details, VAT document":"Name, photo, location"} onClick={()=>setPage("edit")}/>
           <Row t={t} icon={<Shld size={18} color={t.tx2}/>} label="Security" desc="Password, 2FA, sessions" onClick={()=>setPage("security")}/>
-          <Row t={t} icon={<CC size={18} color={t.tx2}/>} label="Payment methods" desc="Coming soon" onClick={()=>setPage("payment")}/>
+          <Row t={t} icon={<CC size={18} color={t.tx2}/>} label="Payment methods" desc="Manage your cards" onClick={()=>setPage("payment")}/>
           <Row t={t} icon={<Globe size={18} color={t.tx2}/>} label="Language & region" desc="English · EUR · Romania" onClick={()=>setPage("language")}/>
         </Sect>
         <Sect t={t} title="Notifications">
