@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import Header from "./Header";
 import BNav from "./BNav";
+import PlanPage from "./pages/PlanPage";
 
 export default function Layout({ t, dark, setDark }) {
   const [favCount, setFavCount] = useState(0);
