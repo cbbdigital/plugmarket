@@ -33,11 +33,23 @@ export function AuthProvider({ children }) {
   }
 
   // Sign up with email/password
-   async function signUp({ email, password, fullName, sellerType }) {
+  async function signUp({ email, password, sellerType, fullName, phone, address, vatNumber, dealerLegalName, firmName, mapsUrl, website }) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName, seller_type: sellerType || "private" } },
+      options: {
+        data: {
+          full_name: fullName || "",
+          seller_type: sellerType || "private",
+          phone: phone || "",
+          address: address || "",
+          vat_number: vatNumber || "",
+          dealer_legal_name: dealerLegalName || "",
+          firm_name: firmName || "",
+          maps_url: mapsUrl || "",
+          website: website || "",
+        },
+      },
     });
     return { data, error };
   }
