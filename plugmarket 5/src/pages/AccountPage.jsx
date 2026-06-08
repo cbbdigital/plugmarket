@@ -78,7 +78,15 @@ const REVIEWS=[
 // Shared
 function Toggle({value,onChange}){return <div onClick={()=>onChange(!value)} style={{width:44,height:24,borderRadius:12,background:value?BC:"rgba(128,128,128,0.2)",cursor:"pointer",position:"relative",transition:"background 0.2s",flexShrink:0}}><div style={{width:20,height:20,borderRadius:10,background:"#fff",position:"absolute",top:2,left:value?22:2,transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.15)"}}/></div>}
 function Badge({label,color,bg}){return <span style={{fontSize:10,fontWeight:600,color,background:bg,padding:"3px 8px",borderRadius:6}}>{label}</span>}
-function SBadge({status}){const m={active:{l:"Active",c:"#10b981",b:"rgba(16,185,129,0.1)"},paused:{l:"Paused",c:"#f59e0b",b:"rgba(245,158,11,0.1)"}};const s=m[status]||m.active;return <Badge label={s.l} color={s.c} bg={s.b}/>}
+function SBadge({status}){const m={active:{l:"Active",c:"#10b981",b:"rgba(16,185,129,0.1)"},paused:{l:"Paused",c:"#f59e0b",b:"rgba(245,158,11,0.1)"},expired:{l:"Offline",c:"#ef4444",b:"rgba(239,68,68,0.1)"}};const s=m[status]||m.active;return <Badge label={s.l} color={s.c} bg={s.b}/>}
+function onlineState(car){
+  if(car.status==="expired") return {kind:"expired"};
+  if(!car.paidUntil) return null;
+  const days=Math.ceil((new Date(car.paidUntil).getTime()-Date.now())/86400000);
+  if(days<=0) return {kind:"expired"};
+  if(days<=7) return {kind:"expiring",days};
+  return {kind:"online",days,until:new Date(car.paidUntil)};
+}
 function Row({icon,label,desc,t,onClick,right,danger}){return <div onClick={onClick} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 0",borderBottom:`1px solid ${t.bd}`,cursor:onClick?"pointer":"default"}}><div style={{width:36,height:36,borderRadius:10,background:danger?"rgba(239,68,68,0.08)":t.sec,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{icon}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:danger?"#ef4444":t.tx}}>{label}</div>{desc&&<div style={{fontSize:11,color:t.tx3,marginTop:1}}>{desc}</div>}</div>{right||(onClick&&<ChR size={16} color={t.tx3}/>)}</div>}
 function Sect({title,children,t}){return <div style={{...cs(t),padding:"4px 18px",marginBottom:14}}>{title&&<div style={{fontSize:12,fontWeight:600,color:t.tx3,textTransform:"uppercase",letterSpacing:0.5,padding:"14px 0 4px"}}>{title}</div>}{children}</div>}
 function SubH({title,t}){return <div style={{padding:"14px 0 10px"}}><span style={{fontSize:17,fontWeight:700}}>{title}</span></div>}
@@ -108,6 +116,7 @@ function ListingsPage({t,onBack,nav,user,session}){
         status:r.status||"active",views:r.view_count||0,inquiries:r.inquiry_count||0,
         saved:r.save_count||0,days:Math.max(0,Math.round((Date.now()-new Date(r.created_at).getTime())/86400000)),
         soh:r.state_of_health_pct||100,battery:r.battery_capacity_kwh?`${r.battery_capacity_kwh} kWh`:"—",boosted:r.is_boosted||false,
+        paidUntil:r.paid_until,plan:r.plan,
       })));
     } else { setListings([]); }
     setLoading(false);
@@ -214,7 +223,25 @@ function ListingsPage({t,onBack,nav,user,session}){
               <div style={{fontSize:11,color:t.tx3,marginTop:6,display:"flex",alignItems:"center",gap:4}}>
                 <Clk size={11} color={t.tx3}/> Listed {car.days}d ago
               </div>
+              {(()=>{
+                const os=onlineState(car);
+                if(!os) return null;
+                if(os.kind==="online") return <div style={{fontSize:11,color:"#10b981",marginTop:4,display:"flex",alignItems:"center",gap:4}}><Chk size={11} color="#10b981"/> Online until {os.until.toLocaleDateString("en-GB",{day:"numeric",month:"short"})}{car.plan==="trial"?" · free trial":""}</div>;
+                if(os.kind==="expiring") return <div style={{fontSize:11,color:"#f59e0b",marginTop:4,fontWeight:600,display:"flex",alignItems:"center",gap:4}}><Clk size={11} color="#f59e0b"/> Expires in {os.days} day{os.days!==1?"s":""} — renew to keep online</div>;
+                return <div style={{fontSize:11,color:"#ef4444",marginTop:4,fontWeight:600,display:"flex",alignItems:"center",gap:4}}><Clk size={11} color="#ef4444"/> Offline — renew to relist</div>;
+              })()}
             </div>
+
+            {/* Renew banner when expiring/expired */}
+            {(()=>{
+              const os=onlineState(car);
+              if(!os||os.kind==="online") return null;
+              return (
+                <button onClick={()=>nav(`/plan?listing=${car.id}&renew=1`)} style={{margin:"0 14px 12px",height:40,borderRadius:10,border:"none",background:GR,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"0 2px 8px rgba(255,117,0,0.25)"}}>
+                  <Clk size={14} color="#fff"/> Renew listing
+                </button>
+              );
+            })()}
 
             {/* Action buttons — 2x2 grid */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",borderTop:`1px solid ${t.bd}`}}>
@@ -725,6 +752,7 @@ export default function AccountPage(){
   const[notifNewMsg,setNotifNewMsg]=useState(true);
   const[notifPrice,setNotifPrice]=useState(true);
   const[stats,setStats]=useState({listings:0,saved:0,messages:0,rating:0,sold:0,reviews:0});
+  const[notifs,setNotifs]=useState([]);
 
   useEffect(() => { if (!user) nav("/login"); }, [user, nav]);
 
@@ -741,6 +769,8 @@ export default function AccountPage(){
       const reviews=await sbQuery("reviews",`seller_id=eq.${uid}&select=rating`,token);
       const avgRating=reviews.length>0?(reviews.reduce((a,r)=>a+r.rating,0)/reviews.length).toFixed(1):"—";
       setStats({listings:active,saved:favs.length,messages:convos.length,rating:avgRating,sold,reviews:reviews.length});
+      const notes=await sbQuery("notifications",`user_id=eq.${uid}&read=eq.false&order=created_at.desc`,token);
+      setNotifs(notes);
     })();
   },[user,session]);
 
@@ -750,6 +780,11 @@ export default function AccountPage(){
   const isDealer = profile?.seller_type === "dealer";
   const dealerVerified = profile?.dealer_verified === true;
   const needsVatDoc = isDealer && !dealerVerified && !profile?.vat_doc_url;
+
+  const dismissNotif=async(id)=>{
+    setNotifs(prev=>prev.filter(n=>n.id!==id));
+    if(session?.access_token) await sbUpdate("notifications",`id=eq.${id}`,{read:true},session.access_token);
+  };
 
   const content = ()=>{
     if(page==="listings") return <ListingsPage t={t} onBack={goHome} nav={nav} user={user} session={session}/>;
@@ -766,6 +801,21 @@ export default function AccountPage(){
     // Home
     const isWide = typeof window !== "undefined" && window.innerWidth >= 700;
     return <>
+      {/* Renewal / in-app notifications */}
+      {notifs.map(n=>(
+        <div key={n.id} style={{...cs(t),padding:"14px 16px",marginTop:10,marginBottom:14,display:"flex",alignItems:"center",gap:12,border:`1px solid rgba(255,117,0,0.3)`,background:"rgba(255,117,0,0.05)"}}>
+          <div style={{width:36,height:36,borderRadius:10,background:"rgba(255,117,0,0.12)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Bell size={18} color={BC}/></div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:13,fontWeight:700,color:t.tx}}>{n.title}</div>
+            <div style={{fontSize:11,color:t.tx2,marginTop:1}}>{n.body}</div>
+          </div>
+          {n.type==="renewal"&&n.listing_id&&(
+            <button onClick={()=>nav(`/plan?listing=${n.listing_id}&renew=1`)} style={{fontSize:12,fontWeight:600,color:"#fff",background:GR,border:"none",borderRadius:8,padding:"7px 12px",cursor:"pointer",flexShrink:0}}>Renew</button>
+          )}
+          <button onClick={()=>dismissNotif(n.id)} style={{width:30,height:30,borderRadius:8,border:`1px solid ${t.bd}`,background:t.sec,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Chk size={14} color={t.tx3}/></button>
+        </div>
+      ))}
+
       {/* Dealer verification prompt */}
       {needsVatDoc&&(
         <div onClick={()=>setPage("edit")} style={{...cs(t),padding:"14px 16px",marginTop:10,marginBottom:14,display:"flex",alignItems:"center",gap:12,cursor:"pointer",border:`1px solid rgba(245,158,11,0.3)`,background:"rgba(245,158,11,0.06)"}}>
@@ -779,7 +829,7 @@ export default function AccountPage(){
       )}
 
       {/* Profile card — always full width */}
-      <div style={{...cs(t),padding:20,marginTop:needsVatDoc?0:10,marginBottom:14}}>
+      <div style={{...cs(t),padding:20,marginTop:(needsVatDoc||notifs.length>0)?0:10,marginBottom:14}}>
         <div style={{display:"flex",alignItems:"center",gap:16}}>
           <div style={{width:64,height:64,borderRadius:"50%",background:GR,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:700,color:"#fff",flexShrink:0}}>{(profile?.full_name||user?.email||"?").split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2)}</div>
           <div style={{flex:1,minWidth:0}}>
