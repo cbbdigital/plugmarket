@@ -15,6 +15,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [sellerType, setSellerType] = useState("private"); // private | dealer — locked after signup
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -42,7 +43,7 @@ export default function AuthPage() {
 
     if (mode === "signup") {
       if (!name.trim()) { setError("Please enter your name"); setLoading(false); return; }
-      const { error: err } = await signUp({ email, password, fullName: name });
+      const { error: err } = await signUp({ email, password, fullName: name, sellerType });
       setLoading(false);
       if (err) setError(err.message);
       else setSuccess("Check your email to confirm your account.");
@@ -95,6 +96,25 @@ export default function AuthPage() {
           <div style={{ position: "relative" }}>
             <Usr size={18} color={t.tx3} style={{ position: "absolute", left: 14, top: 14 }} />
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Full name" style={inp} />
+          </div>
+        )}
+
+        {mode === "signup" && (
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: t.tx2, marginBottom: 6, display: "block" }}>Account type</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              {[{ v: "private", l: "Private seller" }, { v: "dealer", l: "Dealer" }].map(tp => (
+                <button
+                  key={tp.v}
+                  type="button"
+                  onClick={() => setSellerType(tp.v)}
+                  style={{ flex: 1, height: 46, borderRadius: 12, border: sellerType === tp.v ? `2px solid ${BC}` : `1px solid ${t.bd}`, background: sellerType === tp.v ? "rgba(255,117,0,0.06)" : t.inp, color: sellerType === tp.v ? BC : t.tx, fontSize: 14, fontWeight: sellerType === tp.v ? 600 : 400, cursor: "pointer" }}
+                >
+                  {tp.l}
+                </button>
+              ))}
+            </div>
+            <p style={{ fontSize: 11, color: t.tx3, margin: "6px 2px 0" }}>This can't be changed later.</p>
           </div>
         )}
 
