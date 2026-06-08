@@ -33,11 +33,11 @@ export function AuthProvider({ children }) {
   }
 
   // Sign up with email/password
-  async function signUp({ email, password, fullName }) {
+   async function signUp({ email, password, fullName, sellerType }) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      options: { data: { full_name: fullName, seller_type: sellerType || "private" } },
     });
     return { data, error };
   }
