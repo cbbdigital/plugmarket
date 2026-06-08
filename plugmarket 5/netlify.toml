@@ -4,6 +4,11 @@
   publish = "dist"
   functions = "netlify/functions"
 
+[build.environment]
+  # These values are public by design (used in the browser), so the
+  # secret scanner should not treat them as leaked secrets.
+  SECRETS_SCAN_OMIT_KEYS = "SUPABASE_URL,SUPABASE_ANON_KEY,VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY"
+
 # SPA routing — keep existing redirect
 [[redirects]]
   from = "/*"
