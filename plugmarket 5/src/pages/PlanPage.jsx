@@ -103,11 +103,13 @@ export default function PlanPage() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ plan: plan === "sixmonth" ? "list_6m" : "list_30d", listingId }),
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data = {};
+      try { data = JSON.parse(text); } catch {}
       if (data.url) { window.location.href = data.url; return; }
-      alert("Could not start checkout. Please try again.");
-    } catch {
-      alert("Could not start checkout. Please try again.");
+      alert(`Checkout error (${res.status}): ${text || "no response"}`);
+    } catch (e) {
+      alert(`Checkout failed: ${e.message}`);
     }
     setBusy(false);
   };

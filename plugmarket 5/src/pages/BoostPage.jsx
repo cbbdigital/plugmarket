@@ -59,11 +59,13 @@ export default function BoostPage() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({ plan: boost === "daily" ? "boost_daily" : "boost_weekly", listingId }),
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data = {};
+      try { data = JSON.parse(text); } catch {}
       if (data.url) { window.location.href = data.url; return; }
-      alert("Could not start checkout. Please try again.");
-    } catch {
-      alert("Could not start checkout. Please try again.");
+      alert(`Checkout error (${res.status}): ${text || "no response"}`);
+    } catch (e) {
+      alert(`Checkout failed: ${e.message}`);
     }
     setBusy(false);
   };
