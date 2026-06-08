@@ -1105,10 +1105,10 @@ export default function SellPage(){
               </div>
               <div>
                 <label style={{fontSize:12,fontWeight:600,color:t.tx2,marginBottom:6,display:"block"}}>Seller type</label>
-                <div style={{display:"flex",gap:8}}>
-                  {[{v:"private",l:"Private seller"},{v:"dealer",l:"Dealer"}].map(tp=>(
-                    <button key={tp.v} onClick={()=>setSellerType(tp.v)} style={{flex:1,height:42,borderRadius:10,border:sellerType===tp.v?`2px solid ${BC}`:`1px solid ${t.bd}`,background:sellerType===tp.v?(d?"rgba(255,117,0,0.08)":"rgba(255,117,0,0.04)"):t.inp,color:sellerType===tp.v?BC:t.tx,fontSize:13,fontWeight:sellerType===tp.v?600:400,cursor:"pointer"}}>{tp.l}</button>
-                  ))}
+                <div style={{display:"flex",alignItems:"center",gap:8,height:42,borderRadius:10,border:`1px solid ${t.bd}`,background:t.sec,padding:"0 14px"}}>
+                  <UserIcon size={15} color={BC}/>
+                  <span style={{fontSize:13,fontWeight:600,color:t.tx}}>{sellerType==="dealer"?"Dealer":"Private seller"}</span>
+                  <span style={{fontSize:11,color:t.tx3,marginLeft:"auto"}}>Set in your account</span>
                 </div>
               </div>
               <Inp label="Name / Company" value={sellerName} onChange={setSellerName} ph={sellerType==="dealer"?"Company name":"Your name"} req t={t}/>
