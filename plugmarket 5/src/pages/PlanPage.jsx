@@ -1,6 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { BC, GR } from "../styles/theme";
+
+// ── Supabase REST ──
+const SB_URL = import.meta.env.VITE_SUPABASE_URL || "https://tmftxqwqwceuiydleuag.supabase.co";
+const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+function getSession() {
+  try {
+    const raw = localStorage.getItem("sb-tmftxqwqwceuiydleuag-auth-token");
+    if (!raw) return {};
+    const s = JSON.parse(raw);
+    return { token: s.access_token, uid: s.user?.id };
+  } catch { return {}; }
+}
 
 const Ic = ({ d, size = 16, color = "currentColor" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{d}</svg>
@@ -16,7 +28,7 @@ const PLANS = [
     name: "Monthly",
     price: "€9.99",
     per: "/month",
-    sub: "After 30-day free trial. Cancel anytime.",
+    priceLabel: "€9.99/month",
     badge: null,
     note: null,
     features: ["Unlimited photo uploads", "Appear in search results", "Message notifications", "Edit listing anytime"],
@@ -26,7 +38,7 @@ const PLANS = [
     name: "6 Months",
     price: "€49.99",
     per: "/6 mo",
-    sub: "After 30-day free trial. One-time charge.",
+    priceLabel: "€49.99 for 6 months",
     badge: "SAVE 17%",
     note: "≈ €8.33/month",
     features: ["Everything in Monthly", "Priority placement", "Featured badge", "Dedicated support"],
@@ -37,13 +49,70 @@ export default function PlanPage() {
   const { t } = useOutletContext();
   const navigate = useNavigate();
   const [plan, setPlan] = useState("monthly");
+  const [firstListing, setFirstListing] = useState(null); // null = loading
+  const [busy, setBusy] = useState(false);
 
+  const listingId = new URLSearchParams(window.location.search).get("listing");
+
+  // Determine if this is the user's first listing.
+  // The just-published listing is already inserted, so count <= 1 means first.
+  useEffect(() => {
+    const { token, uid } = getSession();
+    if (!uid || !token) { setFirstListing(true); return; }
+    (async () => {
+      try {
+        const r = await fetch(
+          `${SB_URL}/rest/v1/listings?seller_id=eq.${uid}&select=id`,
+          { headers: { apikey: SB_KEY, Authorization: `Bearer ${token}`, Prefer: "count=exact" } }
+        );
+        const rows = await r.json();
+        setFirstListing(Array.isArray(rows) ? rows.length <= 1 : true);
+      } catch {
+        setFirstListing(true);
+      }
+    })();
+  }, []);
+
+  const selected = PLANS.find((p) => p.id === plan);
   const goBack = () => navigate(-1);
-  const startTrial = () => {
-    // Listing already created — record chosen plan, then proceed.
-    // Real Stripe checkout wired here later (Netlify function).
-    navigate("/account");
+
+  const confirm = async () => {
+    if (busy) return;
+    setBusy(true);
+    const { token } = getSession();
+
+    if (isFirst) {
+      // Free 30-day trial — set paid_until, no payment.
+      if (listingId && token) {
+        const until = new Date(); until.setDate(until.getDate() + 30);
+        await fetch(`${SB_URL}/rest/v1/listings?id=eq.${listingId}`, {
+          method: "PATCH",
+          headers: { apikey: SB_KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ paid_until: until.toISOString(), plan: "trial", status: "active", renewal_notified: false }),
+        });
+      }
+      setBusy(false);
+      navigate("/account?page=listings");
+      return;
+    }
+
+    // Paid — open Stripe Checkout
+    try {
+      const res = await fetch("/.netlify/functions/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ plan: plan === "sixmonth" ? "list_6m" : "list_30d", listingId }),
+      });
+      const data = await res.json();
+      if (data.url) { window.location.href = data.url; return; }
+      alert("Could not start checkout. Please try again.");
+    } catch {
+      alert("Could not start checkout. Please try again.");
+    }
+    setBusy(false);
   };
+
+  const isFirst = firstListing !== false; // treat loading as "first" optimistically
 
   return (
     <div style={{ fontFamily: "var(--font-sans)", color: t.tx, maxWidth: 720, margin: "0 auto", padding: "0 6% 80px" }}>
@@ -55,20 +124,24 @@ export default function PlanPage() {
         </button>
         <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>Choose your plan</h1>
         <p style={{ fontSize: 14, color: t.tx2, margin: "6px 0 0", lineHeight: 1.6 }}>
-          Your listing is live. Pick a plan to keep it active after your free trial.
+          {isFirst
+            ? "Your listing is live. Pick a plan to keep it active after your free trial."
+            : "Pick a plan to keep your listing active."}
         </p>
       </div>
 
-      {/* FREE TRIAL BANNER */}
-      <div style={{ background: "linear-gradient(135deg,rgba(16,185,129,0.08),rgba(5,150,105,0.08))", border: "1.5px solid rgba(16,185,129,0.25)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12, marginTop: 20 }}>
-        <div style={{ width: 38, height: 38, borderRadius: 11, background: "linear-gradient(135deg,#10b981,#059669)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <CheckIcon size={19} color="#fff" />
+      {/* FREE TRIAL BANNER — first listing only */}
+      {isFirst && (
+        <div style={{ background: "linear-gradient(135deg,rgba(16,185,129,0.08),rgba(5,150,105,0.08))", border: "1.5px solid rgba(16,185,129,0.25)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12, marginTop: 20 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 11, background: "linear-gradient(135deg,#10b981,#059669)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <CheckIcon size={19} color="#fff" />
+          </div>
+          <div>
+            <div style={{ fontSize: 14.5, fontWeight: 700, color: "#059669" }}>30 days free — no card needed</div>
+            <div style={{ fontSize: 12.5, color: t.tx2, marginTop: 2 }}>You won't be charged until your trial ends.</div>
+          </div>
         </div>
-        <div>
-          <div style={{ fontSize: 14.5, fontWeight: 700, color: "#059669" }}>30 days free — no card needed</div>
-          <div style={{ fontSize: 12.5, color: t.tx2, marginTop: 2 }}>You won't be charged until your trial ends.</div>
-        </div>
-      </div>
+      )}
 
       {/* PLAN CARDS */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 22 }}>
@@ -101,7 +174,6 @@ export default function PlanPage() {
                 <span style={{ fontSize: 12.5, color: t.tx2 }}>{pl.per}</span>
               </div>
               {pl.note && <div style={{ fontSize: 11.5, color: "#d97706", fontWeight: 700, marginTop: 3 }}>{pl.note}</div>}
-              <div style={{ fontSize: 11.5, color: t.tx2, marginTop: 5, lineHeight: 1.5 }}>{pl.sub}</div>
 
               <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 7 }}>
                 {pl.features.map((f, i) => (
@@ -116,12 +188,20 @@ export default function PlanPage() {
         })}
       </div>
 
+      {/* SUMMARY LINE */}
+      <div style={{ marginTop: 20, padding: "14px 16px", borderRadius: 12, background: t.card2, border: `1px solid ${t.brd}`, fontSize: 13, color: t.tx, lineHeight: 1.6 }}>
+        {isFirst
+          ? <>The first <strong>30 days are free</strong>. After that, you'll be charged <strong style={{ color: BC }}>{selected.priceLabel}</strong>.</>
+          : <>Your listing will be charged <strong style={{ color: BC }}>{selected.priceLabel}</strong>, starting today.</>}
+      </div>
+
       {/* CTA */}
       <button
-        onClick={startTrial}
-        style={{ width: "100%", marginTop: 24, padding: "15px 0", borderRadius: 14, border: "none", background: GR, color: "#fff", fontSize: 15.5, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 16px rgba(255,117,0,0.32)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+        onClick={confirm}
+        disabled={busy}
+        style={{ width: "100%", marginTop: 16, padding: "15px 0", borderRadius: 14, border: "none", background: GR, color: "#fff", fontSize: 15.5, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.7 : 1, boxShadow: "0 4px 16px rgba(255,117,0,0.32)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
       >
-        Start 30-day free trial
+        {busy ? "Please wait…" : isFirst ? "Start 30-day free trial" : `Continue to payment — ${selected.price}${selected.per}`}
       </button>
 
       {/* TRUST LINE */}
@@ -133,7 +213,7 @@ export default function PlanPage() {
         <div style={{ width: 1, height: 12, background: t.brd }} />
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <CardIcon size={13} color={t.tx3} />
-          <span style={{ fontSize: 11.5, color: t.tx2 }}>Card added after trial</span>
+          <span style={{ fontSize: 11.5, color: t.tx2 }}>{isFirst ? "Card added after trial" : "Secure card payment"}</span>
         </div>
       </div>
     </div>

@@ -36,12 +36,36 @@ export default function BoostPage() {
   const { t } = useOutletContext();
   const navigate = useNavigate();
   const [boost, setBoost] = useState("weekly");
+  const [busy, setBusy] = useState(false);
+
+  const listingId = new URLSearchParams(window.location.search).get("listing");
+
+  function getToken() {
+    try {
+      const raw = localStorage.getItem("sb-tmftxqwqwceuiydleuag-auth-token");
+      return raw ? JSON.parse(raw).access_token : null;
+    } catch { return null; }
+  }
 
   const selected = BOOSTS.find((b) => b.id === boost);
   const goBack = () => navigate(-1);
-  const confirm = () => {
-    // Boost chosen — real Stripe one-time checkout wired here later (Netlify function).
-    navigate("/account");
+  const confirm = async () => {
+    if (busy) return;
+    if (!listingId) { alert("No listing selected to boost."); return; }
+    setBusy(true);
+    try {
+      const res = await fetch("/.netlify/functions/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ plan: boost === "daily" ? "boost_daily" : "boost_weekly", listingId }),
+      });
+      const data = await res.json();
+      if (data.url) { window.location.href = data.url; return; }
+      alert("Could not start checkout. Please try again.");
+    } catch {
+      alert("Could not start checkout. Please try again.");
+    }
+    setBusy(false);
   };
 
   return (
@@ -119,9 +143,10 @@ export default function BoostPage() {
       {/* CTA */}
       <button
         onClick={confirm}
-        style={{ width: "100%", marginTop: 16, padding: "15px 0", borderRadius: 14, border: "none", background: GR, color: "#fff", fontSize: 15.5, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 16px rgba(255,117,0,0.32)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+        disabled={busy}
+        style={{ width: "100%", marginTop: 16, padding: "15px 0", borderRadius: 14, border: "none", background: GR, color: "#fff", fontSize: 15.5, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.7 : 1, boxShadow: "0 4px 16px rgba(255,117,0,0.32)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
       >
-        <BoltIcon size={17} color="#fff" /> Boost now — {selected.price}
+        <BoltIcon size={17} color="#fff" /> {busy ? "Please wait…" : `Boost now — ${selected.price}`}
       </button>
 
       {/* TRUST LINE */}
