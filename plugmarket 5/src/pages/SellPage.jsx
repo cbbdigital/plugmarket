@@ -510,7 +510,11 @@ export default function SellPage(){
     }
 
     setPublishing(false);
-    setSubmitted(true);
+    if (editId) {
+      setSubmitted(true);
+    } else {
+      nav(`/plan?listing=${listingId}`);
+    }
   };
 
   const models = make ? MAKES_DATA[make]||[] : [];
