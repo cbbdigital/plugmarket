@@ -1,0 +1,15 @@
+# Place this at the repo root of "plugmarket 5" (next to package.json)
+[build]
+  command = "npm install && npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+# SPA routing — keep existing redirect
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Run the expiry checker once a day at 08:00 UTC
+[functions."check-expiring"]
+  schedule = "0 8 * * *"
