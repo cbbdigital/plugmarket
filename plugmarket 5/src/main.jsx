@@ -14,6 +14,7 @@ import ListingDetailPage from "./pages/ListingDetailPage";
 import SellerPage from "./pages/SellerPage";
 import AuthPage from "./pages/AuthPage";
 import "./index.css";
+import PlanPage from "./pages/PlanPage";
 
 function App() {
   const [dark, setDark] = useState(() => {
@@ -45,6 +46,7 @@ function App() {
             <Route path="/seller/:id" element={<SellerPage />} />
             <Route path="/login" element={<AuthPage />} />
             <Route path="/signup" element={<AuthPage />} />
+            <Route path="/plan" element={<PlanPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
