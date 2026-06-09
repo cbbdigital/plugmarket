@@ -581,6 +581,13 @@ export default function ListingDetailPage() {
           <span>·</span> {car.mileage_km ? `${Number(car.mileage_km).toLocaleString()} km` : ""}
           <span>·</span> {fmtCond(car.condition) || ""}
         </div>
+        {car.created_at && (() => {
+          const d = new Date(car.created_at);
+          const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+          const rel = days <= 0 ? "today" : days === 1 ? "1 day ago" : `${days} days ago`;
+          const exact = d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+          return <div style={{ fontSize: 12, color: th.tx3, marginTop: 4 }}>Listed {rel} ({exact})</div>;
+        })()}
       </div>
 
       {/* TWO-COLUMN DESKTOP / SINGLE-COLUMN MOBILE */}
