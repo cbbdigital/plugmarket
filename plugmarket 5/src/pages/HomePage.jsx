@@ -303,6 +303,10 @@ function EVFinder({goSearch,navigate,t,favIds,toggleFav}){
 
   const gr=()=>EV_DB.map(r=>{let s=0;const wk=yk/52;const rng=r.range_summer||r.wltp||300;const dc=r.dc_peak||0;
 
+    // ── Hard budget filter: never suggest a car over the chosen budget ──
+    // (small 5% tolerance so e.g. €20,900 still shows for a €20,000 budget)
+    if(r.pn > bm*1.05) return null;
+
     // ── Use-case matching based on driving pattern ──
     const isCity = yk<10000 && (longTrips==="never"||longTrips==="rarely");
     const isCommute = yk>=10000 && yk<20000 && (longTrips==="never"||longTrips==="rarely");
@@ -337,10 +341,14 @@ function EVFinder({goSearch,navigate,t,favIds,toggleFav}){
     if(longTrips==="often" && rng>=500) s+=10;
     if(longTrips==="sometimes" && rng>=400) s+=8;
 
-    // ── Budget ──
-    if(r.pn>bm) s-=50;
-    else if(r.pn/bm<0.5) s+=10;
-    else if(r.pn/bm<0.8) s+=6;
+    // ── Budget fit: reward staying well under budget (cheaper = better value) ──
+    if(bm<999999){
+      const ratio = r.pn/bm; // 0..1.05 (already filtered above)
+      if(ratio<=0.5) s+=22;
+      else if(ratio<=0.7) s+=16;
+      else if(ratio<=0.85) s+=10;
+      else if(ratio<=1) s+=4;
+    }
 
     // ── Passengers / seating ──
     if(passengers==="5+" && r.seats>=7) s+=20;
@@ -348,7 +356,7 @@ function EVFinder({goSearch,navigate,t,favIds,toggleFav}){
     else if(passengers==="5+" && r.seats<5) s-=15;
     if(passengers==="3-4" && r.seats>=5) s+=5;
 
-    return{...r,score:s,_rng:rng,_dc:dc}}).sort((a,b)=>b.score-a.score).slice(0,3);
+    return{...r,score:s,_rng:rng,_dc:dc}}).filter(Boolean).sort((a,b)=>b.score-a.score).slice(0,3);
 
   const res=step===3?gr():[];const sav=yk>0?((yk/100)*consumption*gasPrice)-((yk/100)*16*elPrice):0;const fmt=v=>Math.round(v).toLocaleString();
 
@@ -395,9 +403,9 @@ function EVFinder({goSearch,navigate,t,favIds,toggleFav}){
               </div>
               <div style={{fontSize:14,fontWeight:600,color:t.tx}}>Max budget?</div>
               <div>
-                <input type="range" min={20000} max={100000} step={5000} value={budgetVal} onChange={e=>setBudgetVal(+e.target.value)} style={{width:"100%",accentColor:BC}}/>
+                <input type="range" min={10000} max={100000} step={5000} value={budgetVal} onChange={e=>setBudgetVal(+e.target.value)} style={{width:"100%",accentColor:BC}}/>
                 <div style={{display:"flex",justifyContent:"space-between",marginTop:2}}>
-                  <span style={{fontSize:10,color:t.tx3}}>€20k</span>
+                  <span style={{fontSize:10,color:t.tx3}}>€10k</span>
                   <span style={{fontSize:14,fontWeight:700,color:BC}}>{bl}</span>
                   <span style={{fontSize:10,color:t.tx3}}>No limit</span>
                 </div>
@@ -448,6 +456,12 @@ function EVFinder({goSearch,navigate,t,favIds,toggleFav}){
                 </div>
               )}
               <div style={{fontSize:15,fontWeight:700,color:t.tx}}>Top matches</div>
+              {res.length===0?(
+                <div style={{...cs(t),borderRadius:12,padding:"24px 18px",textAlign:"center"}}>
+                  <div style={{fontSize:13,fontWeight:600,color:t.tx}}>No EVs match this budget yet</div>
+                  <div style={{fontSize:12,color:t.tx2,marginTop:6,lineHeight:1.5}}>Try raising your budget a little — the most affordable EVs we track start around €20,000.</div>
+                </div>
+              ):(
               <div style={{display:"flex",gap:12,overflowX:"auto",paddingBottom:4}}>
                 {res.map((r,i)=>(
                   <div key={i} style={{minWidth:250,flex:"0 0 250px",...cs(t),borderRadius:14,overflow:"hidden",border:i===0?`2px solid ${BC}`:`1px solid ${t.bd}`,position:"relative"}}>
@@ -480,6 +494,7 @@ function EVFinder({goSearch,navigate,t,favIds,toggleFav}){
                   </div>
                 ))}
               </div>
+              )}
               <button onClick={()=>{setStep(1);setKmVal("")}} style={{alignSelf:"center",fontSize:11,color:BC,background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Start over</button>
             </div>
           )}
