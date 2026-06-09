@@ -13,6 +13,8 @@ function planConfig(plan) {
     case "list_6m":       return { priceId: process.env.STRIPE_PRICE_6M,            kind: "listing" };
     case "boost_daily":   return { priceId: process.env.STRIPE_PRICE_BOOST_DAILY,   kind: "boost" };
     case "boost_weekly":  return { priceId: process.env.STRIPE_PRICE_BOOST_WEEKLY,  kind: "boost" };
+    case "pack10_30d":    return { priceId: process.env.STRIPE_PRICE_PACK10_30D,    kind: "pack" };
+    case "pack10_6m":     return { priceId: process.env.STRIPE_PRICE_PACK10_6M,     kind: "pack" };
     default: return null;
   }
 }
@@ -37,7 +39,8 @@ exports.handler = async (event) => {
     const { plan, listingId } = JSON.parse(event.body || "{}");
     const cfg = planConfig(plan);
     if (!cfg || !cfg.priceId) return { statusCode: 400, body: "Unknown or unconfigured plan" };
-    if (!listingId) return { statusCode: 400, body: "Missing listingId" };
+    // Packs are account-level; a listingId is optional (applies 1 credit to it on success)
+    if (cfg.kind !== "pack" && !listingId) return { statusCode: 400, body: "Missing listingId" };
 
     const authHeader = event.headers.authorization || event.headers.Authorization || "";
     const token = authHeader.replace(/^Bearer\s+/i, "");
@@ -51,11 +54,11 @@ exports.handler = async (event) => {
       line_items: [{ price: cfg.priceId, quantity: 1 }],
       // Save the card for convenience on future manual renewals
       payment_intent_data: { setup_future_usage: "off_session" },
-      metadata: { user_id: userId, listing_id: String(listingId), plan },
+      metadata: { user_id: userId, listing_id: listingId ? String(listingId) : "none", plan },
       success_url: `${site}/account?page=listings&paid=1`,
       cancel_url: cfg.kind === "boost"
         ? `${site}/boost?listing=${listingId}`
-        : `${site}/plan?listing=${listingId}`,
+        : (listingId ? `${site}/plan?listing=${listingId}` : `${site}/account?page=listings`),
     });
 
     return { statusCode: 200, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: session.url }) };

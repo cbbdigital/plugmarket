@@ -67,6 +67,23 @@ exports.handler = async (event) => {
           is_boosted: true,
           boost_until: addDays(new Date(), days).toISOString(),
         });
+      } else if (plan === "pack10_30d" || plan === "pack10_6m") {
+        const is6 = plan === "pack10_6m";
+        const col = is6 ? "listing_credits_6m" : "listing_credits_30d";
+        const userId = (stripeEvent.data.object.metadata || {}).user_id;
+        const prof = await sbGet("profiles", `id=eq.${userId}&select=${col}`);
+        let credits = (prof?.[0]?.[col] || 0) + 10;
+        // If a listing was being published, put it online now using 1 credit
+        if (listing_id && listing_id !== "none") {
+          await sbPatch("listings", `id=eq.${listing_id}`, {
+            paid_until: addDays(new Date(), is6 ? 180 : 30).toISOString(),
+            plan: is6 ? "6m" : "30d",
+            status: "active",
+            renewal_notified: false,
+          });
+          credits -= 1;
+        }
+        await sbPatch("profiles", `id=eq.${userId}`, { [col]: credits });
       }
     } catch (e) {
       console.error("Webhook handling error:", e);
