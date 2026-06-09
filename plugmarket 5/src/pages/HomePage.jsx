@@ -182,6 +182,10 @@ const Grd=p=><I {...p} d={<><rect x="3" y="3" width="7" height="7"/><rect x="14"
 const Info=p=><I {...p} d={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></>}/>;
 const Sun=p=><I {...p} d={<><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></>}/>;
 const Moon=p=><I {...p} d={<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>}/>;
+const Route=p=><I {...p} d={<><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="6" r="2.4"/><path d="M8.4 18H14a3 3 0 000-6h-4a3 3 0 010-6h5.6"/></>}/>;
+const Sliders=p=><I {...p} d={<><path d="M4 8h10M18 8h2M4 16h2M10 16h10"/><circle cx="16" cy="8" r="2"/><circle cx="8" cy="16" r="2"/></>}/>;
+const Euro=p=><I {...p} d={<path d="M17 6.5A6 6 0 1017 17.5M5 10h9M5 14h9"/>}/>;
+const Pin=p=><I {...p} d={<><path d="M12 21s6-5.3 6-10a6 6 0 00-12 0c0 4.7 6 10 6 10z"/><circle cx="12" cy="11" r="2.2"/></>}/>;
 const Lock=p=><I {...p} d={<><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></>}/>;
 const Mail=p=><I {...p} d={<><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22,6 12,13 2,6"/></>}/>;
 const MsgIc=p=><I {...p} d={<><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></>}/>;
@@ -518,6 +522,13 @@ export default function HomePage() {
   const [rngMin, setRngMin] = useState("");
   const [yMin, setYMin] = useState("");
   const [smartQuery, setSmartQuery] = useState("");
+  const [mode, setMode] = useState("specs");        // specs | drive
+  const [evOpen, setEvOpen] = useState(false);
+  const [batMin, setBatMin] = useState("");
+  const [drive, setDrive] = useState("");
+  const [phIdx, setPhIdx] = useState(0);
+  const PLACEHOLDERS = ['"2022 Porsche Taycan RWD"','"Tesla under €40,000"','"Ioniq 5 in Germany"','"AWD with 500km+ range"'];
+  useEffect(()=>{const id=setInterval(()=>setPhIdx(i=>(i+1)%PLACEHOLDERS.length),3200);return()=>clearInterval(id)},[]);
 
   // Smart search — parse natural language into filters
   const doSmartSearch = () => {
@@ -559,18 +570,27 @@ export default function HomePage() {
   const auth = useAuth();
   const { listings: dbListings, loading: dbLoading } = useListings();
   const allListings = dbListings;
-  const featuredListings = dbListings.filter(l=>l.ft).slice(0,4);
-  const recentListings = dbListings.slice(0,5);
+  const boostedListings = dbListings.filter(l=>l.ft);
+  const browseListings = dbListings.filter(l=>!l.ft);
+  const featuredListings = boostedListings.slice(0,6);
+  const recentListings = browseListings.slice(0,12);
+  const countryCount = new Set(allListings.map(l=>l.co).filter(Boolean)).size;
+  const makeCount = new Set(allListings.map(l=>l.mk).filter(Boolean)).size;
+  const activeCount = [make,model,co,yMin,pMin,pMax,rngMin,batMin,drive].filter(Boolean).length + (smartQuery.trim()?1:0);
   const filteredCount = allListings.filter(l=>{
     if(make&&l.mk!==make)return false;
-    if(model&&l.md!==model)return false;
+    if(model&&model!=="Any"&&l.md!==model)return false;
     if(co&&l.co!==co)return false;
     if(yMin&&l.yr<+yMin)return false;
     if(pMin&&l.pr<+pMin)return false;
     if(pMax&&l.pr>+pMax)return false;
     if(rngMin&&l.rng<+rngMin)return false;
+    if(batMin&&l.bat<+batMin)return false;
+    if(drive&&l.dr!==drive)return false;
     return true;
   }).length;
+  const resetFilters=()=>{setMake("");setModel("");setCo("");setYMin("");setPMin("");setPMax("");setRngMin("");setBatMin("");setDrive("");setSmartQuery("")};
+  const submitFilters=()=>{const p=new URLSearchParams();if(make)p.set("make",make);if(model&&model!=="Any")p.set("model",model);if(co)p.set("co",co);if(yMin)p.set("yMin",yMin);if(pMin)p.set("pMin",pMin);if(pMax)p.set("pMax",pMax);if(rngMin)p.set("rMin",rngMin);if(batMin)p.set("bMin",batMin);if(drive)p.set("dr",drive);navigate(`/search?${p.toString()}`)};
 
   useEffect(() => {
     if (!auth.token) return;
@@ -589,97 +609,169 @@ export default function HomePage() {
     }
   };
 
-  const models = make ? MK[make] || [] : [];
-
   return (
     <>
-      <div style={{padding:"20px 0 16px"}}>
-        <div style={{maxWidth:520}}>
-          <h1 style={{fontSize:26,fontWeight:800,lineHeight:1.2,margin:"0 0 4px",color:t.tx}}>Find your perfect<br/><span style={{background:"linear-gradient(135deg,#FF7500,#FF9533)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>electric vehicle</span></h1>
-          <p style={{fontSize:13,color:t.tx2,margin:"0 0 16px"}}>{new Set(allListings.map(l=>l.co)).size} countries. {allListings.length} EVs listed.</p>
-          <div style={{...cs(t),borderRadius:16,padding:18,display:"flex",flexDirection:"column",gap:10}}>
-            {/* ── Smart search bar ── */}
-            <div style={{position:"relative"}}>
-              <input
-                type="text"
-                value={smartQuery}
-                onChange={e=>setSmartQuery(e.target.value)}
-                onKeyDown={e=>{if(e.key==="Enter")doSmartSearch()}}
-                placeholder='"2022 Porsche Taycan RWD" or "Tesla under 40000"'
-                style={{...is(t),height:46,paddingLeft:38,paddingRight:14,fontSize:13}}
-              />
-              <div style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}}><Srch size={16} color={t.tx3}/></div>
-            </div>
-            {smartQuery.trim()&&<button onClick={doSmartSearch} style={{width:"100%",height:44,borderRadius:12,border:"none",background:BG,color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-              <Srch size={17} color="#fff"/>Search
-            </button>}
-            {/* ── "or" divider ── */}
-            <div style={{display:"flex",alignItems:"center",gap:12}}>
-              <div style={{flex:1,height:1,background:t.bd}}/>
-              <span style={{fontSize:11,fontWeight:500,color:t.tx3}}>or filter by</span>
-              <div style={{flex:1,height:1,background:t.bd}}/>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <Sel v={make} onChange={v=>{setMake(v);setModel("")}} opts={Object.keys(MK).sort()} ph="Make" t={t}/>
-              <Sel v={model} onChange={setModel} opts={models} ph="Any" t={t}/>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <Sel v={co} onChange={setCo} opts={CO.map(c=>({v:c.c,l:`${c.f} ${c.n}`}))} ph="Country" t={t}/>
-              <Sel v={yMin} onChange={setYMin} opts={["2025","2024","2023","2022","2021","2020","2019","2018"]} ph="Year from" t={t}/>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              {[{ph:"Price from",vl:pMin,s:setPMin},{ph:"Price to",vl:pMax,s:setPMax}].map((f,i)=>(
-                <div key={i} style={{position:"relative"}}>
-                  <input type="number" placeholder={f.ph} value={f.vl} onChange={e=>f.s(e.target.value)} style={{...is(t),paddingRight:28}}/>
-                  <span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",fontSize:11,color:t.tx3}}>€</span>
-                </div>
-              ))}
-            </div>
-            <div style={{borderTop:`1px solid ${t.bd}`,paddingTop:10}}>
-              <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:8}}><Bolt size={12} color={BC}/><span style={{fontSize:11,fontWeight:600,color:BC}}>EV filters</span></div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                <div style={{position:"relative"}}><input type="number" placeholder="Min range" value={rngMin} onChange={e=>setRngMin(e.target.value)} style={{...is(t),paddingRight:28}}/><span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",fontSize:11,color:t.tx3}}>km</span></div>
-                <div style={{position:"relative"}}><input type="number" placeholder="Min battery" defaultValue="" style={{...is(t),paddingRight:34}}/><span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",fontSize:11,color:t.tx3}}>kWh</span></div>
-              </div>
-            </div>
-            <button onClick={()=>{const p=new URLSearchParams();if(make)p.set("make",make);if(model)p.set("model",model);if(co)p.set("co",co);if(yMin)p.set("yMin",yMin);if(pMin)p.set("pMin",pMin);if(pMax)p.set("pMax",pMax);if(rngMin)p.set("rMin",rngMin);navigate(`/search?${p.toString()}`)}} style={{width:"100%",height:44,borderRadius:12,border:"none",background:BG,color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:2}}>
-              <Srch size={17} color="#fff"/>Search {filteredCount} EVs
-            </button>
-          </div>
+      {/* HERO */}
+      <div style={{textAlign:"center",padding:"clamp(28px,5vw,70px) 0 24px",maxWidth:740,margin:"0 auto"}}>
+        <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"6px 14px",borderRadius:999,background:"linear-gradient(135deg,rgba(255,117,0,0.18),rgba(255,149,51,0.10))",border:"1px solid rgba(255,117,0,0.22)",marginBottom:18}}>
+          <span style={{width:7,height:7,borderRadius:"50%",background:BC,boxShadow:"0 0 8px rgba(255,117,0,0.8)"}}/>
+          <span style={{fontSize:12.5,fontWeight:600,color:"#FFC089"}}>Europe's electric-only marketplace</span>
         </div>
-      </div>
-      <div style={{padding:"4px 0 20px"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-          <div><div style={{fontSize:17,fontWeight:700,color:t.tx}}>Featured vehicles</div><div style={{fontSize:12,color:t.tx3}}>Premium listings</div></div>
-          <button onClick={()=>navigate("/search")} style={{display:"flex",alignItems:"center",gap:3,background:"none",border:"none",color:BC,fontSize:12,fontWeight:600,cursor:"pointer"}}>View all<CR size={13} color={BC}/></button>
-        </div>
-        <div style={{display:"flex",gap:14,overflowX:"auto",paddingBottom:6,maskImage:"linear-gradient(to right,black 95%,transparent 100%)",WebkitMaskImage:"linear-gradient(to right,black 95%,transparent 100%)"}}>
-          {dbLoading?<div style={{padding:"30px 0",width:"100%",textAlign:"center",fontSize:12,color:t.tx3}}>Loading...</div>
-          :featuredListings.length===0?<div style={{padding:"30px 0",width:"100%",textAlign:"center",fontSize:13,color:t.tx3}}>No featured listings yet. Be the first to list your EV!</div>
-          :featuredListings.map(c=><PCard key={c.id} c={c} favIds={favIds} toggleFav={toggleFav} t={t} onPress={(id)=>navigate(`/listing/${id}`)}/>)}
-        </div>
-      </div>
-      <div style={{padding:"0 0 20px"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-          <div><div style={{fontSize:17,fontWeight:700,color:t.tx}}>Recently added</div><div style={{fontSize:12,color:t.tx3}}>Fresh listings</div></div>
-          <button onClick={()=>navigate("/search")} style={{display:"flex",alignItems:"center",gap:3,background:"none",border:"none",color:BC,fontSize:12,fontWeight:600,cursor:"pointer"}}>View all<CR size={13} color={BC}/></button>
-        </div>
-        <div style={{display:"flex",gap:12,overflowX:"auto",paddingBottom:6,maskImage:"linear-gradient(to right,black 95%,transparent 100%)",WebkitMaskImage:"linear-gradient(to right,black 95%,transparent 100%)"}}>
-          {dbLoading?<div style={{padding:"30px 0",width:"100%",textAlign:"center",fontSize:12,color:t.tx3}}>Loading...</div>
-          :recentListings.length===0?<div style={{padding:"30px 0",width:"100%",textAlign:"center",fontSize:13,color:t.tx3}}>No listings yet</div>
-          :recentListings.map(c=><RCard key={c.id} c={c} t={t} onPress={(id)=>navigate(`/listing/${id}`)}/>)}
+        <h1 style={{fontSize:"clamp(34px,6vw,60px)",fontWeight:700,lineHeight:1.03,letterSpacing:"-0.03em",margin:"0 0 14px",color:t.tx}}>
+          Find your perfect<br/><span style={{background:BG,WebkitBackgroundClip:"text",backgroundClip:"text",WebkitTextFillColor:"transparent"}}>electric vehicle</span>
+        </h1>
+        <p style={{fontSize:17,fontWeight:450,lineHeight:1.5,color:t.tx2,maxWidth:540,margin:"0 auto"}}>
+          Search verified EV listings across Europe — filtered the way EV drivers actually shop: by range, battery and real charging speed.
+        </p>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,flexWrap:"wrap",marginTop:18,fontSize:13,color:t.tx2}}>
+          <span><b style={{color:t.tx,fontSize:16}}>{allListings.length}</b> EVs listed</span>
+          <span style={{width:4,height:4,borderRadius:"50%",background:t.tx3}}/>
+          <span><b style={{color:t.tx,fontSize:16}}>{countryCount}</b> countries</span>
+          <span style={{width:4,height:4,borderRadius:"50%",background:t.tx3}}/>
+          <span><b style={{color:t.tx,fontSize:16}}>{makeCount}</b> makes</span>
         </div>
       </div>
 
-      {/* EV FINDER */}
-      <EVFinder goSearch={()=>navigate("/search")} navigate={navigate} t={t} favIds={favIds} toggleFav={toggleFav}/>
-      <div style={{borderTop:`1px solid ${t.bd}`,padding:"20px 0",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+      {/* SEARCH PANEL */}
+      <div style={{maxWidth:920,margin:"0 auto"}}>
+        <div style={{...cs(t),borderRadius:24,padding:12,boxShadow:"0 24px 60px -20px rgba(0,0,0,0.55)"}}>
+          {/* mode tabs */}
+          <div style={{display:"flex",gap:4,padding:4,borderRadius:14,background:t.sec,marginBottom:12}}>
+            {[{k:"specs",l:"Search by specs",ic:<Sliders size={15}/>},{k:"drive",l:"Match to how I drive",ic:<Route size={15}/>}].map(tb=>{
+              const on=mode===tb.k;
+              return <button key={tb.k} onClick={()=>setMode(tb.k)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:7,height:42,borderRadius:11,border:on?`1.5px solid ${BC}`:"1.5px solid transparent",background:on?"rgba(255,117,0,0.08)":"transparent",color:on?BC:t.tx2,fontSize:13.5,fontWeight:on?700:500,cursor:"pointer"}}>{tb.ic}{tb.l}</button>;
+            })}
+          </div>
+
+          {mode==="specs"?(
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              {/* search bar */}
+              <div style={{display:"flex",alignItems:"center",gap:8,height:60,borderRadius:16,background:t.inp,border:`1px solid ${t.bd}`,padding:"0 8px 0 16px"}}>
+                <Srch size={18} color={t.tx3}/>
+                <input value={smartQuery} onChange={e=>setSmartQuery(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")doSmartSearch()}} placeholder={`Try ${PLACEHOLDERS[phIdx]}`} style={{flex:1,height:"100%",border:"none",outline:"none",background:"transparent",color:t.tx,fontSize:16}}/>
+                <button onClick={doSmartSearch} style={{display:"flex",alignItems:"center",gap:6,height:44,padding:"0 16px",borderRadius:12,border:"none",background:BG,color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer"}}><Srch size={15} color="#fff"/><span>Search</span></button>
+              </div>
+
+              {/* divider */}
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                <div style={{flex:1,height:1,background:t.bd}}/>
+                <span style={{fontSize:11.5,fontWeight:600,letterSpacing:"0.12em",textTransform:"uppercase",color:t.tx3}}>or filter by</span>
+                <div style={{flex:1,height:1,background:t.bd}}/>
+              </div>
+
+              {/* filter grid */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <Sel v={make} onChange={v=>{setMake(v);setModel("")}} opts={Object.keys(MK).sort()} ph="Any make" t={t}/>
+                <Sel v={model} onChange={setModel} opts={make?["Any",...(MK[make]||[])]:[]} ph={make?"Any model":"Pick a make first"} t={t}/>
+                <Sel v={co} onChange={setCo} opts={CO.map(c=>({v:c.c,l:c.n}))} ph="Anywhere" t={t}/>
+                <Sel v={yMin} onChange={setYMin} opts={Array.from({length:2026-2010+1},(_,i)=>String(2026-i))} ph="Any year" t={t}/>
+                {[{ph:"0",vl:pMin,s:setPMin},{ph:"No max",vl:pMax,s:setPMax}].map((f,i)=>(
+                  <div key={i} style={{position:"relative"}}>
+                    <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:13,color:t.tx3}}>€</span>
+                    <input type="number" placeholder={f.ph} value={f.vl} onChange={e=>f.s(e.target.value)} style={{...is(t),paddingLeft:26}}/>
+                  </div>
+                ))}
+              </div>
+
+              {/* EV filters disclosure */}
+              <div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <Bolt size={14} color={BC}/><span style={{fontSize:14,fontWeight:650,color:BC}}>EV filters</span>
+                  <button onClick={()=>setEvOpen(o=>!o)} style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:4,background:"none",border:"none",color:t.tx2,fontSize:12.5,fontWeight:600,cursor:"pointer"}}>
+                    {evOpen?"Hide":"Show"}<span style={{display:"inline-flex",transform:evOpen?"rotate(180deg)":"none",transition:"transform 0.2s"}}><CD size={14} color={t.tx2}/></span>
+                  </button>
+                </div>
+                {evOpen&&(
+                  <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:10}}>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                      <div style={{position:"relative"}}><input type="number" placeholder="Min range" value={rngMin} onChange={e=>setRngMin(e.target.value)} style={{...is(t),paddingRight:34}}/><span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",fontSize:11,color:t.tx3}}>km</span></div>
+                      <div style={{position:"relative"}}><input type="number" placeholder="Min battery" value={batMin} onChange={e=>setBatMin(e.target.value)} style={{...is(t),paddingRight:42}}/><span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",fontSize:11,color:t.tx3}}>kWh</span></div>
+                    </div>
+                    <div>
+                      <div style={{fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.07em",color:t.tx3,marginBottom:6}}>Drivetrain</div>
+                      <div style={{display:"flex",gap:8}}>
+                        {["RWD","FWD","AWD"].map(d=>{const on=drive===d;return <button key={d} onClick={()=>setDrive(on?"":d)} style={{flex:1,height:40,borderRadius:10,border:on?"none":`1px solid ${t.bd}`,background:on?BG:t.inp,color:on?"#fff":t.tx,fontSize:13,fontWeight:on?700:500,cursor:"pointer"}}>{d}</button>;})}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* footer actions */}
+              <div style={{display:"flex",gap:10}}>
+                {activeCount>0&&<button onClick={resetFilters} style={{height:56,padding:"0 18px",borderRadius:14,border:`1px solid ${t.bd}`,background:t.inp,color:t.tx,fontSize:13.5,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>Reset ({activeCount})</button>}
+                <button onClick={submitFilters} style={{flex:1,height:56,borderRadius:14,border:"none",background:BG,color:"#fff",fontSize:16,fontWeight:680,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,boxShadow:"0 14px 34px -10px rgba(255,117,0,0.45)"}}>
+                  <Srch size={18} color="#fff"/>{activeCount===0?"Search all EVs":"Show matches"}
+                  <span style={{fontSize:13,fontWeight:700,background:"rgba(0,0,0,0.18)",borderRadius:999,padding:"3px 11px"}}>{filteredCount}</span>
+                </button>
+              </div>
+            </div>
+          ):(
+            /* DRIVE MODE → existing wizard */
+            <EVFinder goSearch={()=>navigate("/search")} navigate={navigate} t={t} favIds={favIds} toggleFav={toggleFav} embedded/>
+          )}
+        </div>
+
+        {/* popular chips — specs mode only */}
+        {mode==="specs"&&(
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",justifyContent:"center",marginTop:16}}>
+            <span style={{fontSize:12.5,color:t.tx3}}>Popular:</span>
+            {[
+              {l:"Tesla Model 3",q:"make=Tesla&model=Model+3"},
+              {l:"Hyundai Ioniq 5",q:"make=Hyundai&model=Ioniq+5"},
+              {l:"Under €30k",q:"pMax=30000"},
+              {l:"500km+ range",q:"rMin=500"},
+              {l:"BMW i4",q:"make=BMW&model=i4"},
+              {l:"Polestar 2",q:"make=Polestar&model=Polestar+2"},
+            ].map(c=>(
+              <button key={c.l} onClick={()=>navigate(`/search?${c.q}`)} style={{padding:"7px 14px",borderRadius:999,border:`1px solid ${t.bd}`,background:t.inp,color:t.tx2,fontSize:12.5,fontWeight:500,cursor:"pointer"}}>{c.l}</button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* LISTING SECTIONS (aligned to 920px panel) */}
+      <div style={{maxWidth:920,margin:"40px auto 0"}}>
+        {/* Boosted */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:14}}>
+          <div><div style={{fontSize:19,fontWeight:700,color:t.tx}}>Boosted listings</div><div style={{fontSize:12.5,color:t.tx3,marginTop:2}}>{boostedListings.length} premium {boostedListings.length===1?"listing":"listings"}</div></div>
+          {boostedListings.length>0&&<button onClick={()=>navigate("/search")} style={{display:"flex",alignItems:"center",gap:3,background:"none",border:"none",color:BC,fontSize:13,fontWeight:600,cursor:"pointer"}}>View all<CR size={14} color={BC}/></button>}
+        </div>
+        {dbLoading?<div style={{padding:"30px 0",textAlign:"center",fontSize:13,color:t.tx3}}>Loading…</div>
+        :featuredListings.length===0?<div style={{...cs(t),padding:"28px 0",textAlign:"center",fontSize:13,color:t.tx3,borderStyle:"dashed"}}>No listings yet — be the first to list your EV.</div>
+        :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:14}}>
+            {featuredListings.map(c=><PCard key={c.id} c={c} favIds={favIds} toggleFav={toggleFav} t={t} onPress={(id)=>navigate(`/listing/${id}`)}/>)}
+          </div>}
+
+        {/* Browse all */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",margin:"36px 0 14px"}}>
+          <div><div style={{fontSize:19,fontWeight:700,color:t.tx}}>Browse all EVs</div><div style={{fontSize:12.5,color:t.tx3,marginTop:2}}>{browseListings.length} available across Europe</div></div>
+          {browseListings.length>0&&<button onClick={()=>navigate("/search")} style={{display:"flex",alignItems:"center",gap:3,background:"none",border:"none",color:BC,fontSize:13,fontWeight:600,cursor:"pointer"}}>View all<CR size={14} color={BC}/></button>}
+        </div>
+        {dbLoading?<div style={{padding:"30px 0",textAlign:"center",fontSize:13,color:t.tx3}}>Loading…</div>
+        :recentListings.length===0?<div style={{...cs(t),padding:"28px 0",textAlign:"center",fontSize:13,color:t.tx3,borderStyle:"dashed"}}>No listings yet — be the first to list your EV.</div>
+        :<div style={{display:"flex",gap:12,overflowX:"auto",paddingBottom:6,maskImage:"linear-gradient(to right,black 95%,transparent 100%)",WebkitMaskImage:"linear-gradient(to right,black 95%,transparent 100%)"}}>
+            {recentListings.map(c=><RCard key={c.id} c={c} t={t} onPress={(id)=>navigate(`/listing/${id}`)}/>)}
+          </div>}
+      </div>
+
+      {/* TRUST ROW */}
+      <div style={{maxWidth:920,margin:"54px auto 0",display:"flex",justifyContent:"center",gap:24,flexWrap:"wrap"}}>
+        {[{ic:<Shld size={16} color={BC}/>,l:"Every listing battery-health checked"},{ic:<Sliders size={16} color={BC}/>,l:"Filter by range, battery & charge speed"},{ic:<Euro size={16} color={BC}/>,l:"No buyer fees, ever"}].map((x,i)=>(
+          <div key={i} style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:t.tx2}}>{x.ic}{x.l}</div>
+        ))}
+      </div>
+
+      {/* footer */}
+      <div style={{borderTop:`1px solid ${t.bd}`,marginTop:40,padding:"20px 0",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
         <div style={{display:"flex",alignItems:"center",gap:6}}>
           <div style={{width:22,height:22,borderRadius:6,background:BG,display:"flex",alignItems:"center",justifyContent:"center"}}><Bolt size={11} color="#fff"/></div>
           <span style={{fontSize:13,fontWeight:600,color:t.tx}}>PlugMarket<span style={{color:BC}}>.eu</span></span>
         </div>
         <div style={{display:"flex",gap:16,fontSize:11,color:t.tx3}}>
-          <span style={{cursor:"pointer"}}>About</span><span style={{cursor:"pointer"}}>For dealers</span><span style={{cursor:"pointer"}}>Privacy</span>
+          <span onClick={()=>navigate("/account?page=terms")} style={{cursor:"pointer"}}>About</span>
+          <span onClick={()=>navigate("/signup")} style={{cursor:"pointer"}}>For dealers</span>
+          <span onClick={()=>navigate("/account?page=terms")} style={{cursor:"pointer"}}>Privacy</span>
         </div>
         <div style={{fontSize:10,color:t.tx3}}>© 2026 PlugMarket.eu</div>
       </div>
