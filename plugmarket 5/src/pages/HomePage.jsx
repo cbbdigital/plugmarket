@@ -512,6 +512,8 @@ function EVFinder({goSearch,navigate,t,favIds,toggleFav}){
 export default function HomePage() {
   const { t, dark } = useOutletContext();
   const navigate = useNavigate();
+  const [narrow,setNarrow]=useState(()=>typeof window!=="undefined"&&window.innerWidth<640);
+  useEffect(()=>{const h=()=>setNarrow(window.innerWidth<640);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h)},[]);
   const [favIds, setFavIds] = useState(()=>{try{return JSON.parse(localStorage.getItem("pm_favs")||"[]")}catch{return[]}});
   useEffect(()=>{try{localStorage.setItem("pm_favs",JSON.stringify(favIds))}catch{}},[favIds]);
   const [make, setMake] = useState("");
@@ -612,18 +614,18 @@ export default function HomePage() {
   return (
     <>
       {/* HERO */}
-      <div style={{textAlign:"center",padding:"clamp(28px,5vw,70px) 0 24px",maxWidth:740,margin:"0 auto"}}>
-        <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"6px 14px",borderRadius:999,background:"linear-gradient(135deg,rgba(255,117,0,0.18),rgba(255,149,51,0.10))",border:"1px solid rgba(255,117,0,0.22)",marginBottom:18}}>
+      <div style={{textAlign:"center",padding:narrow?"16px 0 18px":"clamp(28px,5vw,70px) 0 24px",maxWidth:740,margin:"0 auto"}}>
+        <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"6px 14px",borderRadius:999,background:"linear-gradient(135deg,rgba(255,117,0,0.18),rgba(255,149,51,0.10))",border:"1px solid rgba(255,117,0,0.22)",marginBottom:16}}>
           <span style={{width:7,height:7,borderRadius:"50%",background:BC,boxShadow:"0 0 8px rgba(255,117,0,0.8)"}}/>
-          <span style={{fontSize:12.5,fontWeight:600,color:"#FFC089"}}>Europe's electric-only marketplace</span>
+          <span style={{fontSize:narrow?11.5:12.5,fontWeight:600,color:"#FFC089"}}>Europe's electric-only marketplace</span>
         </div>
-        <h1 style={{fontSize:"clamp(34px,6vw,60px)",fontWeight:700,lineHeight:1.03,letterSpacing:"-0.03em",margin:"0 0 14px",color:t.tx}}>
+        <h1 style={{fontSize:narrow?30:"clamp(34px,6vw,60px)",fontWeight:700,lineHeight:1.05,letterSpacing:"-0.03em",margin:"0 0 12px",color:t.tx}}>
           Find your perfect<br/><span style={{background:BG,WebkitBackgroundClip:"text",backgroundClip:"text",WebkitTextFillColor:"transparent"}}>electric vehicle</span>
         </h1>
-        <p style={{fontSize:17,fontWeight:450,lineHeight:1.5,color:t.tx2,maxWidth:540,margin:"0 auto"}}>
+        <p style={{fontSize:narrow?14:17,fontWeight:450,lineHeight:1.5,color:t.tx2,maxWidth:540,margin:"0 auto",padding:narrow?"0 4px":0}}>
           Search verified EV listings across Europe — filtered the way EV drivers actually shop: by range, battery and real charging speed.
         </p>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,flexWrap:"wrap",marginTop:18,fontSize:13,color:t.tx2}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,flexWrap:"wrap",marginTop:16,fontSize:13,color:t.tx2}}>
           <span><b style={{color:t.tx,fontSize:16}}>{allListings.length}</b> EVs listed</span>
           <span style={{width:4,height:4,borderRadius:"50%",background:t.tx3}}/>
           <span><b style={{color:t.tx,fontSize:16}}>{countryCount}</b> countries</span>
@@ -639,17 +641,17 @@ export default function HomePage() {
           <div style={{display:"flex",gap:4,padding:4,borderRadius:14,background:t.sec,marginBottom:12}}>
             {[{k:"specs",l:"Search by specs",ic:<Sliders size={15}/>},{k:"drive",l:"Match to how I drive",ic:<Route size={15}/>}].map(tb=>{
               const on=mode===tb.k;
-              return <button key={tb.k} onClick={()=>setMode(tb.k)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:7,height:42,borderRadius:11,border:on?`1.5px solid ${BC}`:"1.5px solid transparent",background:on?"rgba(255,117,0,0.08)":"transparent",color:on?BC:t.tx2,fontSize:13.5,fontWeight:on?700:500,cursor:"pointer"}}>{tb.ic}{tb.l}</button>;
+              return <button key={tb.k} onClick={()=>setMode(tb.k)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:narrow?5:7,height:42,borderRadius:11,border:on?`1.5px solid ${BC}`:"1.5px solid transparent",background:on?"rgba(255,117,0,0.08)":"transparent",color:on?BC:t.tx2,fontSize:narrow?12:13.5,fontWeight:on?700:500,cursor:"pointer",padding:"0 4px",lineHeight:1.1}}>{tb.ic}{narrow?(tb.k==="specs"?"By specs":"By driving"):tb.l}</button>;
             })}
           </div>
 
           {mode==="specs"?(
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
               {/* search bar */}
-              <div style={{display:"flex",alignItems:"center",gap:8,height:60,borderRadius:16,background:t.inp,border:`1px solid ${t.bd}`,padding:"0 8px 0 16px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,height:narrow?54:60,borderRadius:16,background:t.inp,border:`1px solid ${t.bd}`,padding:narrow?"0 6px 0 12px":"0 8px 0 16px"}}>
                 <Srch size={18} color={t.tx3}/>
-                <input value={smartQuery} onChange={e=>setSmartQuery(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")doSmartSearch()}} placeholder={`Try ${PLACEHOLDERS[phIdx]}`} style={{flex:1,height:"100%",border:"none",outline:"none",background:"transparent",color:t.tx,fontSize:16}}/>
-                <button onClick={doSmartSearch} style={{display:"flex",alignItems:"center",gap:6,height:44,padding:"0 16px",borderRadius:12,border:"none",background:BG,color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer"}}><Srch size={15} color="#fff"/><span>Search</span></button>
+                <input value={smartQuery} onChange={e=>setSmartQuery(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")doSmartSearch()}} placeholder={narrow?"Search EVs…":`Try ${PLACEHOLDERS[phIdx]}`} style={{flex:1,minWidth:0,height:"100%",border:"none",outline:"none",background:"transparent",color:t.tx,fontSize:narrow?15:16}}/>
+                <button onClick={doSmartSearch} style={{flexShrink:0,display:"flex",alignItems:"center",gap:6,height:narrow?42:44,padding:narrow?"0 14px":"0 16px",borderRadius:12,border:"none",background:BG,color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer"}}><Srch size={15} color="#fff"/>{!narrow&&<span>Search</span>}</button>
               </div>
 
               {/* divider */}
@@ -660,12 +662,12 @@ export default function HomePage() {
               </div>
 
               {/* filter grid */}
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <div style={{display:"grid",gridTemplateColumns:narrow?"1fr":"1fr 1fr",gap:10}}>
                 <Sel v={make} onChange={v=>{setMake(v);setModel("")}} opts={Object.keys(MK).sort()} ph="Any make" t={t}/>
                 <Sel v={model} onChange={setModel} opts={make?["Any",...(MK[make]||[])]:[]} ph={make?"Any model":"Pick a make first"} t={t}/>
                 <Sel v={co} onChange={setCo} opts={CO.map(c=>({v:c.c,l:c.n}))} ph="Anywhere" t={t}/>
                 <Sel v={yMin} onChange={setYMin} opts={Array.from({length:2026-2010+1},(_,i)=>String(2026-i))} ph="Any year" t={t}/>
-                {[{ph:"0",vl:pMin,s:setPMin},{ph:"No max",vl:pMax,s:setPMax}].map((f,i)=>(
+                {[{ph:"Price from",vl:pMin,s:setPMin},{ph:"Price to",vl:pMax,s:setPMax}].map((f,i)=>(
                   <div key={i} style={{position:"relative"}}>
                     <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:13,color:t.tx3}}>€</span>
                     <input type="number" placeholder={f.ph} value={f.vl} onChange={e=>f.s(e.target.value)} style={{...is(t),paddingLeft:26}}/>
@@ -714,8 +716,8 @@ export default function HomePage() {
 
         {/* popular chips — specs mode only */}
         {mode==="specs"&&(
-          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",justifyContent:"center",marginTop:16}}>
-            <span style={{fontSize:12.5,color:t.tx3}}>Popular:</span>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:narrow?"nowrap":"wrap",justifyContent:narrow?"flex-start":"center",marginTop:16,overflowX:narrow?"auto":"visible",paddingBottom:narrow?4:0,WebkitOverflowScrolling:"touch"}}>
+            <span style={{fontSize:12.5,color:t.tx3,flexShrink:0}}>Popular:</span>
             {[
               {l:"Tesla Model 3",q:"make=Tesla&model=Model+3"},
               {l:"Hyundai Ioniq 5",q:"make=Hyundai&model=Ioniq+5"},
@@ -724,7 +726,7 @@ export default function HomePage() {
               {l:"BMW i4",q:"make=BMW&model=i4"},
               {l:"Polestar 2",q:"make=Polestar&model=Polestar+2"},
             ].map(c=>(
-              <button key={c.l} onClick={()=>navigate(`/search?${c.q}`)} style={{padding:"7px 14px",borderRadius:999,border:`1px solid ${t.bd}`,background:t.inp,color:t.tx2,fontSize:12.5,fontWeight:500,cursor:"pointer"}}>{c.l}</button>
+              <button key={c.l} onClick={()=>navigate(`/search?${c.q}`)} style={{padding:"7px 14px",borderRadius:999,border:`1px solid ${t.bd}`,background:t.inp,color:t.tx2,fontSize:12.5,fontWeight:500,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>{c.l}</button>
             ))}
           </div>
         )}
@@ -739,7 +741,7 @@ export default function HomePage() {
         </div>
         {dbLoading?<div style={{padding:"30px 0",textAlign:"center",fontSize:13,color:t.tx3}}>Loading…</div>
         :featuredListings.length===0?<div style={{...cs(t),padding:"28px 0",textAlign:"center",fontSize:13,color:t.tx3,borderStyle:"dashed"}}>No listings yet — be the first to list your EV.</div>
-        :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:14}}>
+        :<div style={{display:"grid",gridTemplateColumns:narrow?"1fr":"repeat(auto-fill,minmax(260px,1fr))",gap:14}}>
             {featuredListings.map(c=><PCard key={c.id} c={c} favIds={favIds} toggleFav={toggleFav} t={t} onPress={(id)=>navigate(`/listing/${id}`)}/>)}
           </div>}
 
@@ -756,9 +758,9 @@ export default function HomePage() {
       </div>
 
       {/* TRUST ROW */}
-      <div style={{maxWidth:920,margin:"54px auto 0",display:"flex",justifyContent:"center",gap:24,flexWrap:"wrap"}}>
+      <div style={{maxWidth:920,margin:narrow?"36px auto 0":"54px auto 0",display:"flex",justifyContent:"center",gap:narrow?12:24,flexWrap:"wrap"}}>
         {[{ic:<Shld size={16} color={BC}/>,l:"Every listing battery-health checked"},{ic:<Sliders size={16} color={BC}/>,l:"Filter by range, battery & charge speed"},{ic:<Euro size={16} color={BC}/>,l:"No buyer fees, ever"}].map((x,i)=>(
-          <div key={i} style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:t.tx2}}>{x.ic}{x.l}</div>
+          <div key={i} style={{display:"flex",alignItems:"center",gap:8,fontSize:narrow?12.5:13,color:t.tx2}}>{x.ic}{x.l}</div>
         ))}
       </div>
 
