@@ -2,27 +2,70 @@ import { useState, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import Header from "./Header";
 import BNav from "./BNav";
+
+const SB_URL = import.meta.env.VITE_SUPABASE_URL || "https://tmftxqwqwceuiydleuag.supabase.co";
+const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+
+// Read the Supabase session from localStorage (token + user id)
+function getSession() {
+  try {
+    const raw = localStorage.getItem("sb-tmftxqwqwceuiydleuag-auth-token");
+    if (raw) { const s = JSON.parse(raw); if (s?.access_token) return { token: s.access_token, uid: s.user?.id }; }
+  } catch {}
+  return {};
+}
+
+// Count only real listing favourites (exclude evdb_ recommender hearts)
+function countReal(ids) {
+  return ids.filter(id => typeof id === "string" && id.length > 10 && !id.startsWith("evdb_")).length;
+}
+
 export default function Layout({ t, dark, setDark }) {
   const [favCount, setFavCount] = useState(0);
   const [msgCount, setMsgCount] = useState(0);
 
-  // Poll localStorage for fav count and unread messages
   useEffect(() => {
-    const update = () => {
-      try {
-        const favs = JSON.parse(localStorage.getItem("pm_favs") || "[]");
-        const real = favs.filter(id => typeof id === "string" && id.length > 10 && !id.startsWith("evdb_"));
-        setFavCount(real.length);
-      } catch { setFavCount(0); }
-      try {
-        const unread = parseInt(localStorage.getItem("pm_unread_msgs") || "0", 10);
-        setMsgCount(unread || 0);
-      } catch { setMsgCount(0); }
+    let alive = true;
+
+    const update = async () => {
+      const { token, uid } = getSession();
+
+      // Favourites: prefer Supabase (authoritative), fall back to localStorage
+      if (token && uid) {
+        try {
+          const r = await fetch(`${SB_URL}/rest/v1/favourites?user_id=eq.${uid}&select=listing_id`, {
+            headers: { apikey: SB_KEY, Authorization: `Bearer ${token}` },
+          });
+          if (r.ok) {
+            const rows = await r.json();
+            const ids = Array.isArray(rows) ? rows.map(x => x.listing_id) : [];
+            if (alive) setFavCount(countReal(ids));
+            // keep localStorage mirror in sync so other views agree
+            try { localStorage.setItem("pm_favs", JSON.stringify(ids)); } catch {}
+          }
+        } catch {
+          try { setFavCount(countReal(JSON.parse(localStorage.getItem("pm_favs") || "[]"))); } catch {}
+        }
+      } else {
+        try { setFavCount(countReal(JSON.parse(localStorage.getItem("pm_favs") || "[]"))); } catch { setFavCount(0); }
+      }
+
+      // Unread messages (localStorage)
+      try { setMsgCount(parseInt(localStorage.getItem("pm_unread_msgs") || "0", 10) || 0); } catch { setMsgCount(0); }
     };
+
     update();
-    window.addEventListener("storage", update);
-    const interval = setInterval(update, 2000);
-    return () => { window.removeEventListener("storage", update); clearInterval(interval); };
+    const onStorage = () => update();
+    const onFocus = () => update();
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("focus", onFocus);
+    const interval = setInterval(update, 4000);
+    return () => {
+      alive = false;
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", onFocus);
+      clearInterval(interval);
+    };
   }, []);
 
   return (
