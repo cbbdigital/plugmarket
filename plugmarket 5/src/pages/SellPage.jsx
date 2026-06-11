@@ -296,7 +296,7 @@ function PhotoLightbox({ photos, startIndex, onClose, t }) {
 
 export default function SellPage(){
   const { t, dark: d } = useOutletContext();
-  const { user, session, profile: authProfile } = useAuth();
+  const { user, session, profile: authProfile, loading: authLoading } = useAuth();
   const nav = useNavigate();
   const [sp] = useSearchParams();
   const editId = sp.get("edit");
@@ -360,9 +360,16 @@ export default function SellPage(){
   const [uploading, setUploading] = useState(false);
   const [uploadProg, setUploadProg] = useState("");
 
-  // Auth redirect
-  useEffect(() => { if (!user) nav("/login"); }, [user, nav]);
-  if (!user) return null;
+  // Auth redirect — wait for auth to finish loading so a press of "back" doesn't bounce you to /login
+  const hasStoredSession = () => {
+    try { const r = localStorage.getItem("sb-tmftxqwqwceuiydleuag-auth-token"); if (r) { const s = JSON.parse(r); return !!s?.access_token; } } catch {}
+    return false;
+  };
+  useEffect(() => { if (!authLoading && !user && !hasStoredSession()) nav("/login"); }, [authLoading, user, nav]);
+  if (!user) {
+    if (authLoading || hasStoredSession()) return <div style={{padding:"60px 0",textAlign:"center",fontSize:13,color:t.tx3}}>Loading…</div>;
+    return null;
+  }
 
   // Auto-fill contact details from profile (only for new listings)
   useEffect(() => {
