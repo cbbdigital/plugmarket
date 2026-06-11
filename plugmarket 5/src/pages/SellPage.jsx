@@ -3,6 +3,18 @@ import { useOutletContext, useNavigate, useSearchParams } from "react-router-dom
 import { useAuth } from "../lib/auth";
 import { BC, GR, cs } from "../styles/theme";
 import { getWLTP } from "../lib/wltp";
+import { EV_DB } from "../data/evdb";
+
+// Look up our known peak DC charging power for a make+model (best match).
+function lookupPeakDc(make, model) {
+  if (!make || !model) return null;
+  const mk = make.toLowerCase().trim();
+  const md = model.toLowerCase().trim();
+  // exact make+model match first, then make + model-contains
+  let hit = EV_DB.find(e => e.make?.toLowerCase() === mk && e.model?.toLowerCase() === md);
+  if (!hit) hit = EV_DB.find(e => e.make?.toLowerCase() === mk && (md.includes(e.model?.toLowerCase()) || e.model?.toLowerCase().includes(md)));
+  return hit?.dc_peak || null;
+}
 
 // ── Supabase REST client ──
 const SB_URL = import.meta.env.VITE_SUPABASE_URL || "https://tmftxqwqwceuiydleuag.supabase.co";
@@ -165,9 +177,8 @@ const STEPS = [
   { id:1, label:"Vehicle", icon:<CarIcon size={14}/> },
   { id:2, label:"EV details", icon:<BatteryIcon size={14}/> },
   { id:3, label:"Photos", icon:<CameraIcon size={14}/> },
-  { id:4, label:"Pricing", icon:<TagIcon size={14}/> },
-  { id:5, label:"Contact", icon:<UserIcon size={14}/> },
-  { id:6, label:"Review", icon:<CheckIcon size={14}/> },
+  { id:4, label:"Price & contact", icon:<TagIcon size={14}/> },
+  { id:5, label:"Review", icon:<CheckIcon size={14}/> },
 ];
 
 // ── Reusable components ──
@@ -694,12 +705,20 @@ export default function SellPage(){
     setPhotos(arr);
   };
 
+  // When a model is selected, suggest its peak DC charge from our data — only if the field is still empty
+  useEffect(() => {
+    if (!dcCharge && make && model) {
+      const rec = lookupPeakDc(make, model);
+      if (rec) setDcCharge(String(rec));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [make, model]);
+
   const canNext = () => {
     if(step===1) return make&&model&&year&&km&&condition;
     if(step===2) return battery&&soh&&dcCharge;
     if(step===3) return photos.filter(p=>typeof p==="string").length>=1;
-    if(step===4) return price;
-    if(step===5) return sellerName&&phone&&email&&city&&country;
+    if(step===4) return price&&sellerName&&phone&&email&&city&&country;
     return true;
   };
 
@@ -736,7 +755,7 @@ export default function SellPage(){
             ))}
           </div>
           <div style={{display:"flex",gap:10,justifyContent:"center",marginTop:20}}>
-              <button onClick={()=>{setSubmitted(false);setStep(1);setMake("");setModel("");setPhotos([]);setPrice("")}} style={{padding:"10px 20px",borderRadius:10,border:`1px solid ${t.bd}`,background:t.card,color:t.tx,fontSize:13,fontWeight:500,cursor:"pointer"}}>Sell another EV</button>
+              <button onClick={()=>{setSubmitted(false);setStep(1);setMake("");setModel("");setVariant("");setYear("");setKm("");setCondition("");setBattery("");setUsable("");setSoh("");setRangeReal("");setRangeWinter("");setDcCharge("");setAcCharge("");setPort("");setPowerKw("");setPhotos([]);setPrice("");setDescription("")}} style={{padding:"10px 20px",borderRadius:10,border:`1px solid ${t.bd}`,background:t.card,color:t.tx,fontSize:13,fontWeight:500,cursor:"pointer"}}>Sell another EV</button>
               <button onClick={()=>nav("/account?page=listings")} style={{padding:"10px 20px",borderRadius:10,border:"none",background:GR,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:"0 2px 8px rgba(255,117,0,0.3)"}}>View my listings</button>
             </div>
         </div>
@@ -890,14 +909,22 @@ export default function SellPage(){
               </div>
               <div style={{display:"grid",gridTemplateColumns:g2,gap:12}}>
                 <Inp label="State of Health (SoH)" value={soh} onChange={setSoh} ph="e.g. 97" unit="%" type="number" req t={t}/>
+              </div>
               <div style={{display:"grid",gridTemplateColumns:g2,gap:12}}>
                 <Inp label="Range estimate (summer)" value={rangeReal} onChange={setRangeReal} ph="e.g. 520" unit="km" type="number" t={t}/>
                 <Inp label="Range estimate (winter)" value={rangeWinter} onChange={setRangeWinter} ph="e.g. 380" unit="km" type="number" t={t}/>
               </div>
-              </div>
               <div style={{fontSize:13,fontWeight:600,color:t.tx,marginTop:8}}>Charging</div>
               <div style={{display:"grid",gridTemplateColumns:g2,gap:12}}>
-                <Inp label="Max DC fast charge" value={dcCharge} onChange={setDcCharge} ph="e.g. 250" unit="kW" type="number" req t={t}/>
+                <div>
+                  <Inp label="Max DC fast charge" value={dcCharge} onChange={setDcCharge} ph="e.g. 250" unit="kW" type="number" req t={t}/>
+                  {(()=>{ const rec=lookupPeakDc(make,model); if(!rec||String(dcCharge)===String(rec))return null; return (
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginTop:5,flexWrap:"wrap"}}>
+                      <span style={{fontSize:11,color:t.tx3}}>Our data: ~{rec} kW for {make} {model}</span>
+                      <button type="button" onClick={()=>setDcCharge(String(rec))} style={{fontSize:11,fontWeight:600,color:BC,background:"rgba(255,117,0,0.08)",border:`1px solid ${BC}`,borderRadius:6,padding:"2px 8px",cursor:"pointer"}}>Use {rec} kW</button>
+                    </div>
+                  );})()}
+                </div>
                 <Inp label="AC onboard charger" value={acCharge} onChange={setAcCharge} ph="e.g. 11" unit="kW" type="number" t={t}/>
               </div>
               <Sel label="Charge port type" value={port} onChange={setPort} options={PORTS} t={t}/>
@@ -1101,12 +1128,8 @@ export default function SellPage(){
                   ))}
                 </div>
               </div>
-            </div>
-          )}
-
-          {step===5&&(
-            <div style={{display:"flex",flexDirection:"column",gap:14}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}>
+              {/* Contact details — merged into the Price & contact step */}
+              <div style={{display:"flex",alignItems:"center",gap:8,margin:"10px 0 2px"}}>
                 <UserIcon size={18} color={BC}/>
                 <h2 style={{fontSize:16,fontWeight:700,margin:0}}>Contact details</h2>
               </div>
@@ -1130,7 +1153,7 @@ export default function SellPage(){
             </div>
           )}
 
-          {step===6&&(
+          {step===5&&(
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}>
                 <CheckIcon size={18} color={BC}/>
@@ -1184,7 +1207,7 @@ export default function SellPage(){
                     ["Negotiable",negotiable?"Yes":"No"],["VAT deductible",vatDeduct?"Yes":"No"],
                     ["Description",description?`${description.slice(0,60)}${description.length>60?"...":""}`:""],
                   ]},
-                  {s:"Contact",si:5,icon:<UserIcon size={15} color={BC}/>,rows:[
+                  {s:"Contact",si:4,icon:<UserIcon size={15} color={BC}/>,rows:[
                     ["Name",sellerName],["Type",sellerType==="dealer"?"Dealer":"Private"],
                     ["Location",`${city}${country?", "+(COUNTRIES.find(c=>c.code===country)?.name||country):""}`],
                     ["Phone",phone],["Email",email],
@@ -1217,7 +1240,7 @@ export default function SellPage(){
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingBottom:12}}>
           <button onClick={()=>setStep(Math.max(1,step-1))} style={{padding:"10px 18px",borderRadius:10,border:`1px solid ${t.bd}`,background:t.card,color:t.tx,fontSize:13,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",gap:6,visibility:step===1?"hidden":"visible"}}><ChevL size={14}/> Back</button>
 
-          {step<6?(
+          {step<5?(
             <button onClick={()=>{if(canNext())setStep(step+1)}} style={{padding:"10px 22px",borderRadius:10,border:"none",background:canNext()?GR:"rgba(128,128,128,0.15)",color:canNext()?"#fff":"#9ca3af",fontSize:13,fontWeight:600,cursor:canNext()?"pointer":"default",display:"flex",alignItems:"center",gap:6,boxShadow:canNext()?"0 2px 8px rgba(255,117,0,0.3)":"none"}}>Next <ChevR size={14} color={canNext()?"#fff":"#9ca3af"}/></button>
           ):(
             <button onClick={publishListing} disabled={publishing} style={{padding:"12px 24px",borderRadius:12,border:"none",background:publishing?"rgba(128,128,128,0.3)":"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:14,fontWeight:600,cursor:publishing?"default":"pointer",display:"flex",alignItems:"center",gap:8,boxShadow:publishing?"none":"0 4px 14px rgba(16,185,129,0.3)",opacity:publishing?0.7:1}}>
