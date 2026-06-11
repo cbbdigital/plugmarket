@@ -226,8 +226,8 @@ function ListingsPage({t,onBack,nav,user,session}){
               {(()=>{
                 const os=onlineState(car);
                 if(!os) return null;
-                if(os.kind==="online") return <div style={{fontSize:11,color:"#10b981",marginTop:4,display:"flex",alignItems:"center",gap:4}}><Chk size={11} color="#10b981"/> Online until {os.until.toLocaleDateString("en-GB",{day:"numeric",month:"short"})}{car.plan==="trial"?" · free trial":""}</div>;
-                if(os.kind==="expiring") return <div style={{fontSize:11,color:"#f59e0b",marginTop:4,fontWeight:600,display:"flex",alignItems:"center",gap:4}}><Clk size={11} color="#f59e0b"/> Expires in {os.days} day{os.days!==1?"s":""} — renew to keep online</div>;
+                if(os.kind==="online") return <div style={{fontSize:11,color:"#10b981",marginTop:4,display:"flex",alignItems:"center",gap:4}}><Chk size={11} color="#10b981"/> {os.days} day{os.days!==1?"s":""} left{car.plan==="trial"?" (free trial)":""} · until {os.until.toLocaleDateString("en-GB",{day:"numeric",month:"short"})}</div>;
+                if(os.kind==="expiring") return <div style={{fontSize:11,color:"#f59e0b",marginTop:4,fontWeight:600,display:"flex",alignItems:"center",gap:4}}><Clk size={11} color="#f59e0b"/> {os.days} day{os.days!==1?"s":""} left — renew to keep online</div>;
                 return <div style={{fontSize:11,color:"#ef4444",marginTop:4,fontWeight:600,display:"flex",alignItems:"center",gap:4}}><Clk size={11} color="#ef4444"/> Offline — renew to relist</div>;
               })()}
             </div>
@@ -398,7 +398,7 @@ function EditPage({t,onBack,user,session,profile,updateProfile,fetchProfile}){
       </div>
       {isDealer&&(verified
         ? <Badge label="Verified" color="#10b981" bg="rgba(16,185,129,0.1)"/>
-        : <Badge label="Unverified" color="#f59e0b" bg="rgba(245,158,11,0.1)"/>)}
+        : <Badge label="Verification pending" color="#f59e0b" bg="rgba(245,158,11,0.1)"/>)}
     </div>
 
     {/* Common fields */}
@@ -838,7 +838,7 @@ export default function AccountPage(){
               {isDealer&&dealerVerified&&<Chk size={15} color="#10b981"/>}
             </div>
             <div style={{fontSize:12,color:t.tx2,marginTop:2}}>{user?.email}</div>
-            {isDealer&&<div style={{fontSize:11,color:BC,fontWeight:600,marginTop:3}}>{profile?.firm_name?profile.firm_name+" · ":""}Dealer{dealerVerified?" · Verified":""}</div>}
+            {isDealer&&<div style={{fontSize:11,color:dealerVerified?BC:"#f59e0b",fontWeight:600,marginTop:3}}>{profile?.firm_name?profile.firm_name+" · ":""}Dealer{dealerVerified?" · Verified":" · Verification pending"}</div>}
             {profile?.city&&<div style={{display:"flex",alignItems:"center",gap:4,marginTop:4}}><Map size={12} color={t.tx3}/><span style={{fontSize:11,color:t.tx3}}>{profile.city}{profile.country?`, ${profile.country}`:""}</span></div>}
           </div>
           <button onClick={()=>setPage("edit")} style={{width:36,height:36,borderRadius:10,border:`1px solid ${t.bd}`,background:t.sec,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Edit size={16} color={t.tx2}/></button>
