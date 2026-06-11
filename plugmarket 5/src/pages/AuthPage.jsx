@@ -4,6 +4,23 @@ import { useAuth } from "../lib/auth";
 import { BC, GR, cs } from "../styles/theme";
 import { Mail, Lock, Usr, Eye, EyeOff, Chk } from "../components/Icons";
 
+// Top-level so it isn't recreated on every render (which was stealing input focus after one keystroke)
+function Field({ label, value, onChange, placeholder, type = "text", optional, t }) {
+  const inpPlain = {
+    width: "100%", height: 46, borderRadius: 12, border: `1px solid ${t.bd}`,
+    background: t.inp, color: t.tx, padding: "0 14px", fontSize: 14,
+    boxSizing: "border-box", outline: "none",
+  };
+  return (
+    <div>
+      <label style={{ fontSize: 12, fontWeight: 600, color: t.tx2, marginBottom: 5, display: "block" }}>
+        {label}{optional && <span style={{ color: t.tx3, fontWeight: 400 }}> (optional)</span>}
+      </label>
+      <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} type={type} style={inpPlain} />
+    </div>
+  );
+}
+
 export default function AuthPage() {
   const { t } = useOutletContext();
   const { signIn, signUp, signInWithOAuth, resetPassword } = useAuth();
@@ -42,16 +59,6 @@ export default function AuthPage() {
     boxSizing: "border-box", outline: "none",
   };
   const inpPlain = { ...inp, padding: "0 14px" };
-
-  // Labeled field without an icon (used for dealer details)
-  const Field = ({ label, value, onChange, placeholder, type = "text", optional }) => (
-    <div>
-      <label style={{ fontSize: 12, fontWeight: 600, color: t.tx2, marginBottom: 5, display: "block" }}>
-        {label}{optional && <span style={{ color: t.tx3, fontWeight: 400 }}> (optional)</span>}
-      </label>
-      <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} type={type} style={inpPlain} />
-    </div>
-  );
 
   async function handleSubmit(e) {
     e?.preventDefault?.();
@@ -112,6 +119,12 @@ export default function AuthPage() {
     if (err) setError(err.message);
   }
 
+  async function handleApple() {
+    setError("");
+    const { error: err } = await signInWithOAuth("apple");
+    if (err) setError(err.message);
+  }
+
   return (
     <div style={{ maxWidth: 420, margin: "0 auto", padding: "20px 0" }}>
       <div style={{ textAlign: "center", marginBottom: 28 }}>
@@ -151,6 +164,11 @@ export default function AuthPage() {
             Continue with Google
           </button>
 
+          <button onClick={handleApple} style={{ width: "100%", height: 46, marginTop: 10, borderRadius: 12, border: `1px solid ${t.bd}`, background: t.card, color: t.tx, fontSize: 14, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill={t.tx}><path d="M17.05 12.04c-.03-2.6 2.12-3.85 2.22-3.91-1.21-1.77-3.09-2.02-3.76-2.05-1.6-.16-3.12.94-3.93.94-.81 0-2.06-.92-3.39-.9-1.74.03-3.35 1.01-4.25 2.57-1.81 3.14-.46 7.79 1.3 10.34.86 1.25 1.89 2.65 3.23 2.6 1.3-.05 1.79-.84 3.36-.84 1.57 0 2.01.84 3.39.81 1.4-.02 2.29-1.27 3.14-2.53.99-1.45 1.4-2.86 1.42-2.93-.03-.01-2.72-1.04-2.75-4.13M14.5 4.32c.71-.86 1.19-2.06 1.06-3.25-1.02.04-2.26.68-2.99 1.54-.66.76-1.23 1.98-1.08 3.15 1.14.09 2.3-.58 3.01-1.44"/></svg>
+            Continue with Apple
+          </button>
+
           <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "20px 0" }}>
             <div style={{ flex: 1, height: 1, background: t.bd }} />
             <span style={{ fontSize: 12, color: t.tx3 }}>or</span>
@@ -169,20 +187,20 @@ export default function AuthPage() {
               <Usr size={18} color={t.tx3} style={{ position: "absolute", left: 14, top: 14 }} />
               <input value={name} onChange={e => setName(e.target.value)} placeholder="Full name" style={inp} />
             </div>
-            <Field label="Phone" value={phone} onChange={setPhone} placeholder="+40 ..." optional />
-            <Field label="Address" value={address} onChange={setAddress} placeholder="Street, city, country" optional />
+            <Field label="Phone" value={phone} onChange={setPhone} placeholder="+40 ..." optional  t={t} />
+            <Field label="Address" value={address} onChange={setAddress} placeholder="Street, city, country" optional  t={t} />
           </>
         )}
 
         {/* DEALER signup fields */}
         {mode === "signup" && accountType === "dealer" && (
           <>
-            <Field label="Dealer official name" value={dealerLegalName} onChange={setDealerLegalName} placeholder="Registered legal name" />
-            <Field label="Firm name" value={firmName} onChange={setFirmName} placeholder="Trading / brand name" />
-            <Field label="VAT number" value={vatNumber} onChange={setVatNumber} placeholder="e.g. RO12345678" />
-            <Field label="Dealer address" value={dealerAddress} onChange={setDealerAddress} placeholder="Street, city, country" />
-            <Field label="Google Maps link" value={mapsUrl} onChange={setMapsUrl} placeholder="https://maps.google.com/..." optional />
-            <Field label="Website" value={website} onChange={setWebsite} placeholder="https://..." optional />
+            <Field label="Dealer official name" value={dealerLegalName} onChange={setDealerLegalName} placeholder="Registered legal name"  t={t} />
+            <Field label="Firm name" value={firmName} onChange={setFirmName} placeholder="Trading / brand name"  t={t} />
+            <Field label="VAT number" value={vatNumber} onChange={setVatNumber} placeholder="e.g. RO12345678"  t={t} />
+            <Field label="Dealer address" value={dealerAddress} onChange={setDealerAddress} placeholder="Street, city, country"  t={t} />
+            <Field label="Google Maps link" value={mapsUrl} onChange={setMapsUrl} placeholder="https://maps.google.com/..." optional  t={t} />
+            <Field label="Website" value={website} onChange={setWebsite} placeholder="https://..." optional  t={t} />
             <div style={{ fontSize: 11, color: t.tx3, background: t.sec, borderRadius: 8, padding: "8px 12px", lineHeight: 1.5 }}>
               You'll upload a photo of your VAT document after your first login to finish verification.
             </div>
