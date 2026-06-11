@@ -144,7 +144,7 @@ export default function PlanPage() {
             {DURATIONS.map((d) => {
               const sel = dur === d.id;
               return (
-                <button key={d.id} onClick={() => setDur(d.id)} style={{ flex: 1, padding: "14px 12px", borderRadius: 14, border: sel ? `2px solid ${BC}` : `1.5px solid ${t.brd}`, background: sel ? "rgba(255,117,0,0.05)" : t.card2, cursor: "pointer", textAlign: "left" }}>
+                <button key={d.id} onClick={() => setDur(d.id)} style={{ flex: 1, padding: "14px 12px", borderRadius: 14, border: sel ? `2px solid ${BC}` : `1.5px solid ${t.bd}`, background: sel ? "rgba(255,117,0,0.05)" : t.sec, cursor: "pointer", textAlign: "left" }}>
                   <div style={{ ...lbl }}>{d.name}</div>
                   <div style={{ fontSize: 22, fontWeight: 800, color: t.tx, marginTop: 4 }}>{d.single}</div>
                   <div style={{ fontSize: 11, color: t.tx2 }}>per listing</div>
@@ -167,7 +167,7 @@ export default function PlanPage() {
 
           {/* Dealer: buy a 10-pack */}
           {isDealer && (
-            <div style={{ marginTop: 18, borderRadius: 16, border: `1.5px solid ${t.brd}`, background: t.card2, padding: 18 }}>
+            <div style={{ marginTop: 18, borderRadius: 16, border: `1.5px solid ${t.bd}`, background: t.sec, padding: 18 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                 <LayersIcon size={16} color={BC} />
                 <span style={{ fontSize: 13.5, fontWeight: 700, color: t.tx }}>Dealer pack — 10 listings</span>

@@ -743,7 +743,7 @@ function TermsPage({t}){
 // ══ Main ══
 export default function AccountPage(){
   const { t, dark, setDark } = useOutletContext();
-  const { user, session, signOut, profile, updateProfile, fetchProfile } = useAuth();
+  const { user, session, signOut, profile, updateProfile, fetchProfile, loading: authLoading } = useAuth();
   const nav = useNavigate();
   const [sp] = useSearchParams();
   const[page,setPage]=useState(sp.get("page")||"home");
@@ -755,13 +755,13 @@ export default function AccountPage(){
   const[notifs,setNotifs]=useState([]);
 
   // A session token in storage means we're logged in but useAuth may still be hydrating.
-  // Only redirect to /login when there's genuinely no session — never during the load flash.
+  // Only redirect to /login once auth has finished loading AND there's genuinely no session.
   const hasStoredSession = () => {
     try { const r = localStorage.getItem("sb-tmftxqwqwceuiydleuag-auth-token"); if (r) { const s = JSON.parse(r); return !!s?.access_token; } } catch {}
     return false;
   };
 
-  useEffect(() => { if (!user && !hasStoredSession()) nav("/login"); }, [user, nav]);
+  useEffect(() => { if (!authLoading && !user && !hasStoredSession()) nav("/login"); }, [authLoading, user, nav]);
 
   useEffect(()=>{
     if(!user||!session?.access_token)return;
@@ -783,7 +783,7 @@ export default function AccountPage(){
 
   if (!user) {
     // Session still loading — show a brief placeholder rather than bouncing to /login
-    if (hasStoredSession()) return <div style={{padding:"60px 0",textAlign:"center",fontSize:13,color:t.tx3}}>Loading your account…</div>;
+    if (authLoading || hasStoredSession()) return <div style={{padding:"60px 0",textAlign:"center",fontSize:13,color:t.tx3}}>Loading your account…</div>;
     return null;
   }
 
