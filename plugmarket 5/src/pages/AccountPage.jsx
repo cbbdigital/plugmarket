@@ -754,7 +754,14 @@ export default function AccountPage(){
   const[stats,setStats]=useState({listings:0,saved:0,messages:0,rating:0,sold:0,reviews:0});
   const[notifs,setNotifs]=useState([]);
 
-  useEffect(() => { if (!user) nav("/login"); }, [user, nav]);
+  // A session token in storage means we're logged in but useAuth may still be hydrating.
+  // Only redirect to /login when there's genuinely no session — never during the load flash.
+  const hasStoredSession = () => {
+    try { const r = localStorage.getItem("sb-tmftxqwqwceuiydleuag-auth-token"); if (r) { const s = JSON.parse(r); return !!s?.access_token; } } catch {}
+    return false;
+  };
+
+  useEffect(() => { if (!user && !hasStoredSession()) nav("/login"); }, [user, nav]);
 
   useEffect(()=>{
     if(!user||!session?.access_token)return;
@@ -774,7 +781,11 @@ export default function AccountPage(){
     })();
   },[user,session]);
 
-  if (!user) return null;
+  if (!user) {
+    // Session still loading — show a brief placeholder rather than bouncing to /login
+    if (hasStoredSession()) return <div style={{padding:"60px 0",textAlign:"center",fontSize:13,color:t.tx3}}>Loading your account…</div>;
+    return null;
+  }
 
   const goHome=()=>setPage("home");
   const isDealer = profile?.seller_type === "dealer";
