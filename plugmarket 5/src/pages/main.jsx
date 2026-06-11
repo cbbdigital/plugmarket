@@ -16,17 +16,20 @@ import AuthPage from "./pages/AuthPage";
 import "./index.css";
 
 function App() {
+  // Default to DARK. Respect a saved choice if the user has toggled before.
   const [dark, setDark] = useState(() => {
-    try { return window.matchMedia("(prefers-color-scheme:dark)").matches; }
-    catch { return false; }
+    try {
+      const saved = localStorage.getItem("pm_theme");
+      if (saved === "light") return false;
+      if (saved === "dark") return true;
+    } catch {}
+    return true; // dark by default
   });
 
+  // Persist the user's choice
   useEffect(() => {
-    const m = window.matchMedia("(prefers-color-scheme:dark)");
-    const h = (e) => setDark(e.matches);
-    m.addEventListener("change", h);
-    return () => m.removeEventListener("change", h);
-  }, []);
+    try { localStorage.setItem("pm_theme", dark ? "dark" : "light"); } catch {}
+  }, [dark]);
 
   const t = theme(dark);
 
