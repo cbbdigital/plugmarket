@@ -89,7 +89,7 @@ function onlineState(car){
 }
 function Row({icon,label,desc,t,onClick,right,danger}){return <div onClick={onClick} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 0",borderBottom:`1px solid ${t.bd}`,cursor:onClick?"pointer":"default"}}><div style={{width:36,height:36,borderRadius:10,background:danger?"rgba(239,68,68,0.08)":t.sec,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{icon}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:danger?"#ef4444":t.tx}}>{label}</div>{desc&&<div style={{fontSize:11,color:t.tx3,marginTop:1}}>{desc}</div>}</div>{right||(onClick&&<ChR size={16} color={t.tx3}/>)}</div>}
 function Sect({title,children,t}){return <div style={{...cs(t),padding:"4px 18px",marginBottom:14}}>{title&&<div style={{fontSize:12,fontWeight:600,color:t.tx3,textTransform:"uppercase",letterSpacing:0.5,padding:"14px 0 4px"}}>{title}</div>}{children}</div>}
-function SubH({title,t}){return <div style={{padding:"14px 0 10px"}}><span style={{fontSize:17,fontWeight:700}}>{title}</span></div>}
+function SubH({title,t,onBack}){return <div style={{padding:"14px 0 10px",display:"flex",alignItems:"center",gap:10}}>{onBack&&<button onClick={onBack} aria-label="Back" style={{width:34,height:34,borderRadius:10,border:`1px solid ${t.bd}`,background:t.card,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.tx} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>}<span style={{fontSize:17,fontWeight:700}}>{title}</span></div>}
 
 // ── Sub-pages ──
 function ListingsPage({t,onBack,nav,user,session}){
@@ -629,7 +629,7 @@ function LangPage({t,onBack}){
   </>;
 }
 
-function HelpPage({t}){
+function HelpPage({t,onBack}){
   const[open,setOpen]=useState(null);
   const faqs=[
     {q:"How do I list my EV for sale?",a:"Go to the Sell tab in the bottom navigation. You'll be guided through a 6-step process: vehicle details, EV specifications (battery, range, charging), photos, pricing with a description, contact info, and a final review before publishing. The whole process takes about 5–10 minutes."},
@@ -644,7 +644,7 @@ function HelpPage({t}){
     {q:"How do I delete my account?",a:"Go to Account → Security → Data & Privacy → Delete Account. This will permanently remove your profile, listings, messages, and reviews. This action cannot be undone. If you just want to take a break, consider pausing your listings instead."},
   ];
   return <>
-    <SubH title="Help centre" t={t}/>
+    <SubH title="Help centre" t={t} onBack={onBack}/>
     <div style={{padding:"6px 0"}}>
       <div style={{...cs(t),padding:"12px 16px",marginBottom:14,display:"flex",alignItems:"center",gap:10,background:`linear-gradient(135deg,rgba(255,117,0,0.06),rgba(255,149,51,0.06))`,border:`1px solid rgba(255,117,0,0.1)`}}>
         <Help size={18} color={BC}/>
@@ -661,9 +661,9 @@ function HelpPage({t}){
   </>;
 }
 
-function ContactPage({t}){
+function ContactPage({t,onBack}){
   return <>
-    <SubH title="Contact support" t={t}/>
+    <SubH title="Contact support" t={t} onBack={onBack}/>
     <div style={{padding:"16px 0"}}>
       <div style={{...cs(t),padding:24,textAlign:"center"}}>
         <div style={{width:56,height:56,borderRadius:"50%",background:"linear-gradient(135deg,rgba(255,117,0,0.1),rgba(255,149,51,0.1))",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto"}}><Mail size={24} color={BC}/></div>
@@ -680,10 +680,10 @@ function ContactPage({t}){
   </>;
 }
 
-function TermsPage({t}){
+function TermsPage({t,onBack}){
   const S=({title,children})=><div style={{marginBottom:24}}><div style={{fontSize:15,fontWeight:700,color:t.tx,marginBottom:8}}>{title}</div><div style={{fontSize:13,color:t.tx2,lineHeight:1.8}}>{children}</div></div>;
   return <>
-    <SubH title="Terms & Privacy" t={t}/>
+    <SubH title="Terms & Privacy" t={t} onBack={onBack}/>
     <div style={{padding:"6px 0"}}>
       <div style={{...cs(t),padding:"20px 18px"}}>
         <div style={{fontSize:12,color:t.tx3,marginBottom:20}}>Last updated: March 1, 2026</div>
@@ -802,7 +802,7 @@ export default function AccountPage(){
     return null;
   }
 
-  const goHome=()=>setPage("home");
+  const goHome=()=>{ setPage("home"); try{ nav("/account",{replace:true}); }catch{} };
   const isDealer = profile?.seller_type === "dealer";
   const dealerVerified = profile?.dealer_verified === true;
   const needsVatDoc = isDealer && !dealerVerified && !profile?.vat_doc_url;
@@ -820,9 +820,9 @@ export default function AccountPage(){
     if(page==="security") return <SecurityPage t={t} onBack={goHome}/>;
     if(page==="payment") return <PaymentPage t={t} onBack={goHome} user={user} session={session}/>;
     if(page==="language") return <LangPage t={t} onBack={goHome}/>;
-    if(page==="help") return <HelpPage t={t}/>;
-    if(page==="contact") return <ContactPage t={t}/>;
-    if(page==="terms") return <TermsPage t={t}/>;
+    if(page==="help") return <HelpPage t={t} onBack={goHome}/>;
+    if(page==="contact") return <ContactPage t={t} onBack={goHome}/>;
+    if(page==="terms") return <TermsPage t={t} onBack={goHome}/>;
 
     // Home
     const isWide = typeof window !== "undefined" && window.innerWidth >= 700;
