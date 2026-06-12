@@ -115,6 +115,9 @@ function LeftPanel({t,dark,search,setSearch,activeFilter,setActiveFilter,convers
 }
 /* ─── SHARED: RIGHT PANEL (chat view) ─── */
 function RightPanel({t,activeConvo,newMsg,setNewMsg,sendMessage,inputRef,messagesEndRef,onBack,narrow}){
+  const fromMe=activeConvo.messages.filter(m=>m.from==="me").length;
+  const fromThem=activeConvo.messages.filter(m=>m.from==="them").length;
+  const awaiting=activeConvo.iAmBuyer && fromThem===0 && fromMe>=1; // sent opener, waiting for seller
   return(
     <>
       <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 16px",borderBottom:`1px solid ${t.bd}`,flexShrink:0}}>
@@ -140,11 +143,17 @@ function RightPanel({t,activeConvo,newMsg,setNewMsg,sendMessage,inputRef,message
         <div ref={messagesEndRef}/>
       </div>
       <div style={{padding:"8px 16px 12px",borderTop:`1px solid ${t.bd}`,flexShrink:0}}>
-        <div style={{display:"flex",alignItems:"center",gap:6,height:40,borderRadius:10,border:`1px solid ${t.bd}`,background:t.bg,padding:"0 5px 0 12px"}}>
-          <Img size={15} color={t.tx3} style={{cursor:"pointer",flexShrink:0}}/>
-          <input ref={inputRef} value={newMsg} onChange={e=>setNewMsg(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage()}}} placeholder="Type a message..." style={{flex:1,background:"none",border:"none",outline:"none",color:t.tx,fontSize:12,height:"100%"}}/>
-          <button onClick={sendMessage} style={{height:30,padding:"0 12px",borderRadius:7,border:"none",background:newMsg.trim()?BG:t.sec,color:newMsg.trim()?"#fff":t.tx3,fontSize:11,fontWeight:600,cursor:newMsg.trim()?"pointer":"default",display:"flex",alignItems:"center",gap:4,transition:"all 0.15s"}}>Send <Send size={11} color={newMsg.trim()?"#fff":t.tx3}/></button>
-        </div>
+        {awaiting?(
+          <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",borderRadius:10,background:t.sec,fontSize:11.5,color:t.tx2,lineHeight:1.4}}>
+            <Send size={13} color={t.tx3}/> Message sent. You can send more once the seller replies.
+          </div>
+        ):(
+          <div style={{display:"flex",alignItems:"center",gap:6,height:40,borderRadius:10,border:`1px solid ${t.bd}`,background:t.bg,padding:"0 5px 0 12px"}}>
+            <Img size={15} color={t.tx3} style={{cursor:"pointer",flexShrink:0}}/>
+            <input ref={inputRef} value={newMsg} onChange={e=>setNewMsg(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage()}}} placeholder="Type a message..." style={{flex:1,background:"none",border:"none",outline:"none",color:t.tx,fontSize:12,height:"100%"}}/>
+            <button onClick={sendMessage} style={{height:30,padding:"0 12px",borderRadius:7,border:"none",background:newMsg.trim()?BG:t.sec,color:newMsg.trim()?"#fff":t.tx3,fontSize:11,fontWeight:600,cursor:newMsg.trim()?"pointer":"default",display:"flex",alignItems:"center",gap:4,transition:"all 0.15s"}}>Send <Send size={11} color={newMsg.trim()?"#fff":t.tx3}/></button>
+          </div>
+        )}
       </div>
     </>
   );
@@ -152,7 +161,7 @@ function RightPanel({t,activeConvo,newMsg,setNewMsg,sendMessage,inputRef,message
 
 export default function MessagesPage(){
   const { t, dark } = useOutletContext();
-  const { user, session } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const nav = useNavigate();
   const [sp, setSp] = useSearchParams();
   const incomingListing = sp.get("listing");
@@ -169,7 +178,11 @@ export default function MessagesPage(){
   const narrow=width<600;
 
   useEffect(()=>{messagesEndRef.current?.scrollIntoView({behavior:"smooth"})},[activeChat,conversations]);
-  useEffect(() => { if (!user) nav("/login"); }, [user, nav]);
+  const hasStoredSession = () => {
+    try { const r = localStorage.getItem("sb-tmftxqwqwceuiydleuag-auth-token"); if (r) { const s = JSON.parse(r); return !!s?.access_token; } } catch {}
+    return false;
+  };
+  useEffect(() => { if (!authLoading && !user && !hasStoredSession()) nav("/login"); }, [authLoading, user, nav]);
 
   // Load conversations from Supabase
   useEffect(()=>{
@@ -189,7 +202,7 @@ export default function MessagesPage(){
           const carName=listing?.[0]?`${listing[0].make} ${listing[0].model}`:"General";
           const msgs=await sbGet("messages",`conversation_id=eq.${c.id}&order=created_at.asc`,token);
           mapped.push({
-            id:c.id, name:otherName,
+            id:c.id, name:otherName, iAmBuyer:otherIsMe,
             initials:otherName.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2),
             online:false, unread:otherIsMe?(c.buyer_unread_count||0):(c.seller_unread_count||0),
             car:carName, lastMsg:c.last_message_text||"", time:timeAgo(c.updated_at),
@@ -228,7 +241,7 @@ export default function MessagesPage(){
           const carName=listing?.[0]?`${listing[0].make} ${listing[0].model}`:"Vehicle";
           const msgs=await sbGet("messages",`conversation_id=eq.${existingId}&order=created_at.asc`,token);
           setConversations(prev=>[{
-            id:existingId,name:otherName,
+            id:existingId,name:otherName,iAmBuyer:existing[0].buyer_id===uid,
             initials:otherName.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2),
             online:false,unread:0,car:carName,
             lastMsg:existing[0].last_message_text||"",time:timeAgo(existing[0].updated_at),
@@ -250,7 +263,7 @@ export default function MessagesPage(){
           const carName=listing?.[0]?`${listing[0].make} ${listing[0].model}`:"Vehicle";
           const sellerName=sellerProfile?.[0]?.full_name||"Seller";
           setConversations(prev=>[{
-            id:newConvo.id,name:sellerName,
+            id:newConvo.id,name:sellerName,iAmBuyer:true,
             initials:sellerName.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2),
             online:false,unread:0,car:carName,lastMsg:"",time:"now",messages:[],
           },...prev]);
@@ -262,7 +275,10 @@ export default function MessagesPage(){
     })();
   },[incomingListing,incomingSeller,user,session,loading]);
 
-  if (!user) return null;
+  if (!user) {
+    if (authLoading || hasStoredSession()) return <div style={{padding:"60px 0",textAlign:"center",fontSize:13,color:t.tx3}}>Loading…</div>;
+    return null;
+  }
 
   const activeConvo=conversations.find(c=>c.id===activeChat);
   const totalUnread=conversations.reduce((s,c)=>s+c.unread,0);
@@ -282,16 +298,45 @@ export default function MessagesPage(){
   const sendMessage=async()=>{
     if(!newMsg.trim()||!activeChat||!session?.access_token)return;
     const token=session.access_token;
-    const msg=await sbPost("messages",{conversation_id:activeChat,sender_id:user.id,content:newMsg.trim()},token);
-    if(msg){
-      const ts=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
-      setConversations(prev=>prev.map(c=>{
-        if(c.id!==activeChat)return c;
-        return{...c,messages:[...c.messages,{id:msg.id||Date.now(),from:"me",text:newMsg.trim(),time:ts}],lastMsg:newMsg.trim(),time:"now"};
-      }));
+
+    // 1-message limit until the seller replies (approves the conversation)
+    const conv=conversations.find(c=>c.id===activeChat);
+    if(conv){
+      const fromMe=conv.messages.filter(m=>m.from==="me").length;
+      const fromThem=conv.messages.filter(m=>m.from==="them").length;
+      if(conv.iAmBuyer && fromThem===0 && fromMe>=1){
+        alert("You can send one message to start the conversation. Please wait for the seller to reply before sending more.");
+        return;
+      }
     }
+
+    const text=newMsg.trim();
+    // Direct fetch so we can surface any permission/RLS error instead of silently failing
+    let msg=null;
+    try{
+      const res=await fetch(`${SB_URL}/rest/v1/messages`,{method:"POST",headers:sbH(token),body:JSON.stringify({conversation_id:activeChat,sender_id:user.id,content:text})});
+      if(!res.ok){
+        const txt=await res.text();
+        alert(`Message couldn't be sent (${res.status}). ${txt||"You may not have permission to post in this conversation."}`);
+        return;
+      }
+      const arr=await res.json();
+      msg=Array.isArray(arr)?arr[0]:arr;
+    }catch(e){
+      alert(`Message couldn't be sent: ${e.message}`);
+      return;
+    }
+
+    const ts=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+    setConversations(prev=>prev.map(c=>{
+      if(c.id!==activeChat)return c;
+      return{...c,messages:[...c.messages,{id:msg?.id||Date.now(),from:"me",text,time:ts}],lastMsg:text,time:"now"};
+    }));
     setNewMsg("");
     inputRef.current?.focus();
+
+    // Bump the conversation (last message + timestamp) so ordering stays correct
+    try{ await sbPatch("conversations",`id=eq.${activeChat}`,{last_message_text:text,updated_at:new Date().toISOString()},token); }catch{}
   };
 
   const selectConvo=(id)=>{

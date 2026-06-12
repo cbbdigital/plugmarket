@@ -771,11 +771,26 @@ export default function AccountPage(){
       const listings=await sbQuery("listings",`seller_id=eq.${uid}&status=neq.deleted&select=id,status`,token);
       const active=listings.filter(l=>l.status==="active").length;
       const sold=listings.filter(l=>l.status==="sold").length;
-      const favs=await sbQuery("favourites",`user_id=eq.${uid}&select=id`,token);
+      const favs=await sbQuery("favourites",`user_id=eq.${uid}&select=listing_id`,token);
+      // Only count favourites whose listing still exists
+      let savedCount=0;
+      const favIds=(favs||[]).map(f=>f.listing_id).filter(id=>typeof id==="string"&&id.length>10&&!id.startsWith("evdb_"));
+      if(favIds.length){
+        const liveFav=await sbQuery("listings",`id=in.(${favIds.join(",")})&select=id`,token);
+        const liveSet=new Set((liveFav||[]).map(x=>x.id));
+        savedCount=favIds.filter(id=>liveSet.has(id)).length;
+      }
+      // Only count conversations that actually have at least one message
       const convos=await sbQuery("conversations",`or=(buyer_id.eq.${uid},seller_id.eq.${uid})&select=id`,token);
+      let realConvos=0;
+      if(convos.length){
+        const cids=convos.map(c=>c.id);
+        const msgs=await sbQuery("messages",`conversation_id=in.(${cids.join(",")})&select=conversation_id`,token);
+        realConvos=new Set((msgs||[]).map(m=>m.conversation_id)).size;
+      }
       const reviews=await sbQuery("reviews",`seller_id=eq.${uid}&select=rating`,token);
       const avgRating=reviews.length>0?(reviews.reduce((a,r)=>a+r.rating,0)/reviews.length).toFixed(1):"—";
-      setStats({listings:active,saved:favs.length,messages:convos.length,rating:avgRating,sold,reviews:reviews.length});
+      setStats({listings:active,saved:savedCount,messages:realConvos,rating:avgRating,sold,reviews:reviews.length});
       const notes=await sbQuery("notifications",`user_id=eq.${uid}&read=eq.false&order=created_at.desc`,token);
       setNotifs(notes);
     })();

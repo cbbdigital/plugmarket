@@ -153,6 +153,7 @@ export default function ListingDetailPage() {
   const [tab, setTab] = useState("overview");
   const [fullscreen, setFullscreen] = useState(false);
   const [galleryMode, setGalleryMode] = useState("single");
+  const [showAllFeatures, setShowAllFeatures] = useState(false);
   const [copied, setCopied] = useState(false);
   const [imgErr, setImgErr] = useState({});
   const [winW, setWinW] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
@@ -385,11 +386,16 @@ export default function ListingDetailPage() {
             <div style={{ ...cardStyle, padding: 18 }}>
               <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}><CheckIcon size={16} color={BC}/> Features</div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {equipment.map((eq, i) => (
+                {(showAllFeatures ? equipment : equipment.slice(0, 3)).map((eq, i) => (
                   <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, padding: "5px 10px", borderRadius: 8, background: dark ? "rgba(255,117,0,0.08)" : "rgba(255,117,0,0.06)", color: th.tx, border: `1px solid ${dark ? "rgba(255,117,0,0.15)" : "rgba(255,117,0,0.1)"}` }}>
                     <CheckIcon size={12} color={BC}/> {eq}
                   </span>
                 ))}
+                {equipment.length > 3 && (
+                  <button onClick={() => setShowAllFeatures(v => !v)} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600, padding: "5px 12px", borderRadius: 8, background: "transparent", color: BC, border: `1px solid ${BC}`, cursor: "pointer" }}>
+                    {showAllFeatures ? "Show less" : `+${equipment.length - 3} more`}
+                  </button>
+                )}
               </div>
             </div>
           )}
