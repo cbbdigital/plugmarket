@@ -13,23 +13,24 @@ import AccountPage from "./pages/AccountPage";
 import ListingDetailPage from "./pages/ListingDetailPage";
 import SellerPage from "./pages/SellerPage";
 import AuthPage from "./pages/AuthPage";
+import AdminListingPage from "./pages/AdminListingPage";
 import "./index.css";
-import PlanPage from "./pages/PlanPage";
-import BoostPage from "./pages/BoostPage";
-
 
 function App() {
+  // Default to DARK. Respect a saved choice if the user has toggled before.
   const [dark, setDark] = useState(() => {
-    try { return window.matchMedia("(prefers-color-scheme:dark)").matches; }
-    catch { return false; }
+    try {
+      const saved = localStorage.getItem("pm_theme");
+      if (saved === "light") return false;
+      if (saved === "dark") return true;
+    } catch {}
+    return true; // dark by default
   });
 
+  // Persist the user's choice
   useEffect(() => {
-    const m = window.matchMedia("(prefers-color-scheme:dark)");
-    const h = (e) => setDark(e.matches);
-    m.addEventListener("change", h);
-    return () => m.removeEventListener("change", h);
-  }, []);
+    try { localStorage.setItem("pm_theme", dark ? "dark" : "light"); } catch {}
+  }, [dark]);
 
   const t = theme(dark);
 
@@ -48,9 +49,7 @@ function App() {
             <Route path="/seller/:id" element={<SellerPage />} />
             <Route path="/login" element={<AuthPage />} />
             <Route path="/signup" element={<AuthPage />} />
-            <Route path="/plan" element={<PlanPage />} />
-            <Route path="/boost" element={<BoostPage />} />
-
+            <Route path="/admin/new" element={<AdminListingPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
