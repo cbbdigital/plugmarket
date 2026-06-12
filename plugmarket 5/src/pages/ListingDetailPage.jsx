@@ -475,7 +475,37 @@ export default function ListingDetailPage() {
         </div>
       </div>
 
-      {/* Seller card */}
+      {/* Seller / contact card */}
+      {car.is_external ? (
+        <div style={{ ...cs(th), padding: 20 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>{car.seller_type === "dealer" ? "Dealer" : "Contact"}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: GR, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 16 }}>
+              {(car.contact_name || "?")[0].toUpperCase()}
+            </div>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 14, color: th.tx }}>{car.contact_name || "Dealer"}</div>
+              <div style={{ fontSize: 12, color: th.tx2 }}>{car.seller_type === "dealer" ? "Dealer" : "Seller"}{car.city ? ` · ${car.city}` : ""}</div>
+              {car.dealer_vat && <div style={{ fontSize: 11, color: th.tx3, marginTop: 2 }}>VAT: {car.dealer_vat}</div>}
+            </div>
+          </div>
+          {car.contact_phone && (
+            <a href={`tel:${car.contact_phone}`} style={{ width: "100%", height: 44, borderRadius: 12, border: "none", background: GR, color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, textDecoration: "none" }}>
+              <PhoneIcon size={16} color="#fff"/> {car.contact_phone}
+            </a>
+          )}
+          {car.contact_email && (
+            <a href={`mailto:${car.contact_email}?subject=${encodeURIComponent(`Enquiry: ${car.make||""} ${car.model||""}`)}`} style={{ width: "100%", height: 42, borderRadius: 12, border: `1px solid ${th.bd}`, background: th.card, color: th.tx, fontSize: 13, cursor: "pointer", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, textDecoration: "none" }}>
+              <MailIcon size={14} color={th.tx2}/> Email seller
+            </a>
+          )}
+          {car.website && (
+            <a href={/^https?:\/\//.test(car.website) ? car.website : `https://${car.website}`} target="_blank" rel="noopener noreferrer" style={{ width: "100%", height: 42, borderRadius: 12, border: `1px solid ${th.bd}`, background: th.card, color: th.tx, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, textDecoration: "none" }}>
+              Visit website
+            </a>
+          )}
+        </div>
+      ) : (
       <div style={{ ...cs(th), padding: 20 }}>
         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Seller</div>
         <div onClick={() => navigate(`/seller/${car.seller_id}`)} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, cursor: "pointer" }}>
@@ -494,6 +524,7 @@ export default function ListingDetailPage() {
           <PhoneIcon size={14} color={th.tx2}/> {showPhone && car.contact_phone ? car.contact_phone : "Show phone number"}
         </button>
       </div>
+      )}
 
       {/* Location card */}
       <div style={{ ...cs(th), padding: 20 }}>
