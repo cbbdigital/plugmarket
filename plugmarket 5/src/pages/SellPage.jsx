@@ -714,6 +714,9 @@ export default function SellPage(){
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [make, model]);
 
+  // Jump back to the top of the page on each step change so the user sees the new step
+  useEffect(() => { try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch { window.scrollTo(0,0); } }, [step]);
+
   const canNext = () => {
     if(step===1) return make&&model&&year&&km&&condition;
     if(step===2) return battery&&soh&&dcCharge;
@@ -782,17 +785,17 @@ export default function SellPage(){
         </div>
 
         {/* STEPPER */}
-        <div style={{display:"flex",gap:4,padding:"14px 0 20px",overflowX:"auto"}}>
+        <div style={{display:"flex",gap:4,padding:"14px 0 20px",overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
           {STEPS.map(s=>{
             const done = step > s.id;
             const active = step === s.id;
             return(
-              <div key={s.id} onClick={()=>{if(done)setStep(s.id)}} style={{flex:1,minWidth:0,cursor:done?"pointer":"default"}}>
-                <div style={{display:"flex",alignItems:"center",gap:5,padding:"7px 8px",borderRadius:10,background:active?(d?"rgba(255,117,0,0.1)":"rgba(255,117,0,0.06)"):done?(d?"rgba(16,185,129,0.1)":"rgba(16,185,129,0.06)"):t.sec,border:active?`1.5px solid ${BC}`:"1.5px solid transparent",transition:"all 0.2s"}}>
-                  <div style={{width:26,height:26,borderRadius:8,background:done?"#10b981":active?BC:"rgba(128,128,128,0.15)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,color:done||active?"#fff":"#9ca3af",transition:"all 0.2s"}}>
+              <div key={s.id} onClick={()=>{if(done)setStep(s.id)}} style={{flex:narrow?"0 0 auto":1,minWidth:0,cursor:done?"pointer":"default"}}>
+                <div style={{display:"flex",alignItems:"center",gap:5,padding:"7px 10px",borderRadius:10,background:active?(d?"rgba(255,117,0,0.1)":"rgba(255,117,0,0.06)"):done?(d?"rgba(16,185,129,0.1)":"rgba(16,185,129,0.06)"):t.sec,border:active?`1.5px solid ${BC}`:"1.5px solid transparent",transition:"all 0.2s"}}>
+                  <div style={{width:24,height:24,borderRadius:8,background:done?"#10b981":active?BC:"rgba(128,128,128,0.15)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,color:done||active?"#fff":"#9ca3af",transition:"all 0.2s"}}>
                     {done?<CheckIcon size={12} color="#fff"/>:<span style={{fontSize:10,fontWeight:700}}>{s.id}</span>}
                   </div>
-                  <span style={{fontSize:11,fontWeight:active?600:500,color:active?BC:done?"#059669":t.tx2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.label}</span>
+                  <span style={{fontSize:11,fontWeight:active?600:500,color:active?BC:done?"#059669":t.tx2,whiteSpace:"nowrap"}}>{s.label}</span>
                 </div>
               </div>
             );
