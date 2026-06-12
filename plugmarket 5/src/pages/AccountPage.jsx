@@ -681,61 +681,218 @@ function ContactPage({t,onBack}){
 }
 
 function TermsPage({t,onBack}){
-  const S=({title,children})=><div style={{marginBottom:24}}><div style={{fontSize:15,fontWeight:700,color:t.tx,marginBottom:8}}>{title}</div><div style={{fontSize:13,color:t.tx2,lineHeight:1.8}}>{children}</div></div>;
+  const [tab,setTab]=useState("terms"); // terms | privacy
+  const S=({n,title,children})=>(
+    <div style={{marginBottom:22}}>
+      <div style={{fontSize:14.5,fontWeight:700,color:t.tx,marginBottom:7}}>{n?`${n}. `:""}{title}</div>
+      <div style={{fontSize:13,color:t.tx2,lineHeight:1.8}}>{children}</div>
+    </div>
+  );
+  const Sub=({title,children})=>(
+    <div style={{margin:"10px 0"}}>
+      <div style={{fontSize:13,fontWeight:600,color:t.tx,marginBottom:3}}>{title}</div>
+      <div style={{fontSize:13,color:t.tx2,lineHeight:1.8}}>{children}</div>
+    </div>
+  );
+  const Li=({children})=><li style={{marginBottom:5}}>{children}</li>;
+  const UL=({children})=><ul style={{margin:"6px 0 6px 18px",padding:0,fontSize:13,color:t.tx2,lineHeight:1.7}}>{children}</ul>;
+  const tabBtn=(id,label)=>(
+    <button onClick={()=>setTab(id)} style={{flex:1,height:40,borderRadius:10,border:tab===id?`1.5px solid ${BC}`:`1px solid ${t.bd}`,background:tab===id?"rgba(255,117,0,0.06)":t.card,color:tab===id?BC:t.tx2,fontSize:13,fontWeight:tab===id?700:500,cursor:"pointer"}}>{label}</button>
+  );
+
   return <>
     <SubH title="Terms & Privacy" t={t} onBack={onBack}/>
     <div style={{padding:"6px 0"}}>
+      <div style={{display:"flex",gap:8,marginBottom:14}}>
+        {tabBtn("terms","Terms of Service")}
+        {tabBtn("privacy","Privacy & GDPR")}
+      </div>
+
+      {tab==="terms"&&(
       <div style={{...cs(t),padding:"20px 18px"}}>
-        <div style={{fontSize:12,color:t.tx3,marginBottom:20}}>Last updated: March 1, 2026</div>
+        <div style={{fontSize:12,color:t.tx3,marginBottom:4}}>Terms of Service</div>
+        <div style={{fontSize:12,color:t.tx3,marginBottom:20}}>Last updated: 12 June 2026 · Effective immediately on acceptance</div>
 
-        <S title="1. About PlugMarket">
-          PlugMarket.eu is an online marketplace operated within the European Union that connects private sellers and professional dealers of electric vehicles with potential buyers across Europe. The platform provides listing, search, messaging, and related services to facilitate the buying and selling of electric vehicles. PlugMarket does not own, buy, sell, or lease any vehicles listed on the platform. We act solely as an intermediary connecting buyers and sellers.
+        <S n="1" title="About PlugMarket and these Terms">
+          PlugMarket.eu (“PlugMarket”, “we”, “us”, “our”) is an online marketplace operated by [Company Legal Name], a company registered in Romania under company number [Company Registration No.], with its registered office at [Registered Office Address] and VAT number [VAT No.]. PlugMarket connects private sellers and professional dealers of electric vehicles with prospective buyers across the European Union. These Terms of Service (“Terms”) form a binding agreement between you and PlugMarket and govern your access to and use of our websites, applications, and services (together, the “Platform”). By creating an account, listing a vehicle, sending a message, or otherwise using the Platform, you confirm that you have read, understood, and accepted these Terms and our Privacy &amp; Data Protection notice. If you do not agree, you must not use the Platform.
         </S>
 
-        <S title="2. Eligibility and Account Registration">
-          To use PlugMarket, you must be at least 18 years old and legally capable of entering into binding agreements in your country of residence. When creating an account, you agree to provide accurate, current, and complete information. You are responsible for maintaining the confidentiality of your login credentials and for all activities that occur under your account. You must notify us immediately of any unauthorised use of your account. PlugMarket reserves the right to suspend or terminate accounts that violate these terms, contain fraudulent information, or are used for purposes that harm other users or the platform.
+        <S n="2" title="Definitions">
+          <UL>
+            <Li>“User” — any person who accesses or uses the Platform, whether or not registered.</Li>
+            <Li>“Buyer” — a User who browses or enquires about vehicles.</Li>
+            <Li>“Seller” — a User who lists a vehicle, whether a “Private Seller” (consumer) or a “Dealer” (acting for purposes relating to their trade, business, craft, or profession).</Li>
+            <Li>“Listing” — a vehicle advertisement created by a Seller.</Li>
+            <Li>“Content” — any text, photographs, specifications, messages, reviews, or other material submitted to the Platform.</Li>
+            <Li>“Paid Services” — listing plans, listing credits/packs, boosts, featured placement, and any other fee-based feature.</Li>
+          </UL>
         </S>
 
-        <S title="3. Listing Vehicles">
-          Sellers are solely responsible for the accuracy and completeness of their vehicle listings, including but not limited to: vehicle specifications, battery health (State of Health), mileage, condition, pricing, photographs, and any disclosures about damage, accidents, or modifications. Misrepresenting a vehicle's condition, history, or specifications is a violation of these terms and may result in listing removal and account suspension. All listed vehicles must be legally owned by the seller or the seller must have explicit authorisation from the owner to sell the vehicle. Listings for stolen vehicles, vehicles with undisclosed liens, or vehicles that cannot legally be transferred are strictly prohibited.
+        <S n="3" title="Eligibility">
+          To register or transact you must be at least 18 years old and able to enter into a legally binding contract in your country of residence. The Platform is intended for use within the European Union; if you access it from elsewhere, you are responsible for compliance with local law. Dealers must be lawfully registered to trade in their jurisdiction and hold any licences required to sell motor vehicles. We may request evidence of identity, VAT registration, or trading status at any time and may refuse, suspend, or terminate access where eligibility cannot be verified.
         </S>
 
-        <S title="4. Transactions Between Users">
-          PlugMarket facilitates introductions between buyers and sellers but is not a party to any transaction. All negotiations, agreements, payments, vehicle inspections, and transfers of ownership are conducted directly between the buyer and seller. PlugMarket does not guarantee the condition, safety, legality, or quality of any listed vehicle, the accuracy of any listing content, the ability of sellers to sell or buyers to purchase, or that a transaction will be completed. Both buyers and sellers are encouraged to exercise due diligence, including verifying vehicle documentation, arranging independent inspections, and using secure payment methods.
+        <S n="4" title="Accounts: registration, account types and security">
+          You must provide accurate, current, and complete information and keep it up to date. There are two account types — Private and Dealer — selected at registration. The account type determines your obligations and cannot be changed after sign-up; to switch, you must close your account and register again. You are responsible for safeguarding your login credentials and for all activity under your account, and you must notify us immediately of any suspected unauthorised use. You may not transfer your account to another person or maintain multiple accounts to evade limits, suspensions, or fees.
         </S>
 
-        <S title="5. Fees and Payments">
-          Creating an account and browsing listings on PlugMarket is free. The first listing is free for 30 days; after the trial, listings are maintained with a paid plan. Optional premium services, including listing boosts and featured placement, are available for a fee. All fees are displayed clearly before purchase and are charged in euros. Payments for premium services are processed through secure third-party payment providers. Refunds for premium services are provided in accordance with applicable EU consumer protection laws. PlugMarket does not process payments between buyers and sellers for vehicle transactions.
+        <S n="5" title="The role of PlugMarket — we are an intermediary only">
+          PlugMarket provides a venue that allows Sellers and Buyers to find one another and communicate. We are not a party to any sale, purchase, or other agreement between Users. We do not own, inspect, take possession of, warrant, or guarantee any vehicle, and we do not act as agent, broker, escrow holder, dealer, importer, valuer, or insurer for any transaction. All negotiations, contracts, payments, inspections, transport, registration, and transfers of ownership take place directly between Buyer and Seller, at their own risk. We do not guarantee that any listing is accurate, that any vehicle exists or is as described, that a Seller is able to sell or a Buyer to pay, or that any transaction will complete.
         </S>
 
-        <S title="6. User Conduct">
-          When using PlugMarket, you agree not to: post false, misleading, or fraudulent listings; harass, threaten, or abuse other users; use the platform for any illegal purpose; attempt to circumvent platform security measures; scrape, copy, or reproduce platform content without authorisation; send unsolicited commercial messages to other users; create multiple accounts to evade suspensions or bans; or manipulate ratings or reviews. PlugMarket reserves the right to remove content and suspend accounts that violate these guidelines, at our sole discretion and without prior notice.
+        <S n="6" title="Listings and EV-specific accuracy">
+          Sellers are solely responsible for the accuracy and completeness of every Listing, including make, model, variant, year, mileage, condition, price, drivetrain, VIN where provided, registration details, and all photographs.
+          <Sub title="Electric-vehicle disclosures">
+            Because battery condition materially affects value, Sellers must give honest figures for battery capacity, usable capacity, and State of Health (SoH) where stated, and must not misrepresent range, charging speed, or charging history. Any battery degradation report, service history, accident history, modification, outstanding finance, or import status known to the Seller must be disclosed.
+          </Sub>
+          <Sub title="Ownership and legality">
+            Every listed vehicle must be lawfully owned by the Seller, or the Seller must hold the owner’s explicit authority to sell it. Listings for stolen vehicles, vehicles subject to undisclosed liens or finance, cloned vehicles, or vehicles that cannot lawfully be transferred are strictly prohibited. We may remove any Listing and suspend any account that breaches this clause, without notice.
+          </Sub>
         </S>
 
-        <S title="7. Intellectual Property">
-          All content on PlugMarket, including but not limited to the logo, design, software, text, and graphics, is owned by PlugMarket or its licensors and is protected by applicable intellectual property laws. User-generated content, including listing descriptions and photographs, remains the property of the respective users. By posting content on PlugMarket, you grant us a non-exclusive, worldwide, royalty-free licence to use, display, and distribute that content in connection with operating and promoting the platform.
+        <S n="7" title="Dealer obligations and consumer law">
+          Dealers act in a business capacity and must comply with all laws applicable to professional motor-vehicle sales, including EU and national consumer-protection, distance-selling, advertising, guarantee, and pre-contractual information requirements. Dealers must provide accurate business identity and VAT details, honour the statutory legal guarantee of conformity owed to consumer Buyers, and clearly state price, whether VAT is included or deductible, and any applicable consumer right of withdrawal for distance sales. Dealers are responsible for their own compliance; PlugMarket does not provide legal advice and does not assume Dealers’ statutory obligations. Verified-dealer status, where shown, indicates only that we have received certain documentation and is not an endorsement or warranty.
         </S>
 
-        <S title="8. Privacy and Data Protection">
-          PlugMarket is committed to protecting your personal data in accordance with the General Data Protection Regulation (GDPR) and applicable national data protection laws. We collect and process personal data including your name, email address, phone number, location, and usage data to provide and improve our services, facilitate communication between users, send service-related notifications, personalise your experience, and comply with legal obligations. We do not sell your personal data to third parties. Data may be shared with payment processors and service providers necessary for platform operation, law enforcement when required by law, and other users to the extent necessary for transactions (for example, showing your city on a listing). You have the right to access, correct, delete, or export your personal data at any time through your account settings or by contacting our support team. For detailed information about cookies, data retention periods, and your full privacy rights, please refer to our complete Privacy Policy available on our website.
+        <S n="8" title="Fees, Paid Services, subscriptions and refunds">
+          Creating an account and browsing are free, and we charge Buyers no fee. A Seller’s first Listing is free for 30 days; thereafter a Listing is kept online with a paid plan (30-day or 6-month). Optional Paid Services include listing boosts, featured placement, and Dealer listing packs (credits). Prices are shown in euros before purchase and may include or exclude VAT as indicated. Payments are processed by our payment provider (Stripe); we do not store full card details. Dealer pack credits are tied to your account, are non-transferable, and—except where required by law—are non-refundable once redeemed.
+          <Sub title="Right of withdrawal for digital services">
+            Where you are a consumer purchasing a Paid Service, you may have a statutory 14-day right of withdrawal. By asking us to begin a Paid Service immediately (for example, publishing or boosting a Listing right away), you request performance during the withdrawal period and acknowledge that, once the service is fully performed, the right of withdrawal is lost; if performance is ongoing when you withdraw, you may owe a proportionate amount for what was supplied. Statutory consumer rights under EU and national law are not affected.
+          </Sub>
         </S>
 
-        <S title="9. Limitation of Liability">
-          To the maximum extent permitted by applicable law, PlugMarket shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the platform, any transaction between users, vehicle defects, inaccuracies in listings, or inability to access the platform. PlugMarket's total liability for any claim arising from these terms shall not exceed the total fees you have paid to PlugMarket in the twelve months preceding the claim. Nothing in these terms excludes or limits liability that cannot be excluded or limited under applicable EU or national law.
+        <S n="9" title="Messaging, the one-message rule and off-platform conduct">
+          Messaging exists to let Buyers and Sellers discuss a specific vehicle. To reduce spam and protect Sellers, a new conversation is limited to a single opening message from the Buyer; further messages are enabled once the Seller replies. You must not use messaging to send unsolicited commercial messages, harass or threaten others, share another person’s personal data unlawfully, attempt to defraud, or solicit payments or actions outside the Platform in order to evade these Terms or our fees. We may read, screen, limit, or remove messages where necessary to operate the Platform, ensure safety, or comply with law, consistent with our Privacy notice.
         </S>
 
-        <S title="10. Dispute Resolution">
-          In the event of a dispute between users, PlugMarket encourages resolution through direct communication. We may, at our discretion, provide mediation assistance but are not obligated to do so. For disputes between you and PlugMarket, these terms are governed by the laws of the European Union and the applicable laws of Romania. Any legal proceedings shall be brought before the competent courts of Satu Mare, Romania, unless mandatory consumer protection laws in your country of residence provide otherwise. As a consumer in the EU, you also have the right to submit complaints to the European Online Dispute Resolution platform at ec.europa.eu/consumers/odr.
+        <S n="10" title="Reviews and ratings">
+          Reviews must reflect genuine experience and must not be false, defamatory, incentivised, or manipulated. You may not post or solicit fake reviews, review your own account, or trade reviews. We may remove reviews that breach these Terms and may suspend accounts that manipulate ratings.
         </S>
 
-        <S title="11. Changes to These Terms">
-          PlugMarket may update these terms from time to time. We will notify you of material changes by email or through the platform at least 30 days before they take effect. Your continued use of the platform after changes take effect constitutes acceptance of the updated terms. If you do not agree with the changes, you may close your account before the new terms take effect.
+        <S n="11" title="Prohibited conduct">
+          You agree not to: post false, misleading, or fraudulent Content; list prohibited or unlawful vehicles; harass, threaten, discriminate against, or abuse others; use the Platform for any unlawful purpose, including money laundering or sanctions evasion; circumvent security, access controls, rate limits, or fees; scrape, harvest, copy, or reproduce Platform Content or data without authorisation; introduce malware; impersonate any person or entity; create multiple or fake accounts; or interfere with the proper functioning of the Platform. We may remove Content and suspend or terminate accounts that breach this clause.
         </S>
 
-        <S title="12. Contact">
-          If you have any questions about these terms, please contact us at support@plugmarket.eu. PlugMarket is operated within the European Union. Registered address details are available upon request.
+        <S n="12" title="Intellectual property and your content licence">
+          The Platform, including its software, design, branding, logos, text, and graphics, is owned by PlugMarket or its licensors and protected by intellectual-property law. You retain ownership of Content you submit. By submitting Content, you grant PlugMarket a non-exclusive, worldwide, royalty-free, sub-licensable licence to host, store, reproduce, adapt for formatting, display, and distribute that Content for the purpose of operating, promoting, and improving the Platform. You confirm you hold the rights necessary to grant this licence and that your Content does not infringe any third party’s rights. The licence ends when you delete the Content or close your account, except for copies retained as required by law or in backups for a limited period.
+        </S>
+
+        <S n="13" title="Transactions, risk and due diligence">
+          Because PlugMarket is not a party to sales, Buyers and Sellers bear full responsibility for their transactions. We strongly recommend that Buyers verify identity and documentation, inspect the vehicle (or commission an independent inspection and battery-health check), confirm there is no outstanding finance, and use secure, traceable payment methods—never sending money to anyone they have not verified. Beware of deals that seem too good to be true, requests to transact off-platform, pressure to pay quickly, or requests for payment by irreversible means. PlugMarket does not provide escrow and is not responsible for losses arising between Users.
+        </S>
+
+        <S n="14" title="Disclaimers">
+          The Platform is provided “as is” and “as available”. To the maximum extent permitted by law, we exclude all warranties not expressly stated, including as to the accuracy of Listings, the quality, legality, or safety of any vehicle, uninterrupted or error-free operation, and the conduct of any User. Nothing in these Terms excludes liability that cannot lawfully be excluded.
+        </S>
+
+        <S n="15" title="Limitation of liability">
+          To the maximum extent permitted by law, PlugMarket is not liable for indirect, incidental, special, consequential, or punitive damages, or for loss of profit, data, goodwill, or opportunity, arising from your use of the Platform, any transaction between Users, vehicle defects, or inaccurate Listings. Our total aggregate liability to you for any claim arising out of or relating to the Platform or these Terms shall not exceed the greater of the total fees you paid to PlugMarket in the twelve months before the event giving rise to the claim, or €100. Nothing limits liability for death or personal injury caused by our negligence, for fraud, or for any liability that cannot be limited under applicable EU or national law, including a consumer’s mandatory rights.
+        </S>
+
+        <S n="16" title="Indemnity">
+          You agree to indemnify and hold PlugMarket harmless from claims, losses, and reasonable costs arising from your breach of these Terms, your Content, your Listings, your transactions with other Users, or your violation of any law or third-party right, except to the extent the loss results from our own breach or negligence.
+        </S>
+
+        <S n="17" title="Suspension and termination">
+          You may close your account at any time. We may suspend or terminate access, remove Content, or withdraw Listings where we reasonably believe you have breached these Terms or the law, where required by a competent authority, or to protect Users or the Platform. Where practical and lawful we will give notice and a chance to remedy. Termination does not affect rights or liabilities accrued before it, and clauses that by their nature should survive (including IP, liability, indemnity, and governing law) will continue.
+        </S>
+
+        <S n="18" title="Changes to the Platform and to these Terms">
+          We may modify or discontinue features of the Platform. We may update these Terms; for material changes affecting your rights or obligations we will give at least 30 days’ notice by email or on the Platform before they take effect. Continued use after the effective date constitutes acceptance. If you do not agree, you may close your account before the changes take effect.
+        </S>
+
+        <S n="19" title="Force majeure, assignment and severability">
+          We are not liable for failure or delay caused by events beyond our reasonable control. We may assign these Terms to a successor in connection with a merger, acquisition, or sale of assets; you may not assign your rights without our consent. If any provision is held invalid, the remainder continues in force.
+        </S>
+
+        <S n="20" title="Governing law and dispute resolution">
+          These Terms are governed by the laws of Romania and applicable EU law. Subject to any mandatory consumer-protection rules of your country of residence, the competent courts of [Court / City], Romania shall have jurisdiction. As an EU consumer you may also use the European Commission’s Online Dispute Resolution platform at ec.europa.eu/consumers/odr. We will try in good faith to resolve disputes informally first; please contact us before commencing proceedings.
+        </S>
+
+        <S n="21" title="Contact">
+          Questions about these Terms: [Company Legal Name], [Registered Office Address], support@plugmarket.eu.
         </S>
       </div>
+      )}
+
+      {tab==="privacy"&&(
+      <div style={{...cs(t),padding:"20px 18px"}}>
+        <div style={{fontSize:12,color:t.tx3,marginBottom:4}}>Privacy &amp; Data Protection Notice (GDPR)</div>
+        <div style={{fontSize:12,color:t.tx3,marginBottom:20}}>Last updated: 12 June 2026</div>
+
+        <S n="1" title="Who we are (Data Controller)">
+          The controller of your personal data is [Company Legal Name], [Registered Office Address], Romania (company no. [Company Registration No.]). For any privacy matter, contact privacy@plugmarket.eu. [If appointed: Our Data Protection Officer can be reached at dpo@plugmarket.eu.] This notice explains what personal data we process, why, on what legal basis, with whom we share it, how long we keep it, and the rights you have under the EU General Data Protection Regulation (GDPR) and Romanian data-protection law.
+        </S>
+
+        <S n="2" title="The data we collect">
+          <UL>
+            <Li><b>Account &amp; profile</b> — name or company name, email, password (stored hashed by our auth provider), phone, address, city, country, bio, profile and cover images.</Li>
+            <Li><b>Dealer data</b> — legal/firm name, VAT number, business address, website, map link, and the VAT or registration document you upload for verification.</Li>
+            <Li><b>Listings</b> — vehicle details, photographs, and any information you choose to include.</Li>
+            <Li><b>Messages</b> — the content and metadata of conversations between Users.</Li>
+            <Li><b>Transactions &amp; payments</b> — records of Paid Services you buy. Card payments are handled by Stripe; we receive confirmation and limited details (such as the last four digits and status) but not your full card number.</Li>
+            <Li><b>Technical &amp; usage data</b> — IP address, device and browser information, log data, and interactions with the Platform, collected via cookies and similar technologies.</Li>
+            <Li><b>Support data</b> — information you provide when you contact us.</Li>
+          </UL>
+          We do not intentionally collect special-category data; please do not include it in Listings or messages.
+        </S>
+
+        <S n="3" title="Why we use your data and our legal bases">
+          <UL>
+            <Li><b>To provide the Platform</b> (accounts, listings, search, messaging, favourites) — <i>performance of a contract</i> (Art. 6(1)(b)).</Li>
+            <Li><b>To process Paid Services and prevent payment fraud</b> — <i>contract</i> and <i>legitimate interests</i> (Art. 6(1)(b),(f)).</Li>
+            <Li><b>To verify Dealers and handle VAT documents</b> — <i>legal obligation</i> and <i>legitimate interests</i> in marketplace trust (Art. 6(1)(c),(f)).</Li>
+            <Li><b>To send service messages</b> (e.g. listing-expiry, security) — <i>contract</i> / <i>legitimate interests</i>.</Li>
+            <Li><b>To send marketing</b>, where applicable — <i>consent</i> (Art. 6(1)(a)), which you can withdraw at any time.</Li>
+            <Li><b>To keep the Platform safe and prevent abuse</b> — <i>legitimate interests</i> (Art. 6(1)(f)).</Li>
+            <Li><b>To comply with law and respond to authorities</b> — <i>legal obligation</i> (Art. 6(1)(c)).</Li>
+            <Li><b>Non-essential cookies/analytics</b> — <i>consent</i> where required.</Li>
+          </UL>
+        </S>
+
+        <S n="4" title="Who we share data with (recipients and processors)">
+          We do not sell your personal data. We share it only as needed:
+          <UL>
+            <Li><b>Other Users</b> — your public profile, Listings, and the city/region shown on a Listing are visible to others; message content is shared with the User you contact.</Li>
+            <Li><b>Service providers (processors)</b> acting on our instructions: Supabase (database, authentication, file storage), Netlify (hosting and serverless functions), Stripe (payments), and our email provider (transactional email). Each processes data under a data-processing agreement.</Li>
+            <Li><b>Authorities and advisers</b> — where required by law, to establish or defend legal claims, or to prevent fraud or harm.</Li>
+            <Li><b>Successors</b> — in connection with a merger, acquisition, or asset sale, subject to this notice.</Li>
+          </UL>
+        </S>
+
+        <S n="5" title="International transfers">
+          Some providers may process data outside the European Economic Area. Where they do, we rely on an adequacy decision or appropriate safeguards such as the European Commission’s Standard Contractual Clauses, together with supplementary measures where needed. You can ask us for details of the safeguards in place.
+        </S>
+
+        <S n="6" title="How long we keep data">
+          We keep personal data only as long as necessary for the purposes above. In general: account and profile data for the life of your account and a limited period afterwards; Listings and messages while relevant to the service and for a reasonable period thereafter; transaction and invoicing records for the period required by tax and accounting law (typically up to 10 years in Romania); verification documents for as long as needed to maintain dealer status; and logs for a short, security-appropriate period. When data is no longer needed we delete or anonymise it.
+        </S>
+
+        <S n="7" title="Your rights">
+          Subject to conditions in the GDPR, you have the right to: access your data; rectify inaccurate data; erase data (“right to be forgotten”); restrict or object to processing, including objecting to processing based on legitimate interests and to direct marketing at any time; data portability; and to withdraw consent at any time without affecting prior processing. You can exercise many of these from your account settings or by emailing privacy@plugmarket.eu. We will respond within one month. You also have the right to lodge a complaint with a supervisory authority — in Romania, the National Supervisory Authority for Personal Data Processing (ANSPDCP, dataprotection.ro) — or with the authority in your EU country of residence.
+        </S>
+
+        <S n="8" title="Cookies and similar technologies">
+          We use cookies and local storage that are strictly necessary to run the Platform (for example, to keep you signed in and remember your theme and favourites). Where we use non-essential cookies or analytics, we ask for your consent and you can change your choice at any time. You can also control cookies through your browser, though disabling essential cookies may break core features.
+        </S>
+
+        <S n="9" title="Security">
+          We use appropriate technical and organisational measures to protect personal data, including encryption in transit, access controls, hashed passwords, and server-side handling of sensitive operations. No system is perfectly secure; if a personal-data breach is likely to affect your rights, we will notify the supervisory authority and, where required, you, in line with the GDPR.
+        </S>
+
+        <S n="10" title="Children">
+          The Platform is not intended for anyone under 18, and we do not knowingly collect their data. If you believe a minor has provided us data, contact us and we will delete it.
+        </S>
+
+        <S n="11" title="Automated decision-making">
+          We do not make decisions producing legal or similarly significant effects about you based solely on automated processing. Features such as the EV recommender and price-positioning indicator are informational tools and do not determine your access to the Platform.
+        </S>
+
+        <S n="12" title="Changes and contact">
+          We may update this notice; we will post the new version with its date and, for material changes, give notice as we do for our Terms. For any privacy question or to exercise your rights: [Company Legal Name], [Registered Office Address], privacy@plugmarket.eu.
+        </S>
+      </div>
+      )}
     </div>
   </>;
 }
