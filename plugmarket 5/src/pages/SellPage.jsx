@@ -113,7 +113,7 @@ const MAKES_DATA = {
   Porsche: ["Macan Electric", "Taycan", "Taycan Cross Turismo", "Taycan Sport Turismo"],
   Renault: ["4 E-Tech", "5 E-Tech", "Megane E-Tech", "Scenic E-Tech", "Twingo Electric"],
   Rivian: ["R2", "R3"],
-  Rolls-Royce: ["Spectre"],
+  "Rolls-Royce": ["Spectre"],
   Skoda: ["Elroq", "Enyaq", "Enyaq Coupe"],
   Smart: ["#1", "#3", "#5"],
   Subaru: ["Solterra"],
