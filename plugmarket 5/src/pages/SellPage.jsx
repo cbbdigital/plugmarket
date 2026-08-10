@@ -559,6 +559,55 @@ export default function SellPage(){
     }
   };
 
+  const [draftSaving, setDraftSaving] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
+
+  const saveDraft = async () => {
+    if (draftSaving) return;
+    setDraftSaving(true);
+    const token = session?.access_token;
+    const uid = user?.id;
+    if (!token || !uid) { setDraftSaving(false); return; }
+
+    const condMap = {"New":"new","Used":"used","Certified Pre-Owned":"certified_pre_owned"};
+    const driveMap = {"RWD":"rwd","AWD":"awd","FWD":"fwd"};
+    const portMap = {"CCS2":"ccs2","Type 2":"type2","CHAdeMO":"chademo","CCS2 / Type 2":"ccs2_type2"};
+
+    const data = {
+      make: make || null, model: model || null, variant: variant || null,
+      year: year ? +year : null, mileage_km: km ? +km : null,
+      condition: condMap[condition] || null,
+      exterior_color: color || null, interior_color: intColor || null, interior_material: intMaterial || null,
+      drivetrain: driveMap[drive] || null,
+      vin: vin || null, first_registration: regDate || null,
+      previous_owners: owners ? +owners : null,
+      accident_free: accidentFree, service_history: serviceHistory || null,
+      features: features.length > 0 ? features : null,
+      battery_capacity_kwh: battery ? +battery : null, usable_capacity_kwh: usable ? +usable : null,
+      state_of_health_pct: soh ? +soh : null,
+      range_real_km: rangeReal ? +rangeReal : null, range_winter_km: rangeWinter ? +rangeWinter : null,
+      range_wltp_km: (()=>{ const w = getWLTP(make, model, variant, year); return w ? w.wltp : null; })(),
+      dc_charge_max_kw: dcCharge ? +dcCharge : null, ac_charge_kw: acCharge ? +acCharge : null,
+      charge_port: portMap[port] || null, power_kw: powerKw ? +powerKw : null,
+      price_eur: price ? +price : null, negotiable, vat_deductible: vatDeduct,
+      description: description || null,
+      contact_name: sellerName || null, contact_phone: phone || null, contact_email: email || null,
+      seller_type: sellerType, city: city || null, country: country || null,
+      status: "draft",
+    };
+
+    if (editId) {
+      await sbUpdate("listings", `id=eq.${editId}`, data, token);
+    } else {
+      data.seller_id = uid;
+      await sbInsert("listings", data, token);
+    }
+
+    setDraftSaving(false);
+    setDraftSaved(true);
+    setTimeout(() => setDraftSaved(false), 3000);
+  };
+
   const models = make ? MAKES_DATA[make]||[] : [];
   const years = Array.from({length:8},(_,i)=>String(2025-i));
 
@@ -1267,13 +1316,19 @@ export default function SellPage(){
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingBottom:12}}>
           <button onClick={()=>setStep(Math.max(1,step-1))} style={{padding:"10px 18px",borderRadius:10,border:`1px solid ${t.bd}`,background:t.card,color:t.tx,fontSize:13,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",gap:6,visibility:step===1?"hidden":"visible"}}><ChevL size={14}/> Back</button>
 
-          {step<5?(
-            <button onClick={()=>{if(canNext())setStep(step+1)}} style={{padding:"10px 22px",borderRadius:10,border:"none",background:canNext()?GR:"rgba(128,128,128,0.15)",color:canNext()?"#fff":"#9ca3af",fontSize:13,fontWeight:600,cursor:canNext()?"pointer":"default",display:"flex",alignItems:"center",gap:6,boxShadow:canNext()?"0 2px 8px rgba(255,117,0,0.3)":"none"}}>Next <ChevR size={14} color={canNext()?"#fff":"#9ca3af"}/></button>
-          ):(
-            <button onClick={publishListing} disabled={publishing} style={{padding:"12px 24px",borderRadius:12,border:"none",background:publishing?"rgba(128,128,128,0.3)":"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:14,fontWeight:600,cursor:publishing?"default":"pointer",display:"flex",alignItems:"center",gap:8,boxShadow:publishing?"none":"0 4px 14px rgba(16,185,129,0.3)",opacity:publishing?0.7:1}}>
-              <CheckIcon size={16} color="#fff"/> {publishing ? (editId ? "Updating..." : "Publishing...") : (editId ? "Update listing" : "Publish listing")}
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <button onClick={saveDraft} disabled={draftSaving} style={{padding:"10px 16px",borderRadius:10,border:`1px solid ${t.bd}`,background:draftSaved?"rgba(16,185,129,0.08)":t.card,color:draftSaved?"#10b981":t.tx2,fontSize:13,fontWeight:500,cursor:draftSaving?"default":"pointer",display:"flex",alignItems:"center",gap:6,transition:"all 0.2s"}}>
+              {draftSaved ? <><CheckIcon size={13} color="#10b981"/> Saved</> : draftSaving ? "Saving..." : "Save draft"}
             </button>
-          )}
+
+            {step<5?(
+              <button onClick={()=>{if(canNext())setStep(step+1)}} style={{padding:"10px 22px",borderRadius:10,border:"none",background:canNext()?GR:"rgba(128,128,128,0.15)",color:canNext()?"#fff":"#9ca3af",fontSize:13,fontWeight:600,cursor:canNext()?"pointer":"default",display:"flex",alignItems:"center",gap:6,boxShadow:canNext()?"0 2px 8px rgba(255,117,0,0.3)":"none"}}>Next <ChevR size={14} color={canNext()?"#fff":"#9ca3af"}/></button>
+            ):(
+              <button onClick={publishListing} disabled={publishing} style={{padding:"12px 24px",borderRadius:12,border:"none",background:publishing?"rgba(128,128,128,0.3)":"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:14,fontWeight:600,cursor:publishing?"default":"pointer",display:"flex",alignItems:"center",gap:8,boxShadow:publishing?"none":"0 4px 14px rgba(16,185,129,0.3)",opacity:publishing?0.7:1}}>
+                <CheckIcon size={16} color="#fff"/> {publishing ? (editId ? "Updating..." : "Publishing...") : (editId ? "Update listing" : "Publish listing")}
+              </button>
+            )}
+          </div>
         </div>
     </>
   );
