@@ -28,8 +28,10 @@ const DURATIONS = [
 ];
 
 export default function PlanPage() {
-  const { t } = useOutletContext();
+  const ctx = useOutletContext();
+  const t = ctx?.t;
   const navigate = useNavigate();
+  if (!t) return null;
   const [dur, setDur] = useState("30d");
   const [firstListing, setFirstListing] = useState(null);
   const [isDealer, setIsDealer] = useState(false);
