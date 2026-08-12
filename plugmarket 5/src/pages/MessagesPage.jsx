@@ -204,7 +204,7 @@ export default function MessagesPage(){
           mapped.push({
             id:c.id, name:otherName, phone:otherProfile?.[0]?.phone||null, iAmBuyer:otherIsMe,
             initials:otherName.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2),
-            online:false, unread:otherIsMe?(c.buyer_unread_count||0):(c.seller_unread_count||0),
+            online:false, unread:otherIsMe?(c.buyer_unread_count||0):(c.seller_unread_count||0), buyerUnread:c.buyer_unread_count||0, sellerUnread:c.seller_unread_count||0,
             car:carName, lastMsg:c.last_message_text||"", time:timeAgo(c.updated_at),
             messages:msgs.map(m=>({id:m.id,from:m.sender_id===uid?"me":"them",text:m.body||m.content||"",time:new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})})),
           });
@@ -354,8 +354,19 @@ export default function MessagesPage(){
     setNewMsg("");
     inputRef.current?.focus();
 
-    // Bump the conversation (last message + timestamp) so ordering stays correct
-    try{ await sbPatch("conversations",`id=eq.${activeChat}`,{last_message_text:text,updated_at:new Date().toISOString()},token); }catch{}
+    // Bump the conversation + increment recipient unread count
+    try{
+      const conv=conversations.find(c=>c.id===activeChat);
+      const iAmBuyer=conv?.iAmBuyer;
+      // increment the OTHER person's unread count
+      const unreadField=iAmBuyer?"seller_unread_count":"buyer_unread_count";
+      const currentUnread=iAmBuyer?(conv?.sellerUnread||0):(conv?.buyerUnread||0);
+      await sbPatch("conversations",`id=eq.${activeChat}`,{
+        last_message_text:text,
+        updated_at:new Date().toISOString(),
+        [unreadField]:currentUnread+1,
+      },token);
+    }catch{}
 
     // Send email notification to recipient (fire and forget)
     try{
