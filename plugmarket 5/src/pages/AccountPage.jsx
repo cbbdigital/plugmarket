@@ -1092,6 +1092,7 @@ export default function AccountPage(){
         {(user?.email||"").toLowerCase()==="cipribadic@gmail.com" && (
           <Sect t={t} title="Admin">
             <Row t={t} icon={<Car size={18} color={BC}/>} label="Add external listing" desc="Create a dealer-sourced listing" onClick={()=>nav("/admin/new")}/>
+            <Row t={t} icon={<Shld size={18} color={BC}/>} label="Dealer verification" desc="Review and approve dealer accounts" onClick={()=>nav("/admin/dealers")}/>
           </Sect>
         )}
         <Sect t={t} title="Account">
