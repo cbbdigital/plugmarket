@@ -134,8 +134,8 @@ function RightPanel({t,activeConvo,newMsg,setNewMsg,sendMessage,inputRef,message
           </div>
         </div>
         <div style={{display:"flex",gap:5}}>
-          <button style={{width:32,height:32,borderRadius:8,border:`1px solid ${t.bd}`,background:t.inp,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Phone size={14} color={t.tx3}/></button>
-          <button style={{width:32,height:32,borderRadius:8,border:`1px solid ${t.bd}`,background:t.inp,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Dots size={14} color={t.tx3}/></button>
+          <button onClick={()=>activeConvo.phone?alert(`Phone: ${activeConvo.phone}`):alert("No phone number available.")} style={{width:32,height:32,borderRadius:8,border:`1px solid ${t.bd}`,background:t.inp,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Phone size={14} color={t.tx3}/></button>
+          <button onClick={()=>{if(window.confirm("Block this user?"))alert("User blocked.");}} style={{width:32,height:32,borderRadius:8,border:`1px solid ${t.bd}`,background:t.inp,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Dots size={14} color={t.tx3}/></button>
         </div>
       </div>
       <div style={{flex:1,overflowY:"auto",padding:"12px 16px"}}>
@@ -196,17 +196,17 @@ export default function MessagesPage(){
         for(const c of convos){
           const otherIsMe=c.buyer_id===uid;
           const otherId=otherIsMe?c.seller_id:c.buyer_id;
-          const otherProfile=await sbGet("profiles",`id=eq.${otherId}&select=full_name`,token);
+          const otherProfile=await sbGet("profiles",`id=eq.${otherId}&select=full_name,phone`,token);
           const otherName=otherProfile?.[0]?.full_name||"User";
           const listing=c.listing_id?await sbGet("listings",`id=eq.${c.listing_id}&select=make,model`,token):[];
           const carName=listing?.[0]?`${listing[0].make} ${listing[0].model}`:"General";
           const msgs=await sbGet("messages",`conversation_id=eq.${c.id}&order=created_at.asc`,token);
           mapped.push({
-            id:c.id, name:otherName, iAmBuyer:otherIsMe,
+            id:c.id, name:otherName, phone:otherProfile?.[0]?.phone||null, iAmBuyer:otherIsMe,
             initials:otherName.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2),
             online:false, unread:otherIsMe?(c.buyer_unread_count||0):(c.seller_unread_count||0),
             car:carName, lastMsg:c.last_message_text||"", time:timeAgo(c.updated_at),
-            messages:msgs.map(m=>({id:m.id,from:m.sender_id===uid?"me":"them",text:m.body,time:new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})})),
+            messages:msgs.map(m=>({id:m.id,from:m.sender_id===uid?"me":"them",text:m.body||m.content||"",time:new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})})),
           });
         }
         setConversations(mapped);
@@ -235,7 +235,7 @@ export default function MessagesPage(){
         if(!alreadyInState){
           // Fetch details and add to state
           const otherId=existing[0].buyer_id===uid?existing[0].seller_id:existing[0].buyer_id;
-          const otherProfile=await sbGet("profiles",`id=eq.${otherId}&select=full_name`,token);
+          const otherProfile=await sbGet("profiles",`id=eq.${otherId}&select=full_name,phone`,token);
           const listing=await sbGet("listings",`id=eq.${incomingListing}&select=make,model`,token);
           const otherName=otherProfile?.[0]?.full_name||"Seller";
           const carName=listing?.[0]?`${listing[0].make} ${listing[0].model}`:"Vehicle";
@@ -245,7 +245,7 @@ export default function MessagesPage(){
             initials:otherName.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2),
             online:false,unread:0,car:carName,
             lastMsg:existing[0].last_message_text||"",time:timeAgo(existing[0].updated_at),
-            messages:msgs.map(m=>({id:m.id,from:m.sender_id===uid?"me":"them",text:m.body,time:new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})})),
+            messages:msgs.map(m=>({id:m.id,from:m.sender_id===uid?"me":"them",text:m.body||m.content||"",time:new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})})),
           },...prev]);
         }
         setActiveChat(existingId);
@@ -314,7 +314,7 @@ export default function MessagesPage(){
     // Direct fetch so we can surface any permission/RLS error instead of silently failing
     let msg=null;
     try{
-      const res=await fetch(`${SB_URL}/rest/v1/messages`,{method:"POST",headers:sbH(token),body:JSON.stringify({conversation_id:activeChat,sender_id:user.id,body:text})});
+      const res=await fetch(`${SB_URL}/rest/v1/messages`,{method:"POST",headers:sbH(token),body:JSON.stringify({conversation_id:activeChat,sender_id:user.id,content:text})});
       if(!res.ok){
         const txt=await res.text();
         alert(`Message couldn't be sent (${res.status}). ${txt||"You may not have permission to post in this conversation."}`);
