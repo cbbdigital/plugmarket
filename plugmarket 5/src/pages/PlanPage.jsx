@@ -29,9 +29,9 @@ const DURATIONS = [
 
 export default function PlanPage() {
   const ctx = useOutletContext();
-  const t = ctx?.t;
   const navigate = useNavigate();
-  if (!t) return null;
+
+  // ALL hooks before any return
   const [dur, setDur] = useState("30d");
   const [firstListing, setFirstListing] = useState(null);
   const [isDealer, setIsDealer] = useState(false);
@@ -58,6 +58,10 @@ export default function PlanPage() {
       } catch { setFirstListing(true); }
     })();
   }, []);
+
+  // Guard AFTER hooks
+  const t = ctx?.t;
+  if (!t) return null;
 
   const isFirst = firstListing !== false;
   const goBack = () => navigate(-1);
@@ -141,7 +145,6 @@ export default function PlanPage() {
       {/* PAID OPTIONS */}
       {!isFirst && (
         <>
-          {/* Duration toggle */}
           <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
             {DURATIONS.map((d) => {
               const sel = dur === d.id;
@@ -155,19 +158,16 @@ export default function PlanPage() {
             })}
           </div>
 
-          {/* Dealer: use a credit */}
           {isDealer && credits[dur] > 0 && (
             <button onClick={useCredit} disabled={busy} style={{ width: "100%", marginTop: 18, padding: "15px 0", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#10b981,#059669)", color: "#fff", fontSize: 15, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 16px rgba(16,185,129,0.28)" }}>
               <LayersIcon size={17} color="#fff" /> Use 1 credit ({credits[dur]} {D.name} left)
             </button>
           )}
 
-          {/* Pay for this listing */}
           <button onClick={paySingle} disabled={busy} style={{ width: "100%", marginTop: 14, padding: "15px 0", borderRadius: 14, border: "none", background: GR, color: "#fff", fontSize: 15, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 16px rgba(255,117,0,0.28)" }}>
             <CardIcon size={17} color="#fff" /> {busy ? "Please wait…" : `Pay for this listing — ${D.single}`}
           </button>
 
-          {/* Dealer: buy a 10-pack */}
           {isDealer && (
             <div style={{ marginTop: 18, borderRadius: 16, border: `1.5px solid ${t.bd}`, background: t.sec, padding: 18 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
@@ -186,7 +186,6 @@ export default function PlanPage() {
         </>
       )}
 
-      {/* TRUST LINE */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginTop: 18 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <ShieldIcon size={13} color={t.tx3} />
