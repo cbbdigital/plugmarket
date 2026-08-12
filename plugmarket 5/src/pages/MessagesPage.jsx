@@ -215,6 +215,25 @@ export default function MessagesPage(){
     })();
   },[user,session]);
 
+  // Live polling - refresh messages every 5 seconds when a chat is open
+  useEffect(()=>{
+    if(!activeChat||!session?.access_token||!user)return;
+    const token=session.access_token;
+    const uid=user.id;
+    const poll=async()=>{
+      const msgs=await sbGet("messages",`conversation_id=eq.${activeChat}&order=created_at.asc`,token);
+      if(!msgs||!msgs.length)return;
+      setConversations(prev=>prev.map(c=>{
+        if(c.id!==activeChat)return c;
+        const mapped=msgs.map(m=>({id:m.id,from:m.sender_id===uid?"me":"them",text:m.body||m.content||"",time:new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}));
+        return{...c,messages:mapped};
+      }));
+    };
+    poll();
+    const interval=setInterval(poll,5000);
+    return()=>clearInterval(interval);
+  },[activeChat,session,user]);
+
   // Auto-open or create conversation when coming from listing page
   useEffect(()=>{
     if(!incomingListing||!incomingSeller||!user||!session?.access_token||loading)return;
@@ -314,7 +333,7 @@ export default function MessagesPage(){
     // Direct fetch so we can surface any permission/RLS error instead of silently failing
     let msg=null;
     try{
-      const res=await fetch(`${SB_URL}/rest/v1/messages`,{method:"POST",headers:sbH(token),body:JSON.stringify({conversation_id:activeChat,sender_id:user.id,content:text})});
+      const res=await fetch(`${SB_URL}/rest/v1/messages`,{method:"POST",headers:sbH(token),body:JSON.stringify({conversation_id:activeChat,sender_id:user.id,body:text})});
       if(!res.ok){
         const txt=await res.text();
         alert(`Message couldn't be sent (${res.status}). ${txt||"You may not have permission to post in this conversation."}`);
