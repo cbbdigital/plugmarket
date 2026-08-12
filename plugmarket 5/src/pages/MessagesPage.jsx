@@ -206,7 +206,7 @@ export default function MessagesPage(){
             initials:otherName.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2),
             online:false, unread:otherIsMe?(c.buyer_unread_count||0):(c.seller_unread_count||0),
             car:carName, lastMsg:c.last_message_text||"", time:timeAgo(c.updated_at),
-            messages:msgs.map(m=>({id:m.id,from:m.sender_id===uid?"me":"them",text:m.content,time:new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})})),
+            messages:msgs.map(m=>({id:m.id,from:m.sender_id===uid?"me":"them",text:m.body,time:new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})})),
           });
         }
         setConversations(mapped);
@@ -245,7 +245,7 @@ export default function MessagesPage(){
             initials:otherName.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2),
             online:false,unread:0,car:carName,
             lastMsg:existing[0].last_message_text||"",time:timeAgo(existing[0].updated_at),
-            messages:msgs.map(m=>({id:m.id,from:m.sender_id===uid?"me":"them",text:m.content,time:new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})})),
+            messages:msgs.map(m=>({id:m.id,from:m.sender_id===uid?"me":"them",text:m.body,time:new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})})),
           },...prev]);
         }
         setActiveChat(existingId);
@@ -314,7 +314,7 @@ export default function MessagesPage(){
     // Direct fetch so we can surface any permission/RLS error instead of silently failing
     let msg=null;
     try{
-      const res=await fetch(`${SB_URL}/rest/v1/messages`,{method:"POST",headers:sbH(token),body:JSON.stringify({conversation_id:activeChat,sender_id:user.id,content:text})});
+      const res=await fetch(`${SB_URL}/rest/v1/messages`,{method:"POST",headers:sbH(token),body:JSON.stringify({conversation_id:activeChat,sender_id:user.id,body:text})});
       if(!res.ok){
         const txt=await res.text();
         alert(`Message couldn't be sent (${res.status}). ${txt||"You may not have permission to post in this conversation."}`);
@@ -337,6 +337,15 @@ export default function MessagesPage(){
 
     // Bump the conversation (last message + timestamp) so ordering stays correct
     try{ await sbPatch("conversations",`id=eq.${activeChat}`,{last_message_text:text,updated_at:new Date().toISOString()},token); }catch{}
+
+    // Send email notification to recipient (fire and forget)
+    try{
+      fetch("/.netlify/functions/send-message-notification",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({conversationId:activeChat,senderId:user.id,messageText:text}),
+      });
+    }catch{}
   };
 
   const selectConvo=(id)=>{
