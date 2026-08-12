@@ -19,7 +19,7 @@ const BOOSTS = [
     per: "/ 24 hours",
     sub: "Top of search results for 24 hours.",
     badge: null,
-    features: ["Pinned to top of search", "Highlighted card border", "“Boosted” label"],
+    features: ["Pinned to top of search", "Highlighted card border", "\u201cBoosted\u201d label"],
   },
   {
     id: "weekly",
@@ -28,17 +28,23 @@ const BOOSTS = [
     per: "/ 7 days",
     sub: "Top placement for a full week.",
     badge: "BEST VALUE",
-    features: ["Everything in Daily", "7 full days of visibility", "≈ €0.86/day"],
+    features: ["Everything in Daily", "7 full days of visibility", "\u2248 \u20ac0.86/day"],
   },
 ];
 
 export default function BoostPage() {
-  const { t } = useOutletContext();
+  const ctx = useOutletContext();
   const navigate = useNavigate();
+
+  // ALL hooks before any return
   const [boost, setBoost] = useState("weekly");
   const [busy, setBusy] = useState(false);
 
   const listingId = new URLSearchParams(window.location.search).get("listing");
+
+  // Guard AFTER hooks
+  const t = ctx?.t;
+  if (!t) return null;
 
   function getToken() {
     try {
@@ -49,6 +55,7 @@ export default function BoostPage() {
 
   const selected = BOOSTS.find((b) => b.id === boost);
   const goBack = () => navigate(-1);
+
   const confirm = async () => {
     if (busy) return;
     if (!listingId) { alert("No listing selected to boost."); return; }
@@ -73,7 +80,6 @@ export default function BoostPage() {
   return (
     <div style={{ fontFamily: "var(--font-sans)", color: t.tx, maxWidth: 720, margin: "0 auto", padding: "0 6% 80px" }}>
 
-      {/* HEADER */}
       <div style={{ padding: "20px 0 8px" }}>
         <button onClick={goBack} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: t.tx2, fontSize: 13, fontWeight: 500, cursor: "pointer", padding: 0, marginBottom: 18 }}>
           <ChevL size={14} /> Back
@@ -89,7 +95,6 @@ export default function BoostPage() {
         </p>
       </div>
 
-      {/* BOOST CARDS */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 24 }}>
         {BOOSTS.map((b) => {
           const sel = boost === b.id;
@@ -99,8 +104,8 @@ export default function BoostPage() {
               onClick={() => setBoost(b.id)}
               style={{
                 borderRadius: 16,
-                border: sel ? `2px solid ${BC}` : `1.5px solid ${t.brd}`,
-                background: sel ? "rgba(255,117,0,0.05)" : t.card2,
+                border: sel ? `2px solid ${BC}` : `1.5px solid ${t.bd}`,
+                background: sel ? "rgba(255,117,0,0.05)" : t.sec,
                 padding: 20,
                 cursor: "pointer",
                 position: "relative",
@@ -113,7 +118,6 @@ export default function BoostPage() {
               {sel && (
                 <div style={{ position: "absolute", top: 12, right: 12, width: 22, height: 22, borderRadius: "50%", background: BC, display: "flex", alignItems: "center", justifyContent: "center" }}><CheckIcon size={12} color="#fff" /></div>
               )}
-
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
                 <BoltIcon size={14} color={BC} />
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: t.tx2 }}>{b.name}</span>
@@ -123,7 +127,6 @@ export default function BoostPage() {
                 <span style={{ fontSize: 12.5, color: t.tx2 }}>{b.per}</span>
               </div>
               <div style={{ fontSize: 11.5, color: t.tx2, marginTop: 5, lineHeight: 1.5 }}>{b.sub}</div>
-
               <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 7 }}>
                 {b.features.map((f, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 7 }}>
@@ -137,21 +140,18 @@ export default function BoostPage() {
         })}
       </div>
 
-      {/* SUMMARY LINE */}
-      <div style={{ marginTop: 20, padding: "14px 16px", borderRadius: 12, background: t.card2, border: `1px solid ${t.brd}`, fontSize: 13, color: t.tx, lineHeight: 1.6 }}>
+      <div style={{ marginTop: 20, padding: "14px 16px", borderRadius: 12, background: t.sec, border: `1px solid ${t.bd}`, fontSize: 13, color: t.tx, lineHeight: 1.6 }}>
         You'll be charged a one-time <strong style={{ color: BC }}>{selected.price}</strong> for the {selected.id === "daily" ? "24-hour" : "7-day"} boost.
       </div>
 
-      {/* CTA */}
       <button
         onClick={confirm}
         disabled={busy}
         style={{ width: "100%", marginTop: 16, padding: "15px 0", borderRadius: 14, border: "none", background: GR, color: "#fff", fontSize: 15.5, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.7 : 1, boxShadow: "0 4px 16px rgba(255,117,0,0.32)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
       >
-        <BoltIcon size={17} color="#fff" /> {busy ? "Please wait…" : `Boost now — ${selected.price}`}
+        <BoltIcon size={17} color="#fff" /> {busy ? "Please wait\u2026" : `Boost now \u2014 ${selected.price}`}
       </button>
 
-      {/* TRUST LINE */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 16 }}>
         <ShieldIcon size={13} color={t.tx3} />
         <span style={{ fontSize: 11.5, color: t.tx2 }}>One-time payment · Secured by Stripe</span>
