@@ -462,10 +462,55 @@ function EditPage({t,onBack,user,session,profile,updateProfile,fetchProfile}){
   </>;
 }
 
-function SecurityPage({t,onBack}){return <>
+function SecurityPage({t,onBack,session}){
+  const[showPw,setShowPw]=useState(false);
+  const[curPw,setCurPw]=useState("");
+  const[newPw,setNewPw]=useState("");
+  const[confirmPw,setConfirmPw]=useState("");
+  const[pwMsg,setPwMsg]=useState("");
+  const[pwErr,setPwErr]=useState(false);
+  const[savingPw,setSavingPw]=useState(false);
+
+  const changePassword=async()=>{
+    if(!newPw||newPw.length<8){setPwErr(true);setPwMsg("Password must be at least 8 characters.");return;}
+    if(newPw!==confirmPw){setPwErr(true);setPwMsg("Passwords do not match.");return;}
+    setSavingPw(true);setPwErr(false);setPwMsg("");
+    try{
+      const token=session?.access_token;
+      const r=await fetch(`${SB_URL}/auth/v1/user`,{
+        method:"PUT",
+        headers:{"apikey":SB_KEY,"Authorization":`Bearer ${token}`,"Content-Type":"application/json"},
+        body:JSON.stringify({password:newPw}),
+      });
+      if(r.ok){
+        setPwMsg("Password updated successfully.");
+        setPwErr(false);
+        setCurPw("");setNewPw("");setConfirmPw("");
+        setTimeout(()=>{setShowPw(false);setPwMsg("");},2000);
+      } else {
+        const d=await r.json();
+        setPwErr(true);setPwMsg(d?.msg||d?.message||"Failed to update password.");
+      }
+    }catch(e){setPwErr(true);setPwMsg("Network error.");}
+    setSavingPw(false);
+  };
+
+  return <>
   <SubH title="Security" t={t} onBack={onBack}/>
   <div style={{padding:"16px 0"}}>
-    <Sect t={t} title="Password"><Row t={t} icon={<Key size={18} color={BC}/>} label="Change password" desc="Last changed 3 months ago" onClick={()=>{}}/></Sect>
+    <Sect t={t} title="Password">
+      <Row t={t} icon={<Key size={18} color={BC}/>} label="Change password" desc="Update your account password" onClick={()=>setShowPw(v=>!v)}/>
+      {showPw&&(
+        <div style={{padding:"14px 0 4px",display:"flex",flexDirection:"column",gap:10}}>
+          <input type="password" value={newPw} onChange={e=>setNewPw(e.target.value)} placeholder="New password" style={{width:"100%",height:42,borderRadius:10,border:`1px solid ${t.bd}`,background:t.inp,color:t.tx,padding:"0 14px",fontSize:13,boxSizing:"border-box"}}/>
+          <input type="password" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)} placeholder="Confirm new password" style={{width:"100%",height:42,borderRadius:10,border:`1px solid ${t.bd}`,background:t.inp,color:t.tx,padding:"0 14px",fontSize:13,boxSizing:"border-box"}}/>
+          {pwMsg&&<div style={{fontSize:12,color:pwErr?"#ef4444":"#10b981",fontWeight:500}}>{pwMsg}</div>}
+          <button onClick={changePassword} disabled={savingPw} style={{height:42,borderRadius:10,border:"none",background:GR,color:"#fff",fontSize:13,fontWeight:600,cursor:savingPw?"default":"pointer",opacity:savingPw?0.7:1}}>
+            {savingPw?"Updating...":"Update password"}
+          </button>
+        </div>
+      )}
+    </Sect>
     <Sect t={t} title="Two-factor authentication"><Row t={t} icon={<Shld size={18} color="#10b981"/>} label="2FA enabled" desc="Authenticator app" right={<Badge label="Active" color="#10b981" bg="rgba(16,185,129,0.1)"/>}/></Sect>
     <Sect t={t} title="Active sessions">
       {[{dev:"Chrome on macOS",loc:"Satu Mare, Romania",time:"Current session",active:true},{dev:"PlugMarket App on iPhone",loc:"Satu Mare, Romania",time:"2 hours ago",active:false}].map((s,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 0",borderBottom:`1px solid ${t.bd}`}}><div><div style={{fontSize:13,fontWeight:500,color:t.tx}}>{s.dev}</div><div style={{fontSize:11,color:t.tx3,marginTop:2}}>{s.loc} · {s.time}</div></div>{s.active?<Badge label="Active" color="#10b981" bg="rgba(16,185,129,0.1)"/>:<button style={{fontSize:11,color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Revoke</button>}</div>)}
@@ -475,7 +520,7 @@ function SecurityPage({t,onBack}){return <>
       <Row t={t} icon={<Trash size={18} color="#ef4444"/>} label="Delete account" desc="Permanently remove your account" onClick={()=>{}} danger/>
     </Sect>
   </div>
-</>}
+</>;}
 
 function brandColor(b){const m={visa:"#1a1f71",mastercard:"#eb001b",amex:"#2e77bb",discover:"#ff6000"};return m[(b||"").toLowerCase()]||"#555"}
 
@@ -974,7 +1019,7 @@ export default function AccountPage(){
     if(page==="sold") return <SoldPage t={t} onBack={goHome} user={user} session={session}/>;
     if(page==="reviews") return <ReviewsPage t={t} onBack={goHome}/>;
     if(page==="edit") return <EditPage t={t} onBack={goHome} user={user} session={session} profile={profile} updateProfile={updateProfile} fetchProfile={fetchProfile}/>;
-    if(page==="security") return <SecurityPage t={t} onBack={goHome}/>;
+    if(page==="security") return <SecurityPage t={t} session={session} onBack={goHome}/>;
     if(page==="payment") return <PaymentPage t={t} onBack={goHome} user={user} session={session}/>;
     if(page==="language") return <LangPage t={t} onBack={goHome}/>;
     if(page==="help") return <HelpPage t={t} onBack={goHome}/>;
