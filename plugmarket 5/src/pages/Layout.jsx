@@ -63,8 +63,23 @@ export default function Layout({ t, dark, setDark }) {
         try { setFavCount(countReal(JSON.parse(localStorage.getItem("pm_favs") || "[]"))); } catch { setFavCount(0); }
       }
 
-      // Unread messages (localStorage)
-      try { setMsgCount(parseInt(localStorage.getItem("pm_unread_msgs") || "0", 10) || 0); } catch { setMsgCount(0); }
+      // Unread messages — fetch directly from Supabase
+      if (token && uid) {
+        try {
+          const r = await fetch(`${SB_URL}/rest/v1/conversations?or=(buyer_id.eq.${uid},seller_id.eq.${uid})&select=buyer_id,buyer_unread_count,seller_unread_count`, {
+            headers: { apikey: SB_KEY, Authorization: `Bearer ${token}` },
+          });
+          if (r.ok) {
+            const rows = await r.json();
+            const total = Array.isArray(rows) ? rows.reduce((s, c) => {
+              return s + (c.buyer_id === uid ? (c.buyer_unread_count || 0) : (c.seller_unread_count || 0));
+            }, 0) : 0;
+            if (alive) setMsgCount(total);
+          }
+        } catch {}
+      } else {
+        try { setMsgCount(parseInt(localStorage.getItem("pm_unread_msgs") || "0", 10) || 0); } catch { setMsgCount(0); }
+      }
     };
 
     update();
