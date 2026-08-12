@@ -15,6 +15,7 @@ import SellerPage from "./pages/SellerPage";
 import AuthPage from "./pages/AuthPage";
 import AdminListingPage from "./pages/AdminListingPage";
 import PlanPage from "./pages/PlanPage";
+import AdminDealersPage from "./pages/AdminDealersPage";
 import BoostPage from "./pages/BoostPage";
 import "./index.css";
 
@@ -53,6 +54,7 @@ function App() {
             <Route path="/signup" element={<AuthPage />} />
             <Route path="/admin/new" element={<AdminListingPage />} />
             <Route path="/plan" element={<PlanPage />} />
+            <Route path="/admin/dealers" element={<AdminDealersPage />} />
             <Route path="/boost" element={<BoostPage />} />
           </Route>
         </Routes>
