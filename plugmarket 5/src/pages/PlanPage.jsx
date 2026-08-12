@@ -46,14 +46,14 @@ export default function PlanPage() {
     if (!uid || !token) { setFirstListing(true); return; }
     (async () => {
       try {
-        const lr = await fetch(`${SB_URL}/rest/v1/listings?seller_id=eq.${uid}&select=id`, { headers: { apikey: SB_KEY, Authorization: `Bearer ${token}` } });
-        const rows = await lr.json();
-        setFirstListing(Array.isArray(rows) ? rows.length <= 1 : true);
-        const pr = await fetch(`${SB_URL}/rest/v1/profiles?id=eq.${uid}&select=seller_type,listing_credits_30d,listing_credits_6m`, { headers: { apikey: SB_KEY, Authorization: `Bearer ${token}` } });
+        const pr = await fetch(`${SB_URL}/rest/v1/profiles?id=eq.${uid}&select=seller_type,listing_credits_30d,listing_credits_6m,had_trial`, { headers: { apikey: SB_KEY, Authorization: `Bearer ${token}` } });
         const prof = (await pr.json())?.[0];
         if (prof) {
           setIsDealer(prof.seller_type === "dealer");
           setCredits({ "30d": prof.listing_credits_30d || 0, "6m": prof.listing_credits_6m || 0 });
+          setFirstListing(!prof.had_trial);
+        } else {
+          setFirstListing(true);
         }
       } catch { setFirstListing(true); }
     })();
@@ -81,13 +81,19 @@ export default function PlanPage() {
 
   const startTrial = async () => {
     if (busy) return; setBusy(true);
-    const { token } = getSession();
+    const { token, uid } = getSession();
     if (listingId && token) {
       const until = new Date(); until.setDate(until.getDate() + 30);
       await fetch(`${SB_URL}/rest/v1/listings?id=eq.${listingId}`, {
         method: "PATCH",
         headers: { apikey: SB_KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ paid_until: until.toISOString(), plan: "trial", status: "active", renewal_notified: false }),
+      });
+      // Mark trial as used so user can't get another free trial
+      await fetch(`${SB_URL}/rest/v1/profiles?id=eq.${uid}`, {
+        method: "PATCH",
+        headers: { apikey: SB_KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ had_trial: true }),
       });
     }
     navigate("/account?page=listings");
