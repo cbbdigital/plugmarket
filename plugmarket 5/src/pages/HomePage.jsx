@@ -116,7 +116,7 @@ function useListings() {
     (async () => {
       try {
         // Fetch active listings with their photos
-        const rows = await sb.query("listings", "status=eq.active&order=created_at.desc");
+        const rows = await sb.query("listings", "status=eq.active&paid_until=gte.now()&order=created_at.desc");
         if (cancelled) return;
         if (rows.length > 0) {
           // Fetch all photos for these listings

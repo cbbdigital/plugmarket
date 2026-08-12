@@ -114,7 +114,7 @@ export default function SearchPage() {
 
   useEffect(()=>{
     (async()=>{
-      let query = "status=eq.active&order=created_at.desc";
+      let query = "status=eq.active&paid_until=gte.now()&order=created_at.desc";
       if (sellerFilter) query += `&seller_id=eq.${sellerFilter}`;
       const rows=await sbGet("listings",query);
       if(rows.length>0){
