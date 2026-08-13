@@ -70,7 +70,16 @@ const LANGS=[{c:"en",n:"English"},{c:"de",n:"Deutsch"},{c:"fr",n:"Français"},{c
 // Shared
 function Toggle({value,onChange}){return <div onClick={()=>onChange(!value)} style={{width:44,height:24,borderRadius:12,background:value?BC:"rgba(128,128,128,0.2)",cursor:"pointer",position:"relative",transition:"background 0.2s",flexShrink:0}}><div style={{width:20,height:20,borderRadius:10,background:"#fff",position:"absolute",top:2,left:value?22:2,transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.15)"}}/></div>}
 function Badge({label,color,bg}){return <span style={{fontSize:10,fontWeight:600,color,background:bg,padding:"3px 8px",borderRadius:6}}>{label}</span>}
-function SBadge({status}){const m={active:{l:"Active",c:"#10b981",b:"rgba(16,185,129,0.1)"},paused:{l:"Paused",c:"#f59e0b",b:"rgba(245,158,11,0.1)"},expired:{l:"Offline",c:"#ef4444",b:"rgba(239,68,68,0.1)"}};const s=m[status]||m.active;return <Badge label={s.l} color={s.c} bg={s.b}/>}
+function SBadge({status}){
+  const m={
+    active:{l:"Active",c:"#10b981",b:"rgba(16,185,129,0.15)",border:"1px solid rgba(16,185,129,0.3)"},
+    paused:{l:"Paused",c:"#f59e0b",b:"rgba(245,158,11,0.15)",border:"1px solid rgba(245,158,11,0.3)"},
+    expired:{l:"Offline",c:"#ef4444",b:"rgba(239,68,68,0.15)",border:"1px solid rgba(239,68,68,0.3)"},
+    draft:{l:"Draft",c:"#9ca3af",b:"rgba(156,163,175,0.15)",border:"1px solid rgba(156,163,175,0.3)"},
+  };
+  const s=m[status]||m.draft;
+  return <span style={{fontSize:10,fontWeight:700,color:s.c,background:s.b,border:s.border,padding:"3px 8px",borderRadius:6,letterSpacing:"0.3px",textTransform:"uppercase"}}>{s.l}</span>;
+}
 function onlineState(car){
   if(car.status==="expired") return {kind:"expired"};
   if(!car.paidUntil) return null;
