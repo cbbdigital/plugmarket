@@ -53,7 +53,7 @@ export default function AdminDealersPage() {
     setLoading(false);
   };
 
-  useEffect(() => { if (session?.access_token && isAdmin) load(); }, [session]);
+  useEffect(() => { if (!authLoading && session?.access_token && isAdmin) load(); }, [session, authLoading, isAdmin]);
 
   const approve = async (id) => {
     setBusy(id + "_approve");
