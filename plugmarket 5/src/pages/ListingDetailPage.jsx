@@ -197,7 +197,7 @@ export default function ListingDetailPage() {
     bd: dark ? "rgba(255,255,255,0.08)" : "rgba(128,128,128,0.18)",
   };
 
-  // Load listing
+  // Load listing + track view
   useEffect(() => {
     if (!id) return;
     (async () => {
@@ -207,6 +207,23 @@ export default function ListingDetailPage() {
         setCar(rows[0]);
         const ph = await sbGet("listing_photos", `listing_id=eq.${id}&order=position.asc`);
         setPhotos(ph.map(p => p.url));
+
+        // Track view — insert into listing_views (trigger increments view_count)
+        try {
+          const token = (() => {
+            try { const r=localStorage.getItem("sb-tmftxqwqwceuiydleuag-auth-token"); return r?JSON.parse(r).access_token:null; } catch{return null;}
+          })();
+          await fetch(`${SB_URL}/rest/v1/listing_views`, {
+            method: "POST",
+            headers: {
+              apikey: SB_KEY,
+              Authorization: `Bearer ${token||SB_KEY}`,
+              "Content-Type": "application/json",
+              Prefer: "return=minimal",
+            },
+            body: JSON.stringify({ listing_id: id, viewer_id: null }),
+          });
+        } catch {}
       }
       setLoading(false);
     })();
