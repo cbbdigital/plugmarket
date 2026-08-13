@@ -16,6 +16,23 @@ function lookupPeakDc(make, model) {
   return hit?.dc_peak || null;
 }
 
+// Look up battery chemistry (LFP vs NMC) from evdb tags
+function lookupBatteryChemistry(make, model, variant) {
+  if (!make || !model) return null;
+  const mk = make.toLowerCase().trim();
+  const md = model.toLowerCase().trim();
+  const vr = (variant||"").toLowerCase().trim();
+  let hit = EV_DB.find(e =>
+    e.make?.toLowerCase() === mk &&
+    e.model?.toLowerCase() === md &&
+    (!vr || e.variant?.toLowerCase().includes(vr) || vr.includes(e.variant?.toLowerCase()||""))
+  );
+  if (!hit) hit = EV_DB.find(e => e.make?.toLowerCase() === mk && e.model?.toLowerCase() === md);
+  if (!hit) return null;
+  if (hit.tags?.includes("lfp")) return "LFP";
+  return "NMC";
+}
+
 // ── Supabase REST client ──
 const SB_URL = import.meta.env.VITE_SUPABASE_URL || "https://tmftxqwqwceuiydleuag.supabase.co";
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtZnR4cXdxd2NldWl5ZGxldWFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDA2MzEsImV4cCI6MjA5MDI3NjYzMX0.k5TOln3e4M8PxH2tH22-6BsFimH84InVfNOWP8riaCM";
@@ -362,6 +379,7 @@ export default function SellPage(){
   // Step 2
   const [battery,setBattery]=useState("");
   const [usable,setUsable]=useState("");
+  const [batteryChemistry,setBatteryChemistry]=useState(""); // "LFP" | "NMC" | ""
   const [soh,setSoh]=useState("");
   const [rangeReal,setRangeReal]=useState("");
   const [rangeWinter,setRangeWinter]=useState("");
@@ -501,6 +519,7 @@ export default function SellPage(){
       features: features.length > 0 ? features : null,
       battery_capacity_kwh: battery ? +battery : null, usable_capacity_kwh: usable ? +usable : null,
       state_of_health_pct: soh ? +soh : null,
+      battery_chemistry: batteryChemistry || null,
       range_real_km: rangeReal ? +rangeReal : null, range_winter_km: rangeWinter ? +rangeWinter : null,
       range_wltp_km: (()=>{ const w = getWLTP(make, model, variant, year); return w ? w.wltp : null; })(),
       dc_charge_max_kw: dcCharge ? +dcCharge : null, ac_charge_kw: acCharge ? +acCharge : null,
@@ -585,6 +604,7 @@ export default function SellPage(){
       features: features.length > 0 ? features : null,
       battery_capacity_kwh: battery ? +battery : null, usable_capacity_kwh: usable ? +usable : null,
       state_of_health_pct: soh ? +soh : null,
+      battery_chemistry: batteryChemistry || null,
       range_real_km: rangeReal ? +rangeReal : null, range_winter_km: rangeWinter ? +rangeWinter : null,
       range_wltp_km: (()=>{ const w = getWLTP(make, model, variant, year); return w ? w.wltp : null; })(),
       dc_charge_max_kw: dcCharge ? +dcCharge : null, ac_charge_kw: acCharge ? +acCharge : null,
@@ -780,6 +800,10 @@ export default function SellPage(){
 
   // When a model is selected, suggest its peak DC charge from our data — only if the field is still empty
   useEffect(() => {
+    // Auto-detect battery chemistry from evdb
+    const chem = lookupBatteryChemistry(make, model, variant);
+    if (chem && !batteryChemistry) setBatteryChemistry(chem);
+
     if (!dcCharge && make && model) {
       const rec = lookupPeakDc(make, model);
       if (rec) setDcCharge(String(rec));
@@ -985,6 +1009,17 @@ export default function SellPage(){
               </div>
               <div style={{display:"grid",gridTemplateColumns:g2,gap:12}}>
                 <Inp label="State of Health (SoH)" value={soh} onChange={setSoh} ph="e.g. 97" unit="%" type="number" req t={t}/>
+                <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                  <label style={{fontSize:12,fontWeight:600,color:t.tx2}}>Battery chemistry</label>
+                  <div style={{display:"flex",gap:8}}>
+                    {["LFP","NMC","Unknown"].map(c=>{
+                      const sel=batteryChemistry===c;
+                      return <button key={c} type="button" onClick={()=>setBatteryChemistry(c)} style={{flex:1,height:42,borderRadius:10,border:sel?`2px solid ${BC}`:`1px solid ${t.bd}`,background:sel?"rgba(255,117,0,0.06)":t.inp,color:sel?BC:t.tx,fontSize:12,fontWeight:sel?600:400,cursor:"pointer"}}>{c}</button>;
+                    })}
+                  </div>
+                  {batteryChemistry==="LFP"&&<div style={{fontSize:11,color:"#10b981",marginTop:2}}>LFP — can be charged to 100% daily</div>}
+                  {batteryChemistry==="NMC"&&<div style={{fontSize:11,color:t.tx3,marginTop:2}}>NMC — charge to 80% for longevity</div>}
+                </div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:g2,gap:12}}>
                 <Inp label="Range estimate (summer)" value={rangeReal} onChange={setRangeReal} ph="e.g. 520" unit="km" type="number" t={t}/>
@@ -1272,7 +1307,7 @@ export default function SellPage(){
                     ["Features",features.length>0?`${features.length} selected`:""],
                   ]},
                   {s:"EV specs",si:2,icon:<BatteryIcon size={15} color={BC}/>,rows:[
-                    ["Battery",battery?`${battery} kWh`:""],["SoH",soh?`${soh}%`:""],
+                    ["Battery",battery?`${battery} kWh`:""],["SoH",soh?`${soh}%`:""],["Battery chemistry",batteryChemistry||""],
                     ["WLTP",(()=>{const w=getWLTP(make,model,variant,year);return w?`${w.wltp} km (official)`:""})()],
                     ["Range (summer)",rangeReal?`${rangeReal} km`:""],["Range (winter)",rangeWinter?`${rangeWinter} km`:""],
                     ["DC charge",dcCharge?`${dcCharge} kW`:""],["AC charge",acCharge?`${acCharge} kW`:""],
