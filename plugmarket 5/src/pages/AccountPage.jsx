@@ -351,6 +351,14 @@ function EditPage({t,onBack,user,session,profile,updateProfile,fetchProfile}){
       setVatDocUrl(display);
       await sbUpdate("profiles",`id=eq.${uid}`,{vat_doc_url:url},token);
       if(fetchProfile) fetchProfile(uid);
+      // Notify admin of new dealer verification request
+      try{
+        fetch("/.netlify/functions/notify-dealer-request",{
+          method:"POST",
+          headers:{"Content-Type":"application/json",Authorization:`Bearer ${token}`},
+          body:JSON.stringify({dealerName:profile?.full_name||user?.email,vatDocUrl:url}),
+        });
+      }catch{}
     } else {
       alert("Upload failed. Make sure a 'vat-docs' storage bucket exists in Supabase.");
     }
