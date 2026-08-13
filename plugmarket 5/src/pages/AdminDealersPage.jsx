@@ -44,8 +44,8 @@ export default function AdminDealersPage() {
     if (!session?.access_token) return;
     setLoading(true);
     try {
-      const r = await fetch(`${SB_URL}/rest/v1/profiles?seller_type=eq.dealer&select=id,full_name,phone,city,country,company_name,vat_number,website,vat_doc_url,dealer_verified,created_at&order=created_at.desc`, {
-        headers: hdrs(session.access_token),
+      const r = await fetch(`/.netlify/functions/get-dealers`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const rows = await r.json();
       setDealers(Array.isArray(rows) ? rows : []);
