@@ -65,15 +65,7 @@ const ChDn=p=><I {...p} d={<polyline points="6 9 12 15 18 9"/>}/>;
 // Data
 const COUNTRIES=[{c:"RO",n:"Romania"},{c:"DE",n:"Germany"},{c:"FR",n:"France"},{c:"NL",n:"Netherlands"},{c:"BE",n:"Belgium"},{c:"AT",n:"Austria"},{c:"IT",n:"Italy"},{c:"ES",n:"Spain"},{c:"PL",n:"Poland"},{c:"SE",n:"Sweden"},{c:"NO",n:"Norway"},{c:"DK",n:"Denmark"},{c:"CZ",n:"Czech Rep."},{c:"PT",n:"Portugal"}];
 const LANGS=[{c:"en",n:"English"},{c:"de",n:"Deutsch"},{c:"fr",n:"Français"},{c:"ro",n:"Română"},{c:"nl",n:"Nederlands"},{c:"es",n:"Español"},{c:"it",n:"Italiano"},{c:"pl",n:"Polski"},{c:"sv",n:"Svenska"}];
-const REVIEWS=[
-  {id:1,name:"Thomas K.",city:"Munich",rating:5,date:"Feb 14, 2026",text:"Excellent seller! The Ioniq 5 was exactly as described. Very transparent about battery health and provided all documentation.",vehicle:"Hyundai Ioniq 5"},
-  {id:2,name:"Anna S.",city:"Vienna",rating:5,date:"Dec 8, 2025",text:"Perfect transaction. Ciprian was honest about every detail, even minor scratches I wouldn't have noticed. Would buy from again.",vehicle:"Renault Megane E-Tech"},
-  {id:3,name:"Erik L.",city:"Stockholm",rating:4,date:"Oct 22, 2025",text:"Good communication and fair pricing. Delivery took a bit longer than expected due to transport logistics, but overall positive.",vehicle:"Tesla Model 3"},
-  {id:4,name:"Marcel D.",city:"Amsterdam",rating:5,date:"Aug 3, 2025",text:"Ciprian went above and beyond - provided battery degradation report, full service history, and even met me halfway for the handover.",vehicle:"Volkswagen ID.4"},
-  {id:5,name:"Sophie B.",city:"Berlin",rating:5,date:"Jun 18, 2025",text:"Very professional for a private seller. All paperwork was prepared in advance. The car was in better condition than the photos showed.",vehicle:"BMW iX3"},
-  {id:6,name:"Pierre M.",city:"Lyon",rating:4,date:"Apr 2, 2025",text:"Honest and straightforward. Minor scratch on the rear bumper was disclosed upfront. Fair negotiation process.",vehicle:"Kia EV6"},
-  {id:7,name:"Luca R.",city:"Milan",rating:5,date:"Jan 15, 2025",text:"One of the best buying experiences I've had. Ciprian provided video walkaround before I travelled to see the car. Highly recommended!",vehicle:"Polestar 2"},
-];
+// Reviews are loaded from Supabase dynamically
 
 // Shared
 function Toggle({value,onChange}){return <div onClick={()=>onChange(!value)} style={{width:44,height:24,borderRadius:12,background:value?BC:"rgba(128,128,128,0.2)",cursor:"pointer",position:"relative",transition:"background 0.2s",flexShrink:0}}><div style={{width:20,height:20,borderRadius:10,background:"#fff",position:"absolute",top:2,left:value?22:2,transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.15)"}}/></div>}
@@ -299,13 +291,45 @@ function SoldPage({t,onBack,user,session}){
   </>;
 }
 
-function ReviewsPage({t,onBack}){
-  const avg=(REVIEWS.reduce((a,r)=>a+r.rating,0)/REVIEWS.length).toFixed(1);
-  const dist=[5,4,3,2,1].map(n=>({n,c:REVIEWS.filter(r=>r.rating===n).length}));
+function ReviewsPage({t,onBack,user,session}){
+  const [reviews,setReviews]=useState([]);
+  const [loading,setLoading]=useState(true);
+
+  useEffect(()=>{
+    if(!user?.id)return;
+    (async()=>{
+      try{
+        const r=await fetch(`${SB_URL}/rest/v1/reviews?seller_id=eq.${user.id}&select=id,rating,text,created_at,reviewer_id,listing_id,profiles(full_name,city),listings(make,model)&order=created_at.desc`,{
+          headers:{apikey:SB_KEY,Authorization:`Bearer ${session?.access_token||""}`},
+        });
+        const rows=await r.json();
+        if(Array.isArray(rows)) setReviews(rows);
+      }catch(e){console.error(e);}
+      setLoading(false);
+    })();
+  },[user]);
+
+  const avg=reviews.length?(reviews.reduce((a,r)=>a+r.rating,0)/reviews.length).toFixed(1):"0.0";
+  const dist=[5,4,3,2,1].map(n=>({n,c:reviews.filter(r=>r.rating===n).length}));
+
   return <>
     <SubH title="Reviews" t={t} onBack={onBack}/>
-    <div style={{...cs(t),padding:20,margin:"16px 0 14px"}}><div style={{display:"flex",alignItems:"center",gap:20}}><div style={{textAlign:"center"}}><div style={{fontSize:40,fontWeight:800,color:t.tx}}>{avg}</div><div style={{display:"flex",gap:2,justifyContent:"center",marginTop:4}}>{[1,2,3,4,5].map(i=><Star key={i} size={14} color="#f59e0b" filled={i<=Math.round(avg)}/>)}</div><div style={{fontSize:11,color:t.tx3,marginTop:4}}>{REVIEWS.length} reviews</div></div><div style={{flex:1}}>{dist.map(dd=><div key={dd.n} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}><span style={{fontSize:11,color:t.tx3,width:10,textAlign:"right"}}>{dd.n}</span><Star size={10} color="#f59e0b" filled/><div style={{flex:1,height:6,borderRadius:3,background:t.sec,overflow:"hidden"}}><div style={{width:`${REVIEWS.length?(dd.c/REVIEWS.length)*100:0}%`,height:"100%",borderRadius:3,background:"#f59e0b"}}/></div><span style={{fontSize:10,color:t.tx3,width:14,textAlign:"right"}}>{dd.c}</span></div>)}</div></div></div>
-    {REVIEWS.map(r=><div key={r.id} style={{...cs(t),padding:16,marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:38,height:38,borderRadius:"50%",background:t.sec,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:t.tx2}}>{r.name.split(" ").map(w=>w[0]).join("")}</div><div><div style={{fontSize:13,fontWeight:600,color:t.tx}}>{r.name}</div><div style={{fontSize:11,color:t.tx3}}>{r.city} · {r.date}</div></div></div><div style={{display:"flex",gap:2}}>{[1,2,3,4,5].map(i=><Star key={i} size={12} color="#f59e0b" filled={i<=r.rating}/>)}</div></div><p style={{fontSize:13,color:t.tx2,lineHeight:1.6,margin:"10px 0 0"}}>{r.text}</p><div style={{fontSize:11,color:t.tx3,marginTop:8,display:"flex",alignItems:"center",gap:4}}><Car size={12} color={t.tx3}/> {r.vehicle}</div></div>)}
+    {loading?(
+      <div style={{textAlign:"center",padding:"40px 0",fontSize:13,color:t.tx3}}>Loading...</div>
+    ):reviews.length===0?(
+      <div style={{textAlign:"center",padding:"40px 0"}}><Star size={36} color={t.tx3}/><div style={{fontSize:14,fontWeight:600,color:t.tx2,marginTop:10}}>No reviews yet</div></div>
+    ):(
+      <>
+        <div style={{...cs(t),padding:20,margin:"16px 0 14px"}}><div style={{display:"flex",alignItems:"center",gap:20}}><div style={{textAlign:"center"}}><div style={{fontSize:40,fontWeight:800,color:t.tx}}>{avg}</div><div style={{display:"flex",gap:2,justifyContent:"center",marginTop:4}}>{[1,2,3,4,5].map(i=><Star key={i} size={14} color="#f59e0b" filled={i<=Math.round(avg)}/>)}</div><div style={{fontSize:11,color:t.tx3,marginTop:4}}>{reviews.length} reviews</div></div><div style={{flex:1}}>{dist.map(dd=><div key={dd.n} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}><span style={{fontSize:11,color:t.tx3,width:10,textAlign:"right"}}>{dd.n}</span><Star size={10} color="#f59e0b" filled/><div style={{flex:1,height:6,borderRadius:3,background:t.sec,overflow:"hidden"}}><div style={{width:`${reviews.length?(dd.c/reviews.length)*100:0}%`,height:"100%",borderRadius:3,background:"#f59e0b"}}/></div><span style={{fontSize:10,color:t.tx3,width:14,textAlign:"right"}}>{dd.c}</span></div>)}</div></div></div>
+        {reviews.map(r=>{
+          const name=r.profiles?.full_name||"Anonymous";
+          const city=r.profiles?.city||"";
+          const vehicle=r.listings?`${r.listings.make} ${r.listings.model}`:"";
+          const date=new Date(r.created_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
+          return <div key={r.id} style={{...cs(t),padding:16,marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:38,height:38,borderRadius:"50%",background:t.sec,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:t.tx2}}>{name.split(" ").map(w=>w[0]).join("").slice(0,2)}</div><div><div style={{fontSize:13,fontWeight:600,color:t.tx}}>{name}</div><div style={{fontSize:11,color:t.tx3}}>{city}{city&&" · "}{date}</div></div></div><div style={{display:"flex",gap:2}}>{[1,2,3,4,5].map(i=><Star key={i} size={12} color="#f59e0b" filled={i<=r.rating}/>)}</div></div><p style={{fontSize:13,color:t.tx2,lineHeight:1.6,margin:"10px 0 0"}}>{r.text}</p>{vehicle&&<div style={{fontSize:11,color:t.tx3,marginTop:8,display:"flex",alignItems:"center",gap:4}}><Car size={12} color={t.tx3}/> {vehicle}</div>}</div>;
+        })}
+      </>
+    )}
   </>;
 }
 
@@ -351,14 +375,6 @@ function EditPage({t,onBack,user,session,profile,updateProfile,fetchProfile}){
       setVatDocUrl(display);
       await sbUpdate("profiles",`id=eq.${uid}`,{vat_doc_url:url},token);
       if(fetchProfile) fetchProfile(uid);
-      // Notify admin of new dealer verification request
-      try{
-        fetch("/.netlify/functions/notify-dealer-request",{
-          method:"POST",
-          headers:{"Content-Type":"application/json",Authorization:`Bearer ${token}`},
-          body:JSON.stringify({dealerName:profile?.full_name||user?.email,vatDocUrl:url}),
-        });
-      }catch{}
     } else {
       alert("Upload failed. Make sure a 'vat-docs' storage bucket exists in Supabase.");
     }
@@ -1025,7 +1041,7 @@ export default function AccountPage(){
   const content = ()=>{
     if(page==="listings") return <ListingsPage t={t} onBack={goHome} nav={nav} user={user} session={session}/>;
     if(page==="sold") return <SoldPage t={t} onBack={goHome} user={user} session={session}/>;
-    if(page==="reviews") return <ReviewsPage t={t} onBack={goHome}/>;
+    if(page==="reviews") return <ReviewsPage t={t} user={user} session={session} onBack={goHome}/>;
     if(page==="edit") return <EditPage t={t} onBack={goHome} user={user} session={session} profile={profile} updateProfile={updateProfile} fetchProfile={fetchProfile}/>;
     if(page==="security") return <SecurityPage t={t} session={session} onBack={goHome}/>;
     if(page==="payment") return <PaymentPage t={t} onBack={goHome} user={user} session={session}/>;
