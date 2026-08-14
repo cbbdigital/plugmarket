@@ -487,19 +487,25 @@ export default function ListingDetailPage() {
           {car.vat_deductible && <span style={{ background: dark ? "rgba(16,185,129,0.1)" : "rgba(16,185,129,0.06)", color: "#10b981", padding: "2px 8px", borderRadius: 5, fontWeight: 500 }}>VAT deductible</span>}
         </div>
         {/* Price analysis bar */}
-        <div style={{ background: th.sec, borderRadius: 10, padding: 14 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: mkt.color }}>{mkt.label}</span>
-            <span style={{ fontSize: 11, color: th.tx3 }}>Avg. €{mkt.avg.toLocaleString()}</span>
+        {marketAvg ? (
+          <div style={{ background: th.sec, borderRadius: 10, padding: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: mkt.color }}>{mkt.label}</span>
+              <span style={{ fontSize: 11, color: th.tx3 }}>Avg. €{mkt.avg.toLocaleString()}</span>
+            </div>
+            <div style={{ position: "relative", height: 6, borderRadius: 3, background: "linear-gradient(90deg,#10b981 0%,#10b981 30%,#f59e0b 50%,#ef4444 70%,#ef4444 100%)" }}>
+              <div style={{ position: "absolute", top: -4, left: `${mkt.pct}%`, transform: "translateX(-50%)", width: 14, height: 14, borderRadius: "50%", background: th.card, border: `3px solid ${mkt.color}`, boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }}/>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 10, color: th.tx3 }}>
+              <span>€{Math.round(mkt.low).toLocaleString()}</span>
+              <span>€{Math.round(mkt.high).toLocaleString()}</span>
+            </div>
           </div>
-          <div style={{ position: "relative", height: 6, borderRadius: 3, background: "linear-gradient(90deg,#10b981 0%,#10b981 30%,#f59e0b 50%,#ef4444 70%,#ef4444 100%)" }}>
-            <div style={{ position: "absolute", top: -4, left: `${mkt.pct}%`, transform: "translateX(-50%)", width: 14, height: 14, borderRadius: "50%", background: th.card, border: `3px solid ${mkt.color}`, boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }}/>
+        ) : (
+          <div style={{ background: th.sec, borderRadius: 10, padding: "12px 14px", fontSize: 12, color: th.tx3, textAlign: "center" }}>
+            Not enough listings to estimate the market average for this model yet.
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 10, color: th.tx3 }}>
-            <span>€{Math.round(mkt.low).toLocaleString()}</span>
-            <span>€{Math.round(mkt.high).toLocaleString()}</span>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Seller / contact card */}
