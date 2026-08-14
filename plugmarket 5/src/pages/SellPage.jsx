@@ -629,7 +629,7 @@ export default function SellPage(){
   };
 
   const models = make ? MAKES_DATA[make]||[] : [];
-  const years = Array.from({length:8},(_,i)=>String(2025-i));
+  const years = Array.from({length:10},(_,i)=>String(2026-i));
 
 
   const compressImage = (file, maxSizeKB = 2500) => {
@@ -1188,7 +1188,9 @@ export default function SellPage(){
                   <div style={{fontSize:12,fontWeight:600,color:t.tx3,marginBottom:8}}>Price positioning</div>
                   {(()=>{
                     const p = Number(price);
-                    const avg = 42200;
+                    // Calculate avg from evdb for selected make/model, or fallback
+                    const evHits = EV_DB.filter(e => e.make === make && e.model === model);
+                    const avg = evHits.length > 0 ? Math.round(evHits.reduce((s,e) => s + (e.pn||0), 0) / evHits.length) : 42200;
                     const low = avg*0.8;
                     const high = avg*1.2;
                     const range = high-low;

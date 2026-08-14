@@ -1095,10 +1095,10 @@ export default function AccountPage(){
           <div style={{width:64,height:64,borderRadius:"50%",background:GR,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:700,color:"#fff",flexShrink:0}}>{(profile?.full_name||user?.email||"?").split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2)}</div>
           <div style={{flex:1,minWidth:0}}>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <div style={{fontSize:18,fontWeight:700,color:t.tx}}>{profile?.full_name||user?.email}</div>
+              <div style={{fontSize:18,fontWeight:700,color:t.tx,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{profile?.full_name||user?.email}</div>
               {isDealer&&dealerVerified&&<Chk size={15} color="#10b981"/>}
             </div>
-            <div style={{fontSize:12,color:t.tx2,marginTop:2}}>{user?.email}</div>
+            <div style={{fontSize:12,color:t.tx2,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user?.email}</div>
             {isDealer&&<div style={{fontSize:11,color:dealerVerified?BC:"#f59e0b",fontWeight:600,marginTop:3}}>{profile?.firm_name?profile.firm_name+" · ":""}Dealer{dealerVerified?" · Verified":" · Verification pending"}</div>}
             {profile?.city&&<div style={{display:"flex",alignItems:"center",gap:4,marginTop:4}}><Map size={12} color={t.tx3}/><span style={{fontSize:11,color:t.tx3}}>{profile.city}{profile.country?`, ${profile.country}`:""}</span></div>}
           </div>

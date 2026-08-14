@@ -101,9 +101,9 @@ function fmtCond(c) {
   const m = { new: "New", used: "Used", certified_pre_owned: "Certified Pre-Owned" };
   return m[c] || c.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
 }
-function getMkt(make, price) {
-  const avgs = { Tesla:44900, BMW:52800, Volkswagen:38200, Mercedes:56700, Audi:51200, Hyundai:41500, Kia:39800, BYD:33200, Porsche:89500, Renault:34100, Skoda:37600, Volvo:46300, MG:29800, Polestar:47200, Cupra:39100, Ford:44800, NIO:46500, Fiat:28900 };
-  const avg = avgs[make] || 42200;
+function getMkt(make, price, realAvg) {
+  const fallback = { Tesla:44900, BMW:52800, Volkswagen:38200, Mercedes:56700, Audi:51200, Hyundai:41500, Kia:39800, BYD:33200, Porsche:89500, Renault:34100, Skoda:37600, Volvo:46300, MG:29800, Polestar:47200, Cupra:39100, Ford:44800, NIO:46500, Fiat:28900 };
+  const avg = realAvg || fallback[make] || 42200;
   const low = avg * 0.75, high = avg * 1.25, range = high - low;
   const pct = Math.max(0, Math.min(100, ((price - low) / range) * 100));
   const label = pct < 35 ? "Great price" : pct > 65 ? "Above average" : "Fair price";
@@ -117,6 +117,7 @@ export default function ListingDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [car, setCar] = useState(null);
+  const [marketAvg, setMarketAvg] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [photoIdx, setPhotoIdx] = useState(0);
@@ -208,6 +209,15 @@ export default function ListingDetailPage() {
         const ph = await sbGet("listing_photos", `listing_id=eq.${id}&order=position.asc`);
         setPhotos(ph.map(p => p.url));
 
+        // Fetch market average from real listings of same make+model
+        try {
+          const avgRes = await sbGet("listings", `make=eq.${rows[0].make}&model=eq.${rows[0].model}&status=eq.active&select=price_eur`);
+          if (Array.isArray(avgRes) && avgRes.length >= 3) {
+            const prices = avgRes.map(l => l.price_eur).filter(p => p > 0);
+            if (prices.length >= 3) setMarketAvg(Math.round(prices.reduce((a,b) => a+b, 0) / prices.length));
+          }
+        } catch {}
+
         // Track view — insert into listing_views (trigger increments view_count)
         try {
           const token = (() => {
@@ -248,7 +258,7 @@ export default function ListingDetailPage() {
   const allPhotos = photos.length > 0 ? photos : ["https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=800&h=500&fit=crop"];
   const prevPhoto = () => setPhotoIdx(i => i === 0 ? allPhotos.length - 1 : i - 1);
   const nextPhoto = () => setPhotoIdx(i => i === allPhotos.length - 1 ? 0 : i + 1);
-  const mkt = getMkt(car.make, Number(car.price_eur));
+  const mkt = getMkt(car.make, Number(car.price_eur), marketAvg);
   const cardStyle = { ...cs(th), padding: "4px 18px", marginBottom: 0 };
 
   // ── Equipment list ──
