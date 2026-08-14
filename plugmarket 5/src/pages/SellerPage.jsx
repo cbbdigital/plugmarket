@@ -130,6 +130,8 @@ export default function SellerPage() {
         });
 
         // Check review eligibility (10+ messages exchanged)
+        var uid = null;
+        try { var sbKey3 = Object.keys(localStorage).find(function(k) { return k.startsWith("sb-") && k.endsWith("-auth-token"); }); if(sbKey3) uid = JSON.parse(localStorage.getItem(sbKey3)).user.id; } catch(e) {}
         if (uid && uid !== id) {
           try {
             var convRes2 = await fetch(SB_URL + "/rest/v1/conversations?or=(and(buyer_id.eq." + uid + ",seller_id.eq." + id + "),and(buyer_id.eq." + id + ",seller_id.eq." + uid + "))&select=id", { headers: hd });
