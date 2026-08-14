@@ -340,6 +340,10 @@ function EVFinder({goSearch,navigate,t,favIds,toggleFav}){
       if(dc>=270) s+=20; else if(dc>=200) s+=10; else if(dc>=150) s+=5; else s-=20;
     }
 
+    // ── Prioritize models with real listings on the platform ──
+    if(listedMakes.has(`${r.make}__${r.model}`)) s+=50;
+    else s-=30; // deprioritize models nobody is selling
+
     // ── Range adequacy ──
     if(rng >= wk*1.3) s+=15; else if(rng >= wk) s+=5; else s-=10;
     if(longTrips==="often" && rng>=500) s+=10;
@@ -493,7 +497,7 @@ function EVFinder({goSearch,navigate,t,favIds,toggleFav}){
                       <div style={{marginTop:8,fontSize:10,color:t.tx2,lineHeight:1.5,background:t.sec,borderRadius:6,padding:"6px 8px"}}>
                         {getRecommendationText(r, yk, longTrips)}
                       </div>
-                      <button onClick={()=>{if(navigate)navigate(`/search?make=${encodeURIComponent(r.make)}&model=${encodeURIComponent(r.model)}`);else goSearch()}} style={{width:"100%",height:34,borderRadius:8,border:"none",background:i===0?BG:t.sec,color:i===0?"#fff":BC,fontSize:11,fontWeight:600,cursor:"pointer",marginTop:8}}>{i===0?"View listings":"See available"}</button>
+                      <button onClick={()=>{if(navigate)navigate(`/search?make=${encodeURIComponent(r.make)}&model=${encodeURIComponent(r.model)}`);else goSearch()}} style={{width:"100%",height:34,borderRadius:8,border:"none",background:i===0?BG:t.sec,color:i===0?"#fff":BC,fontSize:11,fontWeight:600,cursor:"pointer",marginTop:8}}>{listedMakes.has(`${r.make}__${r.model}`)?(i===0?"View listings":"See available"):"No listings yet"}</button>
                     </div>
                   </div>
                 ))}
@@ -514,6 +518,19 @@ export default function HomePage() {
   const navigate = useNavigate();
   const [narrow,setNarrow]=useState(()=>typeof window!=="undefined"&&window.innerWidth<640);
   useEffect(()=>{const h=()=>setNarrow(window.innerWidth<640);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h)},[]);
+
+  // Fetch which makes/models actually have active listings
+  useEffect(()=>{
+    (async()=>{
+      try{
+        const r=await sb.query("listings","status=eq.active&paid_until=gte.now()&select=make,model");
+        if(Array.isArray(r)){
+          const pairs=new Set(r.map(l=>`${l.make}__${l.model}`));
+          setListedMakes(pairs);
+        }
+      }catch{}
+    })();
+  },[]);
   const [favIds, setFavIds] = useState(()=>{try{return JSON.parse(localStorage.getItem("pm_favs")||"[]")}catch{return[]}});
   useEffect(()=>{try{localStorage.setItem("pm_favs",JSON.stringify(favIds))}catch{}},[favIds]);
   const [make, setMake] = useState("");
@@ -524,6 +541,7 @@ export default function HomePage() {
   const [rngMin, setRngMin] = useState("");
   const [yMin, setYMin] = useState("");
   const [smartQuery, setSmartQuery] = useState("");
+  const [listedMakes, setListedMakes] = useState(new Set());
   const [mode, setMode] = useState("specs");        // specs | drive
   const [evOpen, setEvOpen] = useState(false);
   const [batMin, setBatMin] = useState("");
