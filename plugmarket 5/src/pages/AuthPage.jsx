@@ -52,6 +52,7 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [signedUp, setSignedUp] = useState(false);
 
   const inp = {
     width: "100%", height: 46, borderRadius: 12, border: `1px solid ${t.bd}`,
@@ -98,18 +99,18 @@ export default function AuthPage() {
       const { error: err } = await signUp({ email, password, sellerType: accountType, ...profileData });
       setLoading(false);
       if (err) setError(err.message);
-      else setSuccess(
+      else { setSignedUp(true); setSuccess(
         accountType === "dealer"
           ? "Check your email to confirm. After your first login you'll upload your VAT document to finish setup."
           : "Check your email to confirm your account."
-      );
+      ); }
       return;
     }
 
     // Login
     const { error: err } = await signIn({ email, password });
     setLoading(false);
-    if (err) setError(err.message);
+    if (err) setError(/confirm/i.test(err.message) ? "Please confirm your email first — check your inbox for the link." : err.message);
     else nav("/account");
   }
 
@@ -119,10 +120,26 @@ export default function AuthPage() {
     if (err) setError(err.message);
   }
 
-  async function handleApple() {
-    setError("");
-    const { error: err } = await signInWithOAuth("apple");
-    if (err) setError(err.message);
+
+  if (signedUp) {
+    return (
+      <div style={{ maxWidth: 420, margin: "0 auto", padding: "60px 0", textAlign: "center" }}>
+        <div style={{ width: 68, height: 68, borderRadius: 20, background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+          <Mail size={28} color="#10b981" />
+        </div>
+        <h1 style={{ fontSize: 21, fontWeight: 700, margin: 0 }}>Check your email</h1>
+        <p style={{ fontSize: 14, color: t.tx2, margin: "10px 0 0", lineHeight: 1.6 }}>
+          We sent a confirmation link to<br/><strong style={{ color: t.tx }}>{email}</strong>
+        </p>
+        <p style={{ fontSize: 13, color: t.tx3, margin: "18px 0 0", lineHeight: 1.6 }}>
+          You need to confirm your email before you can sign in.
+          {accountType === "dealer" && " After your first login you'll upload your VAT document to finish verification."}
+        </p>
+        <button onClick={() => { setSignedUp(false); setMode("login"); setSuccess(""); setPassword(""); nav("/login"); }} style={{ marginTop: 26, padding: "12px 26px", borderRadius: 12, border: `1px solid ${t.bd}`, background: t.card, color: t.tx, fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
+          Back to sign in
+        </button>
+      </div>
+    );
   }
 
   return (

@@ -35,6 +35,13 @@ export default function SellerPage() {
   var [loading, setLoading] = useState(true);
   var [err, setErr] = useState(null);
   var [showPhone, setShowPhone] = useState(false);
+  var [showReviewForm, setShowReviewForm] = useState(false);
+  var [reviewRating, setReviewRating] = useState(0);
+  var [reviewText, setReviewText] = useState("");
+  var [reviewSubmitting, setReviewSubmitting] = useState(false);
+  var [reviewMsg, setReviewMsg] = useState("");
+  var [canReview, setCanReview] = useState(false);
+  var [hasReviewed, setHasReviewed] = useState(false);
   var [tab, setTab] = useState("listings");
   var [narrow, setNarrow] = useState(typeof window !== "undefined" ? window.innerWidth < 600 : false);
 
@@ -121,6 +128,24 @@ export default function SellerPage() {
           reviewCount: reviews.length,
           rating: avgRating,
         });
+
+        // Check review eligibility (10+ messages exchanged)
+        if (uid && uid !== id) {
+          try {
+            var convRes2 = await fetch(SB_URL + "/rest/v1/conversations?or=(and(buyer_id.eq." + uid + ",seller_id.eq." + id + "),and(buyer_id.eq." + id + ",seller_id.eq." + uid + "))&select=id", { headers: hd });
+            var convos2 = await convRes2.json();
+            var totalMsgs = 0;
+            for (var ci = 0; ci < (convos2||[]).length; ci++) {
+              var msgRes2 = await fetch(SB_URL + "/rest/v1/messages?conversation_id=eq." + convos2[ci].id + "&select=id", { headers: hd });
+              var msgs2 = await msgRes2.json();
+              totalMsgs += (msgs2||[]).length;
+            }
+            if (totalMsgs >= 10) setCanReview(true);
+            var existRev = await fetch(SB_URL + "/rest/v1/reviews?reviewer_id=eq." + uid + "&seller_id=eq." + id + "&select=id", { headers: hd });
+            var existRows = await existRev.json();
+            if (Array.isArray(existRows) && existRows.length > 0) setHasReviewed(true);
+          } catch(e) {}
+        }
 
         var FALLBACK = "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=480&h=300&fit=crop";
         setListings(rows.map(function(r) {
@@ -222,6 +247,25 @@ export default function SellerPage() {
     if (field === "cover") newSeller.cover_url = url;
     else newSeller.avatar_url = url;
     setSeller(newSeller);
+  };
+
+  var submitReview = async function() {
+    if (!reviewRating || reviewSubmitting) return;
+    setReviewSubmitting(true); setReviewMsg("");
+    try {
+      var sbKey2 = null;
+      try { var keys2 = Object.keys(localStorage); sbKey2 = keys2.find(function(k) { return k.startsWith("sb-") && k.endsWith("-auth-token"); }); } catch(e) {}
+      var token2 = sbKey2 ? JSON.parse(localStorage.getItem(sbKey2)).access_token : null;
+      var uid2 = sbKey2 ? JSON.parse(localStorage.getItem(sbKey2)).user.id : null;
+      var r2 = await fetch(SB_URL + "/rest/v1/reviews", {
+        method: "POST",
+        headers: { apikey: SB_KEY, Authorization: "Bearer " + token2, "Content-Type": "application/json", Prefer: "return=representation" },
+        body: JSON.stringify({ reviewer_id: uid2, seller_id: id, rating: reviewRating, text: reviewText }),
+      });
+      if (r2.ok) { setReviewMsg("Review submitted!"); setHasReviewed(true); setShowReviewForm(false); }
+      else { setReviewMsg("Error: " + (await r2.text())); }
+    } catch(e) { setReviewMsg("Network error."); }
+    setReviewSubmitting(false);
   };
 
   if (loading) return (
@@ -436,6 +480,35 @@ export default function SellerPage() {
           </>
         )}
       </div>
+
+      {/* ─── LEAVE A REVIEW ─── */}
+      {!isOwn && loggedIn && canReview && !hasReviewed && (
+        <div style={{ padding: "0 16px", marginBottom: 16 }}>
+          {!showReviewForm ? (
+            <button onClick={function(){setShowReviewForm(true)}} style={{ width: "100%", height: 42, borderRadius: 12, border: "1px solid #f59e0b", background: "rgba(245,158,11,0.06)", color: "#f59e0b", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+              <Star size={14} color="#f59e0b" filled/> Leave a review
+            </button>
+          ) : (
+            <div style={{ background: t.card, borderRadius: 14, border: "1px solid " + t.bd, padding: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: t.tx, marginBottom: 10 }}>Rate your experience</div>
+              <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                {[1,2,3,4,5].map(function(s) { return <button key={s} onClick={function(){setReviewRating(s)}} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}><Star size={28} color="#f59e0b" filled={s <= reviewRating}/></button>; })}
+              </div>
+              <textarea value={reviewText} onChange={function(e){setReviewText(e.target.value)}} placeholder="Tell others about your experience..." rows={3} style={{ width: "100%", borderRadius: 10, border: "1px solid " + t.bd, background: t.inp || t.sec, color: t.tx, padding: "10px 14px", fontSize: 13, boxSizing: "border-box", resize: "vertical", fontFamily: "inherit", lineHeight: 1.6, marginBottom: 10 }}/>
+              {reviewMsg && <div style={{ fontSize: 12, color: reviewMsg.startsWith("Error") ? "#ef4444" : "#10b981", marginBottom: 8 }}>{reviewMsg}</div>}
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={submitReview} disabled={!reviewRating || reviewSubmitting} style={{ flex: 1, height: 40, borderRadius: 10, border: "none", background: reviewRating ? GR : "rgba(128,128,128,0.2)", color: reviewRating ? "#fff" : "#9ca3af", fontSize: 13, fontWeight: 600, cursor: reviewRating && !reviewSubmitting ? "pointer" : "default" }}>{reviewSubmitting ? "Submitting..." : "Submit review"}</button>
+                <button onClick={function(){setShowReviewForm(false);setReviewRating(0);setReviewText("")}} style={{ height: 40, padding: "0 16px", borderRadius: 10, border: "1px solid " + t.bd, background: t.card, color: t.tx2, fontSize: 13, cursor: "pointer" }}>Cancel</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {!isOwn && hasReviewed && (
+        <div style={{ padding: "0 16px", marginBottom: 16, textAlign: "center" }}>
+          <span style={{ fontSize: 12, color: "#10b981", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}><Ic d={<polyline points="20 6 9 17 4 12"/>} size={13} color="#10b981"/> You have reviewed this seller</span>
+        </div>
+      )}
 
       {/* ─── EDIT FORM (inline) ─── */}
       {editing && (

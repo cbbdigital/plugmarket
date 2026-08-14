@@ -39,20 +39,7 @@ export default function Layout({ t, dark, setDark }) {
           if (r.ok) {
             const rows = await r.json();
             let ids = Array.isArray(rows) ? rows.map(x => x.listing_id).filter(id => typeof id === "string" && id.length > 10 && !id.startsWith("evdb_")) : [];
-            // Drop orphaned favourites — only count listings that still exist
-            if (ids.length) {
-              try {
-                const inList = ids.map(encodeURIComponent).join(",");
-                const lr = await fetch(`${SB_URL}/rest/v1/listings?id=in.(${inList})&select=id`, {
-                  headers: { apikey: SB_KEY, Authorization: `Bearer ${token}` },
-                });
-                if (lr.ok) {
-                  const existing = await lr.json();
-                  const liveIds = new Set((Array.isArray(existing) ? existing : []).map(x => x.id));
-                  ids = ids.filter(id => liveIds.has(id));
-                }
-              } catch {}
-            }
+            // Orphan check removed for performance — handled on FavouritesPage load
             if (alive) setFavCount(ids.length);
             try { localStorage.setItem("pm_favs", JSON.stringify(ids)); } catch {}
           }
@@ -87,7 +74,7 @@ export default function Layout({ t, dark, setDark }) {
     const onFocus = () => update();
     window.addEventListener("storage", onStorage);
     window.addEventListener("focus", onFocus);
-    const interval = setInterval(update, 4000);
+    const interval = setInterval(update, 15000);
     return () => {
       alive = false;
       window.removeEventListener("storage", onStorage);

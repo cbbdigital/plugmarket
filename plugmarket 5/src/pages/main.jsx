@@ -13,6 +13,10 @@ import AccountPage from "./pages/AccountPage";
 import ListingDetailPage from "./pages/ListingDetailPage";
 import SellerPage from "./pages/SellerPage";
 import AuthPage from "./pages/AuthPage";
+import PlanPage from "./pages/PlanPage";
+import BoostPage from "./pages/BoostPage";
+import AdminDealersPage from "./pages/AdminDealersPage";
+import AdminListingPage from "./pages/AdminListingPage";
 import "./index.css";
 
 function App() {
@@ -48,6 +52,10 @@ function App() {
             <Route path="/seller/:id" element={<SellerPage />} />
             <Route path="/login" element={<AuthPage />} />
             <Route path="/signup" element={<AuthPage />} />
+            <Route path="/plan" element={<PlanPage />} />
+            <Route path="/boost" element={<BoostPage />} />
+            <Route path="/admin/new" element={<AdminListingPage />} />
+            <Route path="/admin/dealers" element={<AdminDealersPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
