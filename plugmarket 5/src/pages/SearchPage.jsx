@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useOutletContext, useNavigate, useSearchParams } from "react-router-dom";
 
 // ── Supabase REST client ──
+function getSession(){try{const raw=localStorage.getItem("sb-tmftxqwqwceuiydleuag-auth-token");if(!raw)return{};const s=JSON.parse(raw);return{token:s.access_token,uid:s.user?.id};}catch{return{};}}
 const SB_URL = import.meta.env.VITE_SUPABASE_URL || "https://tmftxqwqwceuiydleuag.supabase.co";
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtZnR4cXdxd2NldWl5ZGxldWFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDA2MzEsImV4cCI6MjA5MDI3NjYzMX0.k5TOln3e4M8PxH2tH22-6BsFimH84InVfNOWP8riaCM";
 async function sbGet(table,params){try{const r=await fetch(`${SB_URL}/rest/v1/${table}?${params}`,{headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`}});if(!r.ok)return[];return await r.json()}catch{return[]}}
@@ -95,9 +96,30 @@ export default function SearchPage() {
   const[color,setColor]=useState("");
   const[sort,setSort]=useState("newest");
   const[showF,setShowF]=useState(false);
-  const[favIds,setFavIds]=useState(()=>{try{return JSON.parse(localStorage.getItem("pm_favs")||"[]")}catch{return[]}});
+  const[favIds,setFavIds]=useState([]);
+  // Load favourites from Supabase on mount
+  useEffect(()=>{
+    (async()=>{
+      const {token,uid}=getSession();
+      if(!token||!uid){try{setFavIds(JSON.parse(localStorage.getItem("pm_favs")||"[]"))}catch{} return;}
+      try{
+        const r=await fetch(`${SB_URL}/rest/v1/favourites?user_id=eq.${uid}&select=listing_id`,{headers:{apikey:SB_KEY,Authorization:`Bearer ${token}`}});
+        if(r.ok){const rows=await r.json();const ids=Array.isArray(rows)?rows.map(x=>x.listing_id):[];setFavIds(ids);try{localStorage.setItem("pm_favs",JSON.stringify(ids))}catch{}}
+      }catch{try{setFavIds(JSON.parse(localStorage.getItem("pm_favs")||"[]"))}catch{}}
+    })();
+  },[]);
   useEffect(()=>{try{localStorage.setItem("pm_favs",JSON.stringify(favIds))}catch{}},[favIds]);
-  const toggleFav=(id)=>setFavIds(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
+  const toggleFav=async(id)=>{
+    const {token,uid}=getSession();
+    const isFav=favIds.includes(id);
+    if(isFav){
+      setFavIds(p=>p.filter(x=>x!==id));
+      if(token&&uid) try{await fetch(`${SB_URL}/rest/v1/favourites?user_id=eq.${uid}&listing_id=eq.${id}`,{method:"DELETE",headers:{apikey:SB_KEY,Authorization:`Bearer ${token}`}})}catch{}
+    } else {
+      setFavIds(p=>[...p,id]);
+      if(token&&uid) try{await fetch(`${SB_URL}/rest/v1/favourites`,{method:"POST",headers:{apikey:SB_KEY,Authorization:`Bearer ${token}`,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify({user_id:uid,listing_id:id})})}catch{}
+    }
+  };
   const[allListings,setAllListings]=useState([]);
   const[dbLoading,setDbLoading]=useState(true);
   const[narrow,setNarrow]=useState(()=>typeof window!=="undefined"?window.innerWidth<768:false);
