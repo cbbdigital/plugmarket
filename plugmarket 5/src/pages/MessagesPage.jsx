@@ -51,7 +51,7 @@ function ConvoRow({c,t,active,onClick,isLast}){
   return(
     <div onClick={onClick} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",cursor:"pointer",background:active?"rgba(255,117,0,0.08)":hov?t.sec:"transparent",borderBottom:isLast?"none":`1px solid ${t.bd}`,borderLeft:active?`3px solid ${BC}`:"3px solid transparent",transition:"background 0.15s"}}>
       <div style={{position:"relative",flexShrink:0}}>
-        <div style={{width:40,height:40,borderRadius:"50%",background:t.tg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:t.tx2}}>{c.initials}</div>
+        {c.thumb?<img src={c.thumb} alt="" style={{width:40,height:40,borderRadius:"50%",objectFit:"cover"}}/>:<div style={{width:40,height:40,borderRadius:"50%",background:t.tg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:t.tx2}}>{c.initials}</div>}
         {c.online&&<div style={{position:"absolute",bottom:0,right:0,width:10,height:10,borderRadius:"50%",background:"#10b981",border:`2px solid ${t.card}`}}/>}
       </div>
       <div style={{flex:1,minWidth:0}}>
@@ -123,14 +123,14 @@ function RightPanel({t,activeConvo,newMsg,setNewMsg,sendMessage,inputRef,message
       <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 16px",borderBottom:`1px solid ${t.bd}`,flexShrink:0}}>
         {narrow&&<button onClick={onBack} style={{padding:"5px 8px",borderRadius:8,border:`1px solid ${t.bd}`,background:t.inp,display:"flex",alignItems:"center",cursor:"pointer"}}><ChevL size={14} color={t.tx2}/></button>}
         <div style={{position:"relative",flexShrink:0}}>
-          <div style={{width:36,height:36,borderRadius:"50%",background:t.tg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:t.tx2}}>{activeConvo.initials}</div>
+          {activeConvo.thumb?<img src={activeConvo.thumb} alt="" style={{width:36,height:36,borderRadius:"50%",objectFit:"cover"}}/>:<div style={{width:36,height:36,borderRadius:"50%",background:t.tg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:t.tx2}}>{activeConvo.initials}</div>}
           {activeConvo.online&&<div style={{position:"absolute",bottom:0,right:0,width:9,height:9,borderRadius:"50%",background:"#10b981",border:`2px solid ${t.card}`}}/>}
         </div>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:14,fontWeight:600,color:t.tx}}>{activeConvo.name}</div>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <span style={{fontSize:10,color:activeConvo.online?"#10b981":t.tx3}}>{activeConvo.online?"Online":"Offline"}</span>
-            <span style={{fontSize:9,fontWeight:600,color:"#fff",background:"#3b82f6",padding:"1px 5px",borderRadius:3}}>{activeConvo.car}</span>
+            <span onClick={()=>{if(activeConvo.listingId)nav(`/listing/${activeConvo.listingId}`)}} style={{fontSize:9,fontWeight:600,color:"#fff",background:"#3b82f6",padding:"1px 5px",borderRadius:3,cursor:activeConvo.listingId?"pointer":"default"}}>{activeConvo.car}</span>
           </div>
         </div>
         <div style={{display:"flex",gap:5}}>
@@ -199,13 +199,14 @@ export default function MessagesPage(){
           const otherProfile=await sbGet("profiles",`id=eq.${otherId}&select=full_name,phone`,token);
           const otherName=otherProfile?.[0]?.full_name||"User";
           const listing=c.listing_id?await sbGet("listings",`id=eq.${c.listing_id}&select=make,model`,token):[];
+          const photos=c.listing_id?await sbGet("listing_photos",`listing_id=eq.${c.listing_id}&order=position.asc&limit=1`,token):[];
           const carName=listing?.[0]?`${listing[0].make} ${listing[0].model}`:"General";
           const msgs=await sbGet("messages",`conversation_id=eq.${c.id}&order=created_at.asc`,token);
           mapped.push({
             id:c.id, name:otherName, phone:otherProfile?.[0]?.phone||null, iAmBuyer:otherIsMe,
             initials:otherName.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2),
             online:false, unread:otherIsMe?(c.buyer_unread_count||0):(c.seller_unread_count||0), buyerUnread:c.buyer_unread_count||0, sellerUnread:c.seller_unread_count||0,
-            car:carName, lastMsg:c.last_message_text||"", time:timeAgo(c.updated_at),
+            car:carName, listingId:c.listing_id||null, thumb:photos?.[0]?.url||null, lastMsg:c.last_message_text||"", time:timeAgo(c.updated_at),
             messages:msgs.map(m=>({id:m.id,from:m.sender_id===uid?"me":"them",text:m.body||m.content||"",time:new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})})),
           });
         }
